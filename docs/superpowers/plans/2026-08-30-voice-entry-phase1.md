@@ -1076,7 +1076,7 @@ disposable local Postgres via Docker, never the real database.
 - [ ] **Step 1: Spin up a disposable test database**
 
 ```bash
-docker run -d --name adelaide-voice-test-pg -e POSTGRES_PASSWORD=testpass -e POSTGRES_DB=postgres -p 55433:5432 postgres:16-alpine
+docker run -d --name piko-voice-test-pg -e POSTGRES_PASSWORD=testpass -e POSTGRES_DB=postgres -p 55433:5432 postgres:16-alpine
 ```
 
 - [ ] **Step 2: Point `.env.local` at it temporarily (back up the real one first)**
@@ -1128,7 +1128,7 @@ Open `http://localhost:3000/login` in **Chrome or Edge** (Firefox doesn't suppor
 - [ ] **Step 4: Tear down and restore your real environment**
 
 ```bash
-docker rm -f adelaide-voice-test-pg
+docker rm -f piko-voice-test-pg
 cp .env.local.real-backup .env.local
 rm .env.local.real-backup
 ```

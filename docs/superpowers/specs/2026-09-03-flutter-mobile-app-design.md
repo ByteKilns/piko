@@ -56,7 +56,7 @@ size):
    - URL saved, no/invalid token → **Login**.
    - Both present → **Home**.
 2. **Settings** (`/settings`) — one text field, the server URL, prefilled
-   with `https://adelaide-eosin.vercel.app` the very first time the app
+   with `https://piko-kn.vercel.app` the very first time the app
    runs (still editable/overwritable), saved to `shared_preferences` on
    submit. A **Log out** button (visible only when a token is currently
    stored) clears the token from secure storage and returns to Login.

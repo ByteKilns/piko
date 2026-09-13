@@ -109,7 +109,7 @@ export function SidebarNav({
           {!collapsed && (
             <div className="min-w-0">
               <p className="truncate text-base leading-tight font-semibold">
-                Adelaide
+                Piko
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 Plan together, grow together
