@@ -17,8 +17,8 @@ import {
   notifications,
   recurringExpenses,
 } from "@/db/schema";
-import { formatMonthRangeLabel } from "@/lib/date-format";
 import { getDateFormatPref } from "@/lib/date-format-cookie";
+import { formatPeriodLabel } from "@/lib/month-period";
 import { NOTIFICATION_PREFS_COOKIE_NAME, type NotificationPreferences } from "@/lib/notification-preferences-cookie";
 import { getCurrentMember } from "@/lib/session";
 import { formatNPR } from "@/modules/dashboard/lib/format";
@@ -255,7 +255,7 @@ export async function checkBudgetReminder(householdId: string, year: number, mon
   if (itemCount > 0) return;
 
   const dateFormat = await getDateFormatPref(householdId);
-  const monthLabel = formatMonthRangeLabel(year, month, dateFormat);
+  const monthLabel = formatPeriodLabel(year, month, dateFormat);
   await insertNotification({
     body: "You haven't planned a budget for this month yet. Head to Budget to set your category amounts.",
     category: "budget",

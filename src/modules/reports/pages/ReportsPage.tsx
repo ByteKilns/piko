@@ -1,6 +1,6 @@
 import { getDateFormatPref } from "@/lib/date-format-cookie";
-import { previousMonth } from "@/lib/month-nav";
-import { currentPeriodYearMonth, formatPeriodLabel, resolvePeriod } from "@/lib/month-period";
+import { nextMonth, parseMonthParam, previousMonth } from "@/lib/month-nav";
+import { currentPeriodYearMonth, formatPeriodLabel, MAX_NAVIGABLE_YEAR, MIN_NAVIGABLE_YEAR, resolvePeriod } from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { getBudgetItemsForMonth, getIncomesForMonth, listAllIncomes } from "@/modules/budget/api/budget.actions";
 import { listCategories } from "@/modules/categories/api/categories";
@@ -17,11 +17,17 @@ import { categoryBreakdown, dailySpendingPace, monthlyIncomeExpenseTrend, spendi
 import { listSavingsContributions, listSavingsGoals } from "@/modules/savings-goals/api/savings-goals.actions";
 import { buildContributionEntries, buildGoalCards, monthlyTotals, savingsOverviewStats } from "@/modules/savings-goals/lib/savings-stats";
 
-export async function ReportsPage() {
+type Props = { searchParams: Promise<{ month?: string; year?: string }> };
+
+export async function ReportsPage({ searchParams }: Props) {
   const { householdId, memberId } = await getCurrentMember();
   const dateFormat = await getDateFormatPref(householdId);
-  const { year, month } = currentPeriodYearMonth(dateFormat);
+  const params = await searchParams;
+  const { year: currentYear, month: currentMonth } = currentPeriodYearMonth(dateFormat);
+  const year = parseMonthParam(params.year, currentYear, MAX_NAVIGABLE_YEAR[dateFormat], MIN_NAVIGABLE_YEAR[dateFormat]);
+  const month = parseMonthParam(params.month, currentMonth, 12);
   const prev = previousMonth(year, month);
+  const next = nextMonth(year, month);
 
   let rangeStartYm = { month, year };
   for (let i = 0; i < 5; i++) rangeStartYm = previousMonth(rangeStartYm.year, rangeStartYm.month);
@@ -92,11 +98,11 @@ export async function ReportsPage() {
     members.map((m) => ({ id: m.id, name: m.user.name })),
     memberId,
   );
-  const expenseSlices = categoryBreakdown(expenses, categories, 5);
+  const expenseSlices = categoryBreakdown(expenses, categories);
 
   const rangeExpenses = rangeExpenseRows.map((e) => ({ amount: Number(e.amount), date: e.date }));
   const allIncomes = allIncomeRows.map((i) => ({ amount: Number(i.amount), month: i.month, year: i.year }));
-  const trendPoints = monthlyIncomeExpenseTrend(allIncomes, rangeExpenses, 6, dateFormat);
+  const trendPoints = monthlyIncomeExpenseTrend(allIncomes, rangeExpenses, { month, year }, 6, dateFormat);
 
   const insightMessage = spendingInsight(totalExpenses, prevTotalExpenses);
   const totalPlanned = budgetItemRows.reduce((s, b) => s + Number(b.plannedAmount), 0);
@@ -150,7 +156,12 @@ export async function ReportsPage() {
 
   return (
     <>
-      <ReportsHeader exportRows={exportRows} monthLabel={monthLabel} />
+      <ReportsHeader
+        exportRows={exportRows}
+        monthLabel={monthLabel}
+        nextHref={`/reports?year=${next.year}&month=${next.month}`}
+        prevHref={`/reports?year=${prev.year}&month=${prev.month}`}
+      />
 
       <ReportsTabs
         categories={categories.map((c) => ({ groupName: c.groupName, id: c.id, name: c.name }))}

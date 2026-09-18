@@ -14,7 +14,6 @@ export type CategorySlice = { amount: number; categoryId: string; groupName: str
 export function categoryBreakdown(
   expenses: { amount: number; categoryId: string }[],
   categories: { groupName: string; id: string; name: string }[],
-  limit: number,
 ): CategorySlice[] {
   const totals = new Map<string, number>();
   for (const e of expenses) {
@@ -36,8 +35,7 @@ export function categoryBreakdown(
         tone: getCategoryTone(category?.groupName ?? "Other"),
       };
     })
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, limit);
+    .sort((a, b) => b.amount - a.amount);
 }
 
 export type MonthPoint = { expenses: number; income: number; label: string };
@@ -45,11 +43,11 @@ export type MonthPoint = { expenses: number; income: number; label: string };
 export function monthlyIncomeExpenseTrend(
   incomeRows: { amount: number; month: number; year: number }[],
   expenseRows: { amount: number; date: string }[],
+  end: { month: number; year: number },
   monthsBack: number,
   dateFormat: DateFormat,
 ): MonthPoint[] {
-  const current = currentPeriodYearMonth(dateFormat);
-  const months: { month: number; year: number }[] = [{ month: current.month, year: current.year }];
+  const months: { month: number; year: number }[] = [end];
   for (let i = 1; i < monthsBack; i++) {
     months.unshift(previousMonth(months[0].year, months[0].month));
   }

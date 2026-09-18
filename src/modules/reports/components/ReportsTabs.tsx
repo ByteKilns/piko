@@ -86,7 +86,7 @@ export function ReportsTabs(props: Props) {
           </div>
           <div className="space-y-6">
             <ExpenseSummaryCard pctOfIncome={props.pctOfIncome} slices={props.ownerSlices} total={props.totalExpenses} />
-            <ExpenseBreakdownCard slices={props.expenseSlices} total={props.totalExpenses} viewAllHref="/expenses" />
+            <ExpenseBreakdownCard slices={props.expenseSlices} total={props.totalExpenses} />
             <SmartInsightCard message={props.insightMessage} />
           </div>
         </div>
