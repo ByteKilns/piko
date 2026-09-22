@@ -8,7 +8,10 @@ import { users } from "@/db/schema";
 import { ACCENT_COLOR_COOKIE_NAME, isAccentColor } from "@/lib/accent-color-cookie";
 import { logoutAction } from "@/lib/actions/auth";
 import { getDateFormatPref } from "@/lib/date-format-cookie";
+import { isReleaseAdmin } from "@/lib/release-admin";
 import { getCurrentMember } from "@/lib/session";
+import { listReleases } from "@/modules/app-releases/api/app-releases";
+import { AppReleasesSection } from "@/modules/app-releases/components/AppReleasesSection";
 import { DateFormatSection } from "@/modules/settings/components/DateFormatSection";
 import { PasswordSection } from "@/modules/settings/components/PasswordSection";
 import { ProfilePictureSection } from "@/modules/settings/components/ProfilePictureSection";
@@ -16,11 +19,13 @@ import { ThemeSection } from "@/modules/settings/components/ThemeSection";
 
 export async function SettingsPage() {
   const { householdId, userId } = await getCurrentMember();
-  const [[user], cookieStore, dateFormat] = await Promise.all([
+  const [[user], cookieStore, dateFormat, canPublishReleases] = await Promise.all([
     db.select().from(users).where(eq(users.id, userId)),
     cookies(),
     getDateFormatPref(householdId),
+    isReleaseAdmin(),
   ]);
+  const releases = canPublishReleases ? await listReleases() : [];
 
   const accentCookie = cookieStore.get(ACCENT_COLOR_COOKIE_NAME)?.value ?? "";
   const accent = isAccentColor(accentCookie) ? accentCookie : "purple";
@@ -36,6 +41,7 @@ export async function SettingsPage() {
       <DateFormatSection initialFormat={dateFormat} />
       <ProfilePictureSection initialImage={user?.image ?? null} name={user?.name ?? "?"} />
       <PasswordSection />
+      {canPublishReleases && <AppReleasesSection releases={releases} />}
 
       <Card>
         <CardHeader className="pb-2">

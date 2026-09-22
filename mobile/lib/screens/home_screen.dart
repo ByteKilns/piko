@@ -2,19 +2,40 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/categories_result.dart';
 import '../models/expense_draft.dart';
 import '../providers/api_client_provider.dart';
+import '../providers/app_update_provider.dart';
 import '../providers/categories_provider.dart';
 import '../providers/expenses_provider.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_update_sheet.dart';
 import '../widgets/expense_confirm_sheet.dart';
 import '../widgets/expense_list_tile.dart';
 import 'settings_screen.dart';
 import 'voice_capture_screen.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  // Re-check for a new build whenever the app comes back to the foreground, not just on cold start.
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(onResume: () => ref.invalidate(availableUpdateProvider));
+    // Capturing an expense is the app's main job, so jump straight into voice capture on launch.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _openVoiceFlow(context, ref);
+    });
+  }
 
   Future<void> _openVoiceFlow(BuildContext context, WidgetRef ref) async {
     final draft = await Navigator.of(context).push<ExpenseDraft?>(
@@ -45,8 +66,19 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Future<void> _openConfirmSheet(BuildContext context, WidgetRef ref, ExpenseDraft draft) async {
-    final categoriesResult = ref.read(categoriesProvider).valueOrNull;
-    if (categoriesResult == null) return;
+    // Voice capture opens on launch, so categories may still be loading — wait rather than drop the draft.
+    final CategoriesResult categoriesResult;
+    try {
+      categoriesResult = await ref.read(categoriesProvider.future);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Couldn't load categories — check your connection and try again.")),
+        );
+      }
+      return;
+    }
+    if (!context.mounted) return;
 
     await showModalBottomSheet(
       context: context,
@@ -83,8 +115,15 @@ class HomeScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final expensesAsync = ref.watch(recentExpensesProvider);
+    final update = ref.watch(availableUpdateProvider).valueOrNull;
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return Scaffold(
@@ -115,6 +154,11 @@ class HomeScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            if (update != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                child: AppUpdateBanner(release: update),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
               child: Row(

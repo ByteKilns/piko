@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../models/app_release.dart';
 import '../models/categories_result.dart';
 import '../models/expense.dart';
 import '../models/expense_draft.dart';
@@ -103,5 +104,11 @@ class ApiClient {
   Future<Expense> createExpense(ExpenseDraft draft) async {
     final body = await _authorizedPost('/api/mobile/expenses', draft.toJson());
     return Expense.fromJson(body['expense'] as Map<String, dynamic>);
+  }
+
+  Future<AppRelease?> fetchLatestRelease() async {
+    final body = await _authorizedGet('/api/mobile/app-version');
+    final latest = body['latest'];
+    return latest == null ? null : AppRelease.fromJson(latest as Map<String, dynamic>);
   }
 }
