@@ -52,6 +52,7 @@ src/
   lib/            # cross-cutting helpers: session, mobile-auth, cookies, dates, gemini
 drizzle/          # generated SQL migrations + meta snapshots (never hand-edit the meta)
 mobile/           # Flutter app (own README)
+e2e/              # Playwright browser tests (own runner; see Commands)
 docs/             # this file
 graphify-out/     # knowledge graph (gitignored)
 ```
@@ -175,7 +176,8 @@ Conventions to keep when adding columns/tables:
 ```sh
 npm run dev                 # Next dev server (also rewrites the AGENTS.md nextjs block)
 npm run lint                # ESLint (perfectionist ordering) — add -- --fix
-npm run test                # Vitest
+npm run test                # Vitest (unit/integration)
+npm run test:e2e            # Playwright browser tests (boots the dev server; seeds from .env.local)
 npm run build               # production build (runs tsc too; part of the pre-commit hook)
 npm run db:generate         # generate a migration from schema changes
 npm run db:migrate          # apply migrations to .env.local's DATABASE_URL
