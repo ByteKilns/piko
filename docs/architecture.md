@@ -74,8 +74,10 @@ Each feature is a slice under `src/modules/<feature>/`:
   hooks/                    # client hooks (e.g. table columns)
 ```
 
-A route file is a one-liner that re-exports the page, e.g.
+A route file is a thin adapter that re-exports the page, e.g.
 `src/app/(app)/expenses/page.tsx` → `export { ExpensesPage as default } from "@/modules/expenses";`.
+It also carries the Next-only bits a module can't: `export const metadata` (page titles)
+and, when needed, route segment config (`dynamic`, `revalidate`, `runtime`, …).
 Route handlers in `src/app/api/**` are the exception — they hold real logic.
 
 **Worked example:** `expenses`. `api/expenses.actions.ts` holds `createExpenseAction`

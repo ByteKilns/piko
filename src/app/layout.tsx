@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Piko",
+  title: { default: "Piko", template: "%s · Piko" },
   description: "A private, cloud-synced budgeting app for two partners",
 };
 
