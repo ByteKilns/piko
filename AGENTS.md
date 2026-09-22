@@ -8,6 +8,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## Architecture
+
+Piko is a household expense tracker: a Next.js 16 web app (`src/`) plus a Flutter voice-capture companion (`mobile/`). A row with `ownerMemberId === null` is *shared*; otherwise it belongs to one member.
+
+- **Read `docs/architecture.md` first** — stack, module anatomy, request/data flow, domain model, and task playbooks. Don't grep the whole repo to get oriented.
+- **Mobile app** — build/publish an update per `mobile/README.md`.
+- **graphify** (below) — query the knowledge graph for relationships instead of reading everything.
+- **Golden rule** — every domain query is scoped by `householdId`, and writes derive it from the session (`getCurrentMember()` / `requireMobileAuth`), never from client input.
+
 ## Principles
 
 - **YAGNI (You Aren't Gonna Need It)**: Don't build functionality, abstractions, or configuration for hypothetical future requirements. Implement only what the current task needs.
