@@ -151,7 +151,13 @@ Conventions to keep when adding columns/tables:
   (income − fixed commitments − savings) and a masked payload for the AI. The
   privacy boundary is `lib/mask-financial-context.ts` — the only producer of
   `MaskedFinancialContext` (shares + opaque category/owner tokens; no amounts,
-  names, dates or notes). Gated by `AI_BUDGET_PLANNER=off|mock|live`.
+  names, dates or notes). The model returns token-keyed shares of the envelope;
+  `lib/build-plan.ts` maps them back to real categories/owners, converts to
+  amounts, and enforces invariants (drops unknown tokens, scales into the
+  flexible pool) for review — nothing is written until the user applies a row
+  via `setBudgetItemAction`. Gated by `AI_BUDGET_PLANNER=off|mock|live`; `mock`
+  is deterministic and offline. `npm run eval:planner` runs the real model
+  offline against fixtures (not part of CI).
 - **App releases**: publishing is gated by `APP_RELEASE_ADMIN_EMAILS`
   (`src/lib/release-admin.ts`); APKs are uploaded to Vercel Blob via a client-token
   flow (`src/app/api/app-releases/upload/route.ts`). `handleUpload` requires
@@ -190,6 +196,7 @@ npm run build               # production build (runs tsc too; part of the pre-co
 npm run db:generate         # generate a migration from schema changes
 npm run db:migrate          # apply migrations to .env.local's DATABASE_URL
 npm run db:seed             # seed household + 2 users + default categories
+npm run eval:planner        # offline AI eval over fixtures (needs AI_BUDGET_PLANNER=live)
 
 # mobile (from mobile/)
 flutter build apk --release --split-per-abi

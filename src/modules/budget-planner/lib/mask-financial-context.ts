@@ -1,10 +1,7 @@
 import { type MaskedFinancialContext, maskedFinancialContextSchema } from "../schemas/masked-context.schema";
 import type { FinancialProfile } from "./profile";
 import { roundTo, shareOf } from "./stats";
-
-// Defensive cap so a pathological category list can't produce an oversized
-// payload.
-const MAX_CATEGORY_TOKENS = 40;
+import { tokenize } from "./tokens";
 
 // Turns a local FinancialProfile into the masked payload that may be sent to
 // the AI. This is the privacy boundary and the only producer of
@@ -19,29 +16,18 @@ const MAX_CATEGORY_TOKENS = 40;
 export function buildMaskedContext(profile: FinancialProfile): MaskedFinancialContext {
   const { envelope, periods } = profile;
   const income = envelope.income;
-
-  const categoryEntries = [...profile.categories]
-    .sort((a, b) => a.groupName.localeCompare(b.groupName) || a.categoryId.localeCompare(b.categoryId))
-    .slice(0, MAX_CATEGORY_TOKENS)
-    .map((category, index) => ({ category, token: `c${index + 1}` }));
-
-  const ownerKeys = new Set<string>();
-  for (const category of profile.categories) {
-    for (const split of category.ownerSplit) ownerKeys.add(split.ownerMemberId ?? "shared");
-  }
-  for (const owner of profile.fixedFloor.byOwner) ownerKeys.add(owner.ownerMemberId ?? "shared");
-
-  const memberKeys = [...ownerKeys].filter((k) => k !== "shared").sort();
-  const ownerToken = (key: string) => (key === "shared" ? "shared" : `m${memberKeys.indexOf(key) + 1}`);
-  const owners = [...memberKeys.map((_, i) => `m${i + 1}`), ...(ownerKeys.has("shared") ? ["shared"] : [])];
+  const tokens = tokenize(profile);
 
   const masked = {
-    categories: categoryEntries.map(({ category, token }) => ({
+    categories: tokens.categories.map(({ category, token }) => ({
       budgetType: category.budgetType,
       group: category.groupName,
       label: category.label,
       ownerSplit: Object.fromEntries(
-        category.ownerSplit.map((split) => [ownerToken(split.ownerMemberId ?? "shared"), roundTo(split.share, 3)]),
+        category.ownerSplit.map((split) => [
+          tokens.tokenByOwnerKey.get(split.ownerMemberId ?? "shared") ?? "shared",
+          roundTo(split.share, 3),
+        ]),
       ),
       spendShares: category.spendByPeriod.map((spend) => roundTo(shareOf(spend, income), 3)),
       token,
@@ -54,7 +40,7 @@ export function buildMaskedContext(profile: FinancialProfile): MaskedFinancialCo
     },
     incomeVariability: profile.incomeVariability.band,
     monthsUsed: periods.length,
-    owners,
+    owners: tokens.owners,
     version: 1 as const,
   };
 

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { getCurrentMember } from "@/lib/session";
 import { buildPlannerPreview } from "@/modules/budget-planner/api/budget-planner.queries";
-import { PlanPreviewPanel } from "@/modules/budget-planner/components/PlanPreviewPanel";
+import { BudgetPlannerClient } from "@/modules/budget-planner/components/BudgetPlannerClient";
 import { isPlannerEnabled } from "@/modules/budget-planner/lib/flag";
 import { formatNPR } from "@/modules/dashboard/lib/format";
 
@@ -28,7 +28,7 @@ export async function BudgetPlanPage() {
       </div>
 
       {preview.ok ? (
-        <PlanPreviewPanel
+        <BudgetPlannerClient
           confidence={preview.profile.incomeAnchor.confidence}
           envelope={{
             fixed: formatNPR(preview.profile.envelope.fixed),

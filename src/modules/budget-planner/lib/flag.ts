@@ -1,8 +1,7 @@
-// Feature gate for the AI budget planner. Phase 1 ships the local preview
-// only, so the default is off: the entry point and route are hidden unless the
-// value is explicitly mock/live. e2e sets it to "mock" via the Playwright
-// webServer env.
+import { plannerMode } from "./mode";
+
+// Whether the planner's entry point and route should be visible. Same gate as
+// the AI dispatch, so the UI can't offer a planner that would refuse to run.
 export function isPlannerEnabled(): boolean {
-  const value = process.env.AI_BUDGET_PLANNER;
-  return value === "live" || value === "mock";
+  return plannerMode() !== null;
 }

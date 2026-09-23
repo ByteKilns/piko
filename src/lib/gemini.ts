@@ -1,14 +1,7 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
 
+import { GEMINI_MODEL_ID, geminiClient } from "@/lib/gemini-client";
 import type { RawVoiceExpense } from "@/modules/voice-entry/lib/sanitize-voice-expense";
-
-// Free-tier Flash-Lite model — generous free quota (30 requests/min, 1500/day at
-// time of writing) for a task this small (classify + extract from one sentence).
-// Google's Gemini model lineup moves fast; if this ID is ever retired, swap it for
-// the current Flash-Lite-tier model at https://ai.google.dev/gemini-api/docs/models.
-const MODEL_ID = "gemini-3.1-flash-lite";
-
-const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export type VoiceExpenseContext = {
   categories: { id: string; name: string }[];
@@ -47,7 +40,7 @@ says "yesterday"/"last Monday"/etc; default to today's date if no date is
 mentioned. Set "understood" to false if the sentence doesn't describe a
 plausible expense at all (e.g. it's unrelated small talk).`;
 
-  const response = await client.models.generateContent({
+  const response = await geminiClient.models.generateContent({
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -65,7 +58,7 @@ plausible expense at all (e.g. it's unrelated small talk).`;
       },
     },
     contents: prompt,
-    model: MODEL_ID,
+    model: GEMINI_MODEL_ID,
   });
 
   return JSON.parse(response.text ?? "{}") as RawVoiceExpense;

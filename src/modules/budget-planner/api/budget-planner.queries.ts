@@ -20,7 +20,12 @@ export const HISTORY_MONTHS = 3;
 
 export type PlannerPreview =
   | { ok: false; reason: "no_history" | "no_income" }
-  | { masked: MaskedFinancialContext; ok: true; profile: FinancialProfile };
+  | {
+      categoryNameById: Map<string, string>;
+      masked: MaskedFinancialContext;
+      ok: true;
+      profile: FinancialProfile;
+    };
 
 // Loads the household's rows and derives both the local profile (real amounts,
 // for the envelope display) and the masked payload (shares, for the AI). The
@@ -56,5 +61,11 @@ export async function buildPlannerPreview(householdId: string): Promise<PlannerP
   if (profile.incomeAnchor.amount <= 0) return { ok: false, reason: "no_income" };
   if (profile.spendByPeriod.every((s) => s === 0)) return { ok: false, reason: "no_history" };
 
-  return { masked: buildMaskedContext(profile), ok: true, profile };
+  // Real names for local display only — never part of the masked payload.
+  return {
+    categoryNameById: new Map(categories.map((c) => [c.id, c.name])),
+    masked: buildMaskedContext(profile),
+    ok: true,
+    profile,
+  };
 }

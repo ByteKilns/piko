@@ -49,5 +49,8 @@ next-env.d.ts
 # graphify
 /graphify-out/
 
+# offline AI eval output (review artifacts, not committed)
+/eval/
+
 # playwright (ad-hoc screenshots/inspection, includes a logged-in session)
 /.playwright/
