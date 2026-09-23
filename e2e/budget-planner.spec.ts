@@ -19,4 +19,15 @@ test.describe("budget planner", () => {
 
     await expect(page.getByRole("heading", { name: "Budget planner", exact: true })).toBeVisible();
   });
+
+  // Exercises the full flow against the seeded e2e database (mock provider).
+  test("generates a plan and applies a row", async ({ page }) => {
+    await gotoRoute(page, "/budget/plan");
+
+    await page.getByRole("button", { name: "Generate plan" }).click();
+    await expect(page.getByText(/Suggested budget/)).toBeVisible();
+
+    await page.getByRole("button", { name: "Apply", exact: true }).first().click();
+    await expect(page.getByRole("button", { name: "Applied", exact: true }).first()).toBeVisible();
+  });
 });

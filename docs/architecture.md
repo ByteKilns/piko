@@ -190,8 +190,8 @@ Conventions to keep when adding columns/tables:
 npm run dev                 # Next dev server (also rewrites the AGENTS.md nextjs block)
 npm run lint                # ESLint (perfectionist ordering) — add -- --fix
 npm run test                # Vitest (unit/integration)
-npm run test:e2e            # Playwright browser tests (builds + serves prod on :3100)
-npm run e2e:serve           # `next build && next start -p 3100` — what Playwright starts
+npm run test:e2e            # Playwright tests: reset+seed e2e DB, build, serve prod on :3100
+npm run e2e:serve           # seed-e2e + build + start :3100 — what Playwright starts
 npm run build               # production build (runs tsc too; part of the pre-commit hook)
 npm run db:generate         # generate a migration from schema changes
 npm run db:migrate          # apply migrations to .env.local's DATABASE_URL

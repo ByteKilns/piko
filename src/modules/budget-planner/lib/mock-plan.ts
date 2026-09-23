@@ -10,15 +10,18 @@ export function mockPlan(masked: MaskedFinancialContext): RawPlan {
   const weights = flexible.map((c) => c.spendShares.reduce((s, v) => s + v, 0));
   const totalWeight = weights.reduce((s, v) => s + v, 0);
 
-  const allocations = flexible.map((category, index) => {
-    const weight = totalWeight > 0 ? weights[index] / totalWeight : 1 / flexible.length;
-    return {
-      owner: dominantOwner(category.ownerSplit, masked.owners),
-      rationale: `Mock allocation based on ${category.group} spending history.`,
-      shareOfEnvelope: Number((masked.envelope.flexibleShare * weight).toFixed(3)),
-      token: category.token,
-    };
-  });
+  const allocations = flexible
+    .map((category, index) => {
+      const weight = totalWeight > 0 ? weights[index] / totalWeight : 1 / flexible.length;
+      return {
+        owner: dominantOwner(category.ownerSplit, masked.owners),
+        rationale: `Mock allocation based on ${category.group} spending history.`,
+        shareOfEnvelope: Number((masked.envelope.flexibleShare * weight).toFixed(3)),
+        token: category.token,
+      };
+    })
+    // Skip categories with no history (weight 0) — the plan stays readable.
+    .filter((allocation) => allocation.shareOfEnvelope > 0);
 
   return { allocations, summary: "Mock plan (deterministic — for tests and e2e)." };
 }
