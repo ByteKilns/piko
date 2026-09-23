@@ -21,3 +21,11 @@ export async function getDateFormatPref(householdId: string): Promise<DateFormat
   const [household] = await db.select().from(households).where(eq(households.id, householdId));
   return household?.dateFormat ?? DEFAULT_DATE_FORMAT;
 }
+
+// Household-wide opt-in for the AI budget planner. The deployment gate
+// (AI_BUDGET_PLANNER) must also be on for the feature to appear; this is the
+// per-household consent layer on top of it.
+export async function getPlannerEnabledPref(householdId: string): Promise<boolean> {
+  const [household] = await db.select().from(households).where(eq(households.id, householdId));
+  return household?.plannerEnabled ?? false;
+}

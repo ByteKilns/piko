@@ -57,3 +57,9 @@ export async function setDateFormatAction(format: string) {
   await db.update(households).set({ dateFormat: format }).where(eq(households.id, householdId));
   revalidatePath("/", "layout");
 }
+
+export async function setPlannerEnabledAction(enabled: boolean) {
+  const { householdId } = await getCurrentMember();
+  await db.update(households).set({ plannerEnabled: enabled }).where(eq(households.id, householdId));
+  revalidatePath("/", "layout");
+}

@@ -98,7 +98,8 @@ async function main() {
 
   const [household] = await db
     .insert(households)
-    .values({ name: "E2E Household", dateFormat: "english" })
+    // plannerEnabled: so the e2e fixture can exercise the planner end-to-end.
+    .values({ name: "E2E Household", dateFormat: "english", plannerEnabled: true })
     .returning();
   const [user1] = await db
     .insert(users)

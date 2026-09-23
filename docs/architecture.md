@@ -155,9 +155,12 @@ Conventions to keep when adding columns/tables:
   `lib/build-plan.ts` maps them back to real categories/owners, converts to
   amounts, and enforces invariants (drops unknown tokens, scales into the
   flexible pool) for review — nothing is written until the user applies a row
-  via `setBudgetItemAction`. Gated by `AI_BUDGET_PLANNER=off|mock|live`; `mock`
-  is deterministic and offline. `npm run eval:planner` runs the real model
-  offline against fixtures (not part of CI).
+  via `setBudgetItemAction`. Weekly pacing (`lib/pacing.ts`) splits the flexible
+  budget into a weekly release with a last-week buffer, surfaced on the
+  dashboard. Two gates: the deployment `AI_BUDGET_PLANNER=off|mock|live` (mock
+  is deterministic and offline) and a per-household opt-in
+  (`households.plannerEnabled`, toggled in Settings). `npm run eval:planner`
+  runs the real model offline against fixtures (not part of CI).
 - **App releases**: publishing is gated by `APP_RELEASE_ADMIN_EMAILS`
   (`src/lib/release-admin.ts`); APKs are uploaded to Vercel Blob via a client-token
   flow (`src/app/api/app-releases/upload/route.ts`). `handleUpload` requires

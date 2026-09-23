@@ -8,9 +8,9 @@ import { isPlannerEnabled } from "@/modules/budget-planner/lib/flag";
 import { formatNPR } from "@/modules/dashboard/lib/format";
 
 export async function BudgetPlanPage() {
-  if (!isPlannerEnabled()) notFound();
-
   const { householdId } = await getCurrentMember();
+  if (!(await isPlannerEnabled(householdId))) notFound();
+
   const preview = await buildPlannerPreview(householdId);
 
   return (

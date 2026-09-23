@@ -15,4 +15,9 @@ test.describe("settings", () => {
     await expect(page.getByRole("button", { name: "Change Password" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
   });
+
+  test("shows the AI budget planner opt-in", async ({ page }) => {
+    await expect(page.getByText("AI budget planner", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Use the AI budget planner")).toBeChecked();
+  });
 });

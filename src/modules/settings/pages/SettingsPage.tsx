@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db/client";
-import { users } from "@/db/schema";
+import { households, users } from "@/db/schema";
 import { ACCENT_COLOR_COOKIE_NAME, isAccentColor } from "@/lib/accent-color-cookie";
 import { logoutAction } from "@/lib/actions/auth";
 import { getDateFormatPref } from "@/lib/date-format-cookie";
@@ -14,16 +14,18 @@ import { listReleases } from "@/modules/app-releases/api/app-releases";
 import { AppReleasesSection } from "@/modules/app-releases/components/AppReleasesSection";
 import { DateFormatSection } from "@/modules/settings/components/DateFormatSection";
 import { PasswordSection } from "@/modules/settings/components/PasswordSection";
+import { PlannerSection } from "@/modules/settings/components/PlannerSection";
 import { ProfilePictureSection } from "@/modules/settings/components/ProfilePictureSection";
 import { ThemeSection } from "@/modules/settings/components/ThemeSection";
 
 export async function SettingsPage() {
   const { householdId, userId } = await getCurrentMember();
-  const [[user], cookieStore, dateFormat, canPublishReleases] = await Promise.all([
+  const [[user], cookieStore, dateFormat, canPublishReleases, [household]] = await Promise.all([
     db.select().from(users).where(eq(users.id, userId)),
     cookies(),
     getDateFormatPref(householdId),
     isReleaseAdmin(),
+    db.select().from(households).where(eq(households.id, householdId)),
   ]);
   const releases = canPublishReleases ? await listReleases() : [];
 
@@ -39,6 +41,7 @@ export async function SettingsPage() {
 
       <ThemeSection initialAccent={accent} />
       <DateFormatSection initialFormat={dateFormat} />
+      <PlannerSection initialEnabled={household?.plannerEnabled ?? false} />
       <ProfilePictureSection initialImage={user?.image ?? null} name={user?.name ?? "?"} />
       <PasswordSection />
       {canPublishReleases && <AppReleasesSection releases={releases} />}

@@ -16,6 +16,7 @@ Piko is a household expense tracker: a Next.js 16 web app (`src/`) plus a Flutte
 - **Mobile app** — build/publish an update per `mobile/README.md`.
 - **graphify** (below) — query the knowledge graph for relationships instead of reading everything.
 - **Golden rule** — every domain query is scoped by `householdId`, and writes derive it from the session (`getCurrentMember()` / `requireMobileAuth`), never from client input.
+- **Privacy rule** — data sent to any third-party AI must pass through a masking boundary first (see `budget-planner/lib/mask-financial-context.ts`): shares and opaque tokens only, never amounts, names, dates or notes.
 
 ## Principles
 

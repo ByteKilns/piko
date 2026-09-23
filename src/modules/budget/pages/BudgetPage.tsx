@@ -28,13 +28,14 @@ export async function BudgetPage({ searchParams }: Props) {
   const prev = previousMonth(year, month);
   const next = nextMonth(year, month);
 
-  const [members, categories, incomes, budgetItems, expenseRows, prevBudgetItems] = await Promise.all([
+  const [members, categories, incomes, budgetItems, expenseRows, prevBudgetItems, plannerEnabled] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
     getIncomesForMonth(year, month),
     getBudgetItemsForMonth(year, month),
     listExpensesForMonth(year, month, dateFormat),
     getBudgetItemsForMonth(prev.year, prev.month),
+    isPlannerEnabled(householdId),
   ]);
 
   if (year === currentYear && month === currentMonth) {
@@ -81,7 +82,7 @@ export async function BudgetPage({ searchParams }: Props) {
         month={month}
         monthLabel={monthLabel}
         nextHref={`/budget?year=${next.year}&month=${next.month}`}
-        plannerEnabled={isPlannerEnabled()}
+        plannerEnabled={plannerEnabled}
         prevHref={`/budget?year=${prev.year}&month=${prev.month}`}
         year={year}
       />

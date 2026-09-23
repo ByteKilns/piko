@@ -1,0 +1,1 @@
+ALTER TABLE "households" ADD COLUMN "planner_enabled" boolean DEFAULT false NOT NULL;
