@@ -4,34 +4,8 @@ config({ path: ".env.local" });
 
 import bcrypt from "bcryptjs";
 
+import { DEFAULT_CATEGORIES } from "../modules/categories/lib/default-categories";
 import { categories, householdMembers, households, users } from "./schema";
-
-const DEFAULT_CATEGORIES: { fixed: boolean; group: string; name: string; }[] = [
-  { name: "Parents", group: "Family", fixed: true },
-  { name: "Family Support", group: "Family", fixed: true },
-  { name: "Personal Loan", group: "Obligations", fixed: true },
-  { name: "EMI", group: "Obligations", fixed: true },
-  { name: "Insurance", group: "Obligations", fixed: true },
-  { name: "Bills", group: "Obligations", fixed: true },
-  { name: "Groceries", group: "Household", fixed: false },
-  { name: "Utilities", group: "Household", fixed: true },
-  { name: "Internet", group: "Household", fixed: true },
-  { name: "Household", group: "Household", fixed: false },
-  { name: "Petrol", group: "Transportation", fixed: false },
-  { name: "Public Transport", group: "Transportation", fixed: false },
-  { name: "Vehicle Maintenance", group: "Transportation", fixed: false },
-  { name: "Dates", group: "Lifestyle", fixed: false },
-  { name: "Dining Out", group: "Lifestyle", fixed: false },
-  { name: "Entertainment", group: "Lifestyle", fixed: false },
-  { name: "Gifts", group: "Lifestyle", fixed: false },
-  { name: "Social", group: "Lifestyle", fixed: false },
-  { name: "Shopping", group: "Lifestyle", fixed: false },
-  { name: "Personal", group: "Personal", fixed: false },
-  { name: "Health/Wellness", group: "Personal", fixed: false },
-  { name: "Other Personal", group: "Personal", fixed: false },
-  { name: "Savings", group: "Financial", fixed: false },
-  { name: "Miscellaneous", group: "Other", fixed: false },
-];
 
 async function seed() {
   // Imported dynamically (after dotenv config runs above) so that
@@ -83,7 +57,7 @@ async function seed() {
         householdId: household.id,
         name: c.name,
         groupName: c.group,
-        budgetType: c.fixed ? ("fixed" as const) : ("flexible" as const),
+        budgetType: c.budgetType,
       })),
     );
 

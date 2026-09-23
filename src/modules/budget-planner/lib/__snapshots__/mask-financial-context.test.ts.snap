@@ -1,0 +1,42 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildMaskedContext — shape > matches the committed golden payload 1`] = `
+"{
+  "categories": [
+    {
+      "budgetType": "flexible",
+      "group": "Household",
+      "label": "Groceries",
+      "ownerSplit": {
+        "m1": 1
+      },
+      "spendShares": [
+        0.988
+      ],
+      "token": "c1"
+    },
+    {
+      "budgetType": "flexible",
+      "group": "Personal",
+      "label": null,
+      "ownerSplit": {},
+      "spendShares": [
+        0
+      ],
+      "token": "c2"
+    }
+  ],
+  "confidence": "low",
+  "envelope": {
+    "fixedShare": 0,
+    "flexibleShare": 0.988,
+    "savingsShare": 0.012
+  },
+  "incomeVariability": "unknown",
+  "monthsUsed": 1,
+  "owners": [
+    "m1"
+  ],
+  "version": 1
+}"
+`;

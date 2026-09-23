@@ -147,6 +147,11 @@ Conventions to keep when adding columns/tables:
 - **Error logging**: `src/instrumentation.ts` (`onRequestError`) unwraps `error.cause`
   chains so the real Postgres error is visible server-side — the client error boundary
   (`src/components/ErrorState.tsx`) only sees a stripped message.
+- **AI budget planner** (`src/modules/budget-planner/`): derives an envelope
+  (income − fixed commitments − savings) and a masked payload for the AI. The
+  privacy boundary is `lib/mask-financial-context.ts` — the only producer of
+  `MaskedFinancialContext` (shares + opaque category/owner tokens; no amounts,
+  names, dates or notes). Gated by `AI_BUDGET_PLANNER=off|mock|live`.
 - **App releases**: publishing is gated by `APP_RELEASE_ADMIN_EMAILS`
   (`src/lib/release-admin.ts`); APKs are uploaded to Vercel Blob via a client-token
   flow (`src/app/api/app-releases/upload/route.ts`). `handleUpload` requires
@@ -179,7 +184,8 @@ Conventions to keep when adding columns/tables:
 npm run dev                 # Next dev server (also rewrites the AGENTS.md nextjs block)
 npm run lint                # ESLint (perfectionist ordering) — add -- --fix
 npm run test                # Vitest (unit/integration)
-npm run test:e2e            # Playwright browser tests (boots the dev server; seeds from .env.local)
+npm run test:e2e            # Playwright browser tests (builds + serves prod on :3100)
+npm run e2e:serve           # `next build && next start -p 3100` — what Playwright starts
 npm run build               # production build (runs tsc too; part of the pre-commit hook)
 npm run db:generate         # generate a migration from schema changes
 npm run db:migrate          # apply migrations to .env.local's DATABASE_URL

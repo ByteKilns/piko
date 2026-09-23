@@ -2,6 +2,7 @@ import { getDateFormatPref } from "@/lib/date-format-cookie";
 import { nextMonth, parseMonthParam, previousMonth } from "@/lib/month-nav";
 import { currentPeriodYearMonth, formatPeriodLabel, MAX_NAVIGABLE_YEAR, MIN_NAVIGABLE_YEAR } from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
+import { isPlannerEnabled } from "@/modules/budget-planner/lib/flag";
 import { getBudgetItemsForMonth, getIncomesForMonth } from "@/modules/budget/api/budget.actions";
 import { AllocationSummaryCard } from "@/modules/budget/components/AllocationSummaryCard";
 import { BudgetGroups } from "@/modules/budget/components/BudgetGroups";
@@ -80,6 +81,7 @@ export async function BudgetPage({ searchParams }: Props) {
         month={month}
         monthLabel={monthLabel}
         nextHref={`/budget?year=${next.year}&month=${next.month}`}
+        plannerEnabled={isPlannerEnabled()}
         prevHref={`/budget?year=${prev.year}&month=${prev.month}`}
         year={year}
       />

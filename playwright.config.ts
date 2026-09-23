@@ -4,7 +4,10 @@ import { config as loadEnv } from "dotenv";
 // e2e runs against the app in .env.local (local DB, seeded via `npm run db:seed`).
 loadEnv({ path: ".env.local" });
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
+// A dedicated port so e2e never reuses (or fights over) a manually-run dev
+// server on 3000 — reusing one would silently miss the env below.
+const port = process.env.PLAYWRIGHT_PORT ?? "3100";
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
 
 export default defineConfig({
   expect: { timeout: 10_000 },
@@ -32,7 +35,13 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "npm run dev",
+    // Production server, not `next dev`: Next 16 refuses a second dev server
+    // for the same directory, so `next dev` here would fail whenever a manual
+    // dev server is running. This also exercises the real build.
+    command: "npm run e2e:serve",
+    // AUTH_TRUST_HOST: next-auth v5 rejects a non-Vercel host unless trusted;
+    // e2e runs a local `next start`, so it needs this. Test-only.
+    env: { AI_BUDGET_PLANNER: "mock", AUTH_TRUST_HOST: "true" },
     reuseExistingServer: !process.env.CI,
     stderr: "pipe",
     stdout: "pipe",

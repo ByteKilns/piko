@@ -1,11 +1,19 @@
-import { ChevronLeft, ChevronRight, Copy } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { copyPreviousMonthBudgetAction } from "@/modules/budget/api/budget.actions";
 
-type Props = { canCopyPreviousMonth: boolean; month: number; monthLabel: string; nextHref: string; prevHref: string; year: number };
+type Props = {
+  canCopyPreviousMonth: boolean;
+  month: number;
+  monthLabel: string;
+  nextHref: string;
+  plannerEnabled: boolean;
+  prevHref: string;
+  year: number;
+};
 
-export function BudgetHeader({ canCopyPreviousMonth, month, monthLabel, nextHref, prevHref, year }: Props) {
+export function BudgetHeader({ canCopyPreviousMonth, month, monthLabel, nextHref, plannerEnabled, prevHref, year }: Props) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
@@ -13,6 +21,16 @@ export function BudgetHeader({ canCopyPreviousMonth, month, monthLabel, nextHref
         <p className="text-sm text-muted-foreground">Plan your money for the month</p>
       </div>
       <div className="flex items-center gap-3">
+        {plannerEnabled && (
+          <Link
+            className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15"
+            href="/budget/plan"
+          >
+            <Sparkles className="h-4 w-4" />
+            Plan with AI
+          </Link>
+        )}
+
         <div className="flex items-center gap-1 rounded-full border bg-background px-1 py-1 text-foreground">
           <Link aria-label="Previous month" className="rounded-full p-1 hover:bg-accent" href={prevHref}>
             <ChevronLeft className="h-4 w-4" />
