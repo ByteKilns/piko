@@ -11,24 +11,20 @@ import { listCategories } from "@/modules/categories/api/categories";
 import { type SetBudgetItemInput, setBudgetItemSchema } from "../schemas/budget-item.schema";
 import { type SetIncomeInput, setIncomeSchema } from "../schemas/income.schema";
 
+// Insert-or-get in one statement. A select-then-insert would race when two
+// requests hit a not-yet-created month at the same time (both see nothing,
+// both insert, one hits the unique constraint and 500s). The no-op update on
+// conflict makes the concurrent case return the existing row instead.
 async function getOrCreateMonthlyBudget(householdId: string, year: number, month: number) {
-  const [existing] = await db
-    .select()
-    .from(monthlyBudgets)
-    .where(
-      and(
-        eq(monthlyBudgets.householdId, householdId),
-        eq(monthlyBudgets.year, year),
-        eq(monthlyBudgets.month, month),
-      ),
-    );
-  if (existing) return existing;
-
-  const [created] = await db
+  const [budget] = await db
     .insert(monthlyBudgets)
     .values({ householdId, year, month })
+    .onConflictDoUpdate({
+      set: { householdId },
+      target: [monthlyBudgets.householdId, monthlyBudgets.year, monthlyBudgets.month],
+    })
     .returning();
-  return created;
+  return budget;
 }
 
 export async function getBudgetItemsForMonth(year: number, month: number) {

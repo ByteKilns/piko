@@ -1,7 +1,16 @@
 import { getDateFormatPref } from "@/lib/date-format-cookie";
 import { nextMonth, parseMonthParam, previousMonth } from "@/lib/month-nav";
-import { currentPeriodYearMonth, formatPeriodLabel, MAX_NAVIGABLE_YEAR, MIN_NAVIGABLE_YEAR } from "@/lib/month-period";
+import {
+  currentPeriodYearMonth,
+  dayNumberInPeriod,
+  daysElapsedInPeriod,
+  formatPeriodLabel,
+  MAX_NAVIGABLE_YEAR,
+  MIN_NAVIGABLE_YEAR,
+  resolvePeriod,
+} from "@/lib/month-period";
 import { getEffectiveMember, getHouseholdMembers } from "@/lib/session";
+import { buildPacingSchedule, currentWeekPacing } from "@/modules/budget-planner/lib/pacing";
 import {
   getBudgetItemsForMonth,
   getIncomesForMonth,
@@ -175,6 +184,23 @@ export async function DashboardPage({ searchParams }: Props) {
   const safeToSpend = safeToSpendToday(totalPlanned, summary.totalExpenses + netOutflow, year, month, dateFormat);
   const daysLeft = daysLeftInMonth(year, month, dateFormat);
 
+  // Weekly pacing over the flexible part of the budget (fixed commitments are
+  // already spoken for). Surfaced on SafeToSpendCard as "this week".
+  const period = resolvePeriod(year, month, dateFormat);
+  const flexiblePlanned = budgetItemRows
+    .filter((b) => category(b.categoryId)?.budgetType === "flexible")
+    .reduce((s, b) => s + Number(b.plannedAmount), 0);
+  const pacingSchedule =
+    flexiblePlanned > 0 ? buildPacingSchedule({ daysInPeriod: period.daysInPeriod, flexibleTotal: flexiblePlanned }) : null;
+  const dayOfPeriod =
+    year === currentYear && month === currentMonth ? daysElapsedInPeriod(period) : period.daysInPeriod;
+  const spentByDay = new Array<number>(period.daysInPeriod).fill(0);
+  for (const expense of expenseRows) {
+    const day = dayNumberInPeriod(expense.date, year, month, dateFormat);
+    if (day !== null) spentByDay[day - 1] += Number(expense.amount);
+  }
+  const weekPacing = pacingSchedule ? currentWeekPacing(pacingSchedule, dayOfPeriod, spentByDay) : null;
+
   const savingsStats = savingsOverviewStats(
     goalRows.map((g) => ({
       createdAt: g.createdAt,
@@ -202,6 +228,7 @@ export async function DashboardPage({ searchParams }: Props) {
       <SafeToSpendCard
         daysLeft={daysLeft}
         monthLabel={monthLabel}
+        pacing={pacingSchedule && weekPacing ? { schedule: pacingSchedule, week: weekPacing } : null}
         safeToSpend={safeToSpend}
         totalActual={summary.totalExpenses + netOutflow}
         totalPlanned={totalPlanned}
