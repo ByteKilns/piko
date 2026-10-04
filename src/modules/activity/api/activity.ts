@@ -7,6 +7,7 @@ import {
   type ActivityEntityType,
   type ActivityLog,
   activityLogs,
+  type ActivitySnapshot,
   type ActivitySource,
 } from "@/db/schema";
 import { getDateFormatPref } from "@/lib/date-format-cookie";
@@ -17,6 +18,7 @@ import { encodeCursor, escapeLike } from "../lib/activity-query";
 import { kathmanduDayStart, kathmanduNextDayStart } from "../lib/activity-time";
 import { type ActivityFormatters, activityFormatters } from "../lib/activity-values";
 import { actionsForGroup, entityTypesForSection } from "../lib/sections";
+import { toSnapshot } from "../lib/snapshot";
 import type { ActivityFilters } from "../schemas/activity-filter.schema";
 
 export const ACTIVITY_PAGE_SIZE = 50;
@@ -25,11 +27,17 @@ export type ActivityActor = Pick<CurrentMember, "householdId" | "memberId" | "na
 
 export type ActivityEntry = {
   action: ActivityAction;
+  // Raw rows for revert support; omit where the action has none.
+  after?: null | object;
+  before?: null | object;
   // Omit for entries that aren't field edits. An empty array means "saved,
   // but nothing actually changed" and the entry is skipped.
   changes?: ActivityChange[];
   entityId: null | string;
   entityType: ActivityEntityType;
+  related?: Record<string, object[]>;
+  // Set when this entry records a revert of another entry.
+  revertOfId?: string;
   summary: string;
 };
 
@@ -48,10 +56,14 @@ export async function logActivities(actor: ActivityActor, entries: ActivityEntry
       action: entry.action,
       actorMemberId: actor.memberId,
       actorName: actor.name,
+      after: entry.after ? toSnapshot(entry.after) : null,
+      before: entry.before ? toSnapshot(entry.before) : null,
       changes: entry.changes ?? null,
       entityId: entry.entityId,
       entityType: entry.entityType,
       householdId: actor.householdId,
+      related: entry.related ? (toSnapshot(entry.related) as Record<string, ActivitySnapshot[]>) : null,
+      revertOfId: entry.revertOfId ?? null,
       source: actor.source,
       summary: entry.summary,
     })),

@@ -38,6 +38,8 @@ export type ActivityEntityType = (typeof activityEntityTypeEnum.enumValues)[numb
 export type ActivitySource = (typeof activitySourceEnum.enumValues)[number];
 // One field's before/after on an "updated" entry, already formatted for display.
 export type ActivityChange = { field: string; from: null | string; to: null | string };
+// Raw column values (Drizzle field names) of a row, as stored in jsonb.
+export type ActivitySnapshot = Record<string, unknown>;
 
 // Append-only audit trail of household data changes (see
 // src/modules/activity). Rows are written by the mutating actions themselves,
@@ -59,6 +61,16 @@ export const activityLogs = pgTable(
     // Display text written at log time, e.g. "Groceries · RS 1,200 · Shared".
     summary: text("summary").notNull(),
     changes: jsonb("changes").$type<ActivityChange[]>(),
+    // Raw row just before / after the action, for reverting. null where the
+    // row didn't exist, and on entries without revert support (account,
+    // import, anything logged before revert shipped).
+    before: jsonb("before").$type<ActivitySnapshot>(),
+    after: jsonb("after").$type<ActivitySnapshot>(),
+    // Rows removed or unlinked along with the entity, by kind
+    // (e.g. { loanPayments: [...] } when deleting a loan cascaded them).
+    related: jsonb("related").$type<Record<string, ActivitySnapshot[]>>(),
+    // Set on the entry a revert writes: the entry that was reverted.
+    revertOfId: uuid("revert_of_id"),
     source: activitySourceEnum("source").notNull(),
     // Millisecond precision (not Postgres' default microseconds) so a JS Date
     // round-trips exactly — the "Older activity" keyset cursor compares
