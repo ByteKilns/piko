@@ -6,7 +6,9 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { loanPayments, loans } from "@/db/schema";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
+import { activityActor, loadActivityFormatters, logActivity } from "@/modules/activity/api/activity";
 import { formatNPR } from "@/modules/dashboard/lib/format";
+import { loanChanges, loanPaymentSummary, loanSummary } from "@/modules/loans/lib/loan-activity";
 import { type LoanInput, type LoanPaymentInput, loanPaymentSchema, loanSchema } from "@/modules/loans/schemas/loan.schema";
 import { insertNotification } from "@/modules/notifications/api/notifications.actions";
 
@@ -38,14 +40,20 @@ export async function listLoanPayments(householdId: string) {
     .orderBy(desc(loanPayments.date), desc(loanPayments.createdAt));
 }
 
+async function findLoanInHousehold(householdId: string, loanId: string) {
+  const [loan] = await db.select().from(loans).where(and(eq(loans.id, loanId), eq(loans.householdId, householdId)));
+  return loan;
+}
+
 export async function createLoanAction(input: LoanInput) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const parsed = loanSchema.parse(input);
   if (parsed.ownerMemberId) {
     await assertMemberInHousehold(householdId, parsed.ownerMemberId);
   }
 
-  await db.insert(loans).values({
+  const [created] = await db.insert(loans).values({
     counterpartyName: parsed.counterpartyName,
     date: parsed.date,
     direction: parsed.direction,
@@ -57,17 +65,29 @@ export async function createLoanAction(input: LoanInput) {
     note: parsed.note?.trim() || null,
     ownerMemberId: parsed.ownerMemberId,
     principalAmount: String(parsed.principalAmount),
+  }).returning();
+
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "created",
+    entityId: created.id,
+    entityType: "loan",
+    summary: loanSummary(f, created),
   });
 
   revalidateLoansPaths();
 }
 
 export async function updateLoanAction(id: string, input: LoanInput) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const parsed = loanSchema.parse(input);
   if (parsed.ownerMemberId) {
     await assertMemberInHousehold(householdId, parsed.ownerMemberId);
   }
+
+  const before = await findLoanInHousehold(householdId, id);
+  if (!before) return;
 
   await db
     .update(loans)
@@ -85,18 +105,39 @@ export async function updateLoanAction(id: string, input: LoanInput) {
     })
     .where(and(eq(loans.id, id), eq(loans.householdId, householdId)));
 
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "updated",
+    changes: loanChanges(f, before, parsed),
+    entityId: id,
+    entityType: "loan",
+    summary: loanSummary(f, parsed),
+  });
+
   revalidateLoansPaths();
 }
 
 export async function deleteLoanAction(id: string) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
+  const before = await findLoanInHousehold(householdId, id);
+  if (!before) return;
+
   await db.delete(loans).where(and(eq(loans.id, id), eq(loans.householdId, householdId)));
+
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "deleted",
+    entityId: id,
+    entityType: "loan",
+    summary: loanSummary(f, before),
+  });
 
   revalidateLoansPaths();
 }
 
 async function getLoanInHousehold(householdId: string, loanId: string) {
-  const [loan] = await db.select().from(loans).where(and(eq(loans.id, loanId), eq(loans.householdId, householdId)));
+  const loan = await findLoanInHousehold(householdId, loanId);
   if (!loan) {
     throw new Error("Loan does not belong to this household");
   }
@@ -114,7 +155,8 @@ function advanceInstallmentDate(dateStr: string, frequency: "monthly" | "weekly"
 }
 
 export async function addLoanPaymentAction(loanId: string, input: LoanPaymentInput) {
-  const { householdId, name: actorName } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId, name: actorName } = member;
   const parsed = loanPaymentSchema.parse(input);
   const loan = await getLoanInHousehold(householdId, loanId);
   await assertMemberInHousehold(householdId, parsed.memberId);
@@ -160,16 +202,33 @@ export async function addLoanPaymentAction(loanId: string, input: LoanPaymentInp
     title: "Loan payment recorded",
   });
 
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "created",
+    entityId: created.id,
+    entityType: "loan_payment",
+    summary: loanPaymentSummary(f, created, loan),
+  });
+
   revalidateLoansPaths();
 }
 
 export async function deleteLoanPaymentAction(id: string) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const [payment] = await db.select().from(loanPayments).where(eq(loanPayments.id, id));
   if (!payment) return;
-  await getLoanInHousehold(householdId, payment.loanId);
+  const loan = await getLoanInHousehold(householdId, payment.loanId);
 
   await db.delete(loanPayments).where(eq(loanPayments.id, id));
+
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "deleted",
+    entityId: id,
+    entityType: "loan_payment",
+    summary: loanPaymentSummary(f, payment, loan),
+  });
 
   revalidateLoansPaths();
 }
