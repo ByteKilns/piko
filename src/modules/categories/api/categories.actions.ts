@@ -6,7 +6,9 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { categories } from "@/db/schema";
 import { getCurrentMember } from "@/lib/session";
+import { activityActor, logActivity } from "@/modules/activity/api/activity";
 
+import { categoryChanges, categorySummary } from "../lib/category-activity";
 import { type CategoryInput, categorySchema } from "../schemas/category.schema";
 
 function revalidateCategoryPaths() {
@@ -16,8 +18,17 @@ function revalidateCategoryPaths() {
   revalidatePath("/dashboard");
 }
 
+async function findCategoryInHousehold(householdId: string, id: string) {
+  const [category] = await db
+    .select()
+    .from(categories)
+    .where(and(eq(categories.id, id), eq(categories.householdId, householdId)));
+  return category;
+}
+
 export async function createCategoryAction(input: CategoryInput) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const parsed = categorySchema.parse(input);
 
   const [category] = await db
@@ -36,19 +47,59 @@ export async function createCategoryAction(input: CategoryInput) {
       name: categories.name,
     });
 
+  await logActivity(activityActor(member), {
+    action: "created",
+    entityId: category.id,
+    entityType: "category",
+    summary: categorySummary(category),
+  });
+
   revalidateCategoryPaths();
 
   return category;
 }
 
 export async function updateCategoryAction(id: string, input: CategoryInput) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const parsed = categorySchema.parse(input);
+
+  const before = await findCategoryInHousehold(householdId, id);
+  if (!before) return;
 
   await db
     .update(categories)
     .set({ budgetType: parsed.budgetType, groupName: parsed.groupName, name: parsed.name })
     .where(and(eq(categories.id, id), eq(categories.householdId, householdId)));
+
+  await logActivity(activityActor(member), {
+    action: "updated",
+    changes: categoryChanges(before, parsed),
+    entityId: id,
+    entityType: "category",
+    summary: categorySummary(parsed),
+  });
+
+  revalidateCategoryPaths();
+}
+
+async function setCategoryArchived(id: string, archived: boolean) {
+  const member = await getCurrentMember();
+  const { householdId } = member;
+  const before = await findCategoryInHousehold(householdId, id);
+  if (!before || before.archived === archived) return;
+
+  await db
+    .update(categories)
+    .set({ archived })
+    .where(and(eq(categories.id, id), eq(categories.householdId, householdId)));
+
+  await logActivity(activityActor(member), {
+    action: archived ? "archived" : "restored",
+    entityId: id,
+    entityType: "category",
+    summary: categorySummary(before),
+  });
 
   revalidateCategoryPaths();
 }
@@ -59,23 +110,9 @@ export async function updateCategoryAction(id: string, input: CategoryInput) {
 // against that category. archived=true keeps history intact while
 // removing the category from listCategories' default (active-only) view.
 export async function archiveCategoryAction(id: string) {
-  const { householdId } = await getCurrentMember();
-
-  await db
-    .update(categories)
-    .set({ archived: true })
-    .where(and(eq(categories.id, id), eq(categories.householdId, householdId)));
-
-  revalidateCategoryPaths();
+  await setCategoryArchived(id, true);
 }
 
 export async function restoreCategoryAction(id: string) {
-  const { householdId } = await getCurrentMember();
-
-  await db
-    .update(categories)
-    .set({ archived: false })
-    .where(and(eq(categories.id, id), eq(categories.householdId, householdId)));
-
-  revalidateCategoryPaths();
+  await setCategoryArchived(id, false);
 }

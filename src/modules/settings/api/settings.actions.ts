@@ -10,12 +10,15 @@ import { households, users } from "@/db/schema";
 import { ACCENT_COLOR_COOKIE_NAME, isAccentColor } from "@/lib/accent-color-cookie";
 import { isDateFormat } from "@/lib/date-format-cookie";
 import { getCurrentMember } from "@/lib/session";
+import { activityActor, logActivity } from "@/modules/activity/api/activity";
 
+import { dateFormatChanges, dateFormatLabel, plannerChanges } from "../lib/settings-activity";
 import { type ChangePasswordInput, changePasswordSchema } from "../schemas/password.schema";
 import { profileImageSchema } from "../schemas/profile-image.schema";
 
 export async function changePasswordAction(input: ChangePasswordInput) {
-  const { userId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { userId } = member;
   const parsed = changePasswordSchema.parse(input);
 
   const [user] = await db.select().from(users).where(eq(users.id, userId));
@@ -26,13 +29,29 @@ export async function changePasswordAction(input: ChangePasswordInput) {
 
   const passwordHash = await bcrypt.hash(parsed.newPassword, 12);
   await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
+
+  // No detail beyond the fact it happened.
+  await logActivity(activityActor(member), {
+    action: "updated",
+    entityId: member.memberId,
+    entityType: "account",
+    summary: "Changed their password",
+  });
 }
 
 export async function updateProfileImageAction(imageDataUrl: string) {
-  const { userId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { userId } = member;
   const parsed = profileImageSchema.parse(imageDataUrl);
 
   await db.update(users).set({ image: parsed }).where(eq(users.id, userId));
+
+  await logActivity(activityActor(member), {
+    action: "updated",
+    entityId: member.memberId,
+    entityType: "account",
+    summary: "Changed their profile photo",
+  });
   revalidatePath("/", "layout");
 }
 
@@ -53,13 +72,33 @@ export async function setAccentColorAction(color: string) {
 export async function setDateFormatAction(format: string) {
   if (!isDateFormat(format)) throw new Error("Invalid date format");
 
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
+  const [before] = await db.select().from(households).where(eq(households.id, householdId));
   await db.update(households).set({ dateFormat: format }).where(eq(households.id, householdId));
+
+  await logActivity(activityActor(member), {
+    action: "updated",
+    changes: dateFormatChanges(before.dateFormat, format),
+    entityId: householdId,
+    entityType: "household_settings",
+    summary: `Date format → ${dateFormatLabel(format)}`,
+  });
   revalidatePath("/", "layout");
 }
 
 export async function setPlannerEnabledAction(enabled: boolean) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
+  const [before] = await db.select().from(households).where(eq(households.id, householdId));
   await db.update(households).set({ plannerEnabled: enabled }).where(eq(households.id, householdId));
+
+  await logActivity(activityActor(member), {
+    action: "updated",
+    changes: plannerChanges(before.plannerEnabled, enabled),
+    entityId: householdId,
+    entityType: "household_settings",
+    summary: `AI budget planner → ${enabled ? "On" : "Off"}`,
+  });
   revalidatePath("/", "layout");
 }
