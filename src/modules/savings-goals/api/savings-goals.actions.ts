@@ -6,8 +6,10 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { savingsContributions, savingsGoals } from "@/db/schema";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
+import { activityActor, loadActivityFormatters, logActivity } from "@/modules/activity/api/activity";
 import { formatNPR } from "@/modules/dashboard/lib/format";
 import { insertNotification } from "@/modules/notifications/api/notifications.actions";
+import { contributionSummary, goalChanges, goalSummary } from "@/modules/savings-goals/lib/savings-activity";
 import { type ContributionInput, contributionSchema, type SavingsGoalInput, savingsGoalSchema } from "@/modules/savings-goals/schemas/savings-goal.schema";
 
 function revalidateSavingsGoalsPaths() {
@@ -20,6 +22,14 @@ async function assertMemberInHousehold(householdId: string, memberId: string) {
   if (!members.some((m) => m.id === memberId)) {
     throw new Error("Member does not belong to this household");
   }
+}
+
+async function findGoalInHousehold(householdId: string, goalId: string) {
+  const [goal] = await db
+    .select()
+    .from(savingsGoals)
+    .where(and(eq(savingsGoals.id, goalId), eq(savingsGoals.householdId, householdId)));
+  return goal;
 }
 
 export async function listSavingsGoals(householdId: string) {
@@ -39,31 +49,47 @@ export async function listSavingsContributions(householdId: string) {
 }
 
 export async function createSavingsGoalAction(input: SavingsGoalInput) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const parsed = savingsGoalSchema.parse(input);
   if (parsed.ownerMemberId) {
     await assertMemberInHousehold(householdId, parsed.ownerMemberId);
   }
 
-  await db.insert(savingsGoals).values({
-    description: parsed.description?.trim() || null,
-    householdId,
-    image: parsed.image,
-    name: parsed.name,
-    ownerMemberId: parsed.ownerMemberId,
-    targetAmount: parsed.targetAmount === null ? null : String(parsed.targetAmount),
-    targetDate: parsed.targetDate,
+  const [created] = await db
+    .insert(savingsGoals)
+    .values({
+      description: parsed.description?.trim() || null,
+      householdId,
+      image: parsed.image,
+      name: parsed.name,
+      ownerMemberId: parsed.ownerMemberId,
+      targetAmount: parsed.targetAmount === null ? null : String(parsed.targetAmount),
+      targetDate: parsed.targetDate,
+    })
+    .returning();
+
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "created",
+    entityId: created.id,
+    entityType: "savings_goal",
+    summary: goalSummary(f, created),
   });
 
   revalidateSavingsGoalsPaths();
 }
 
 export async function updateSavingsGoalAction(id: string, input: SavingsGoalInput) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const parsed = savingsGoalSchema.parse(input);
   if (parsed.ownerMemberId) {
     await assertMemberInHousehold(householdId, parsed.ownerMemberId);
   }
+
+  const before = await findGoalInHousehold(householdId, id);
+  if (!before) return;
 
   await db
     .update(savingsGoals)
@@ -77,21 +103,39 @@ export async function updateSavingsGoalAction(id: string, input: SavingsGoalInpu
     })
     .where(and(eq(savingsGoals.id, id), eq(savingsGoals.householdId, householdId)));
 
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "updated",
+    changes: goalChanges(f, before, parsed),
+    entityId: id,
+    entityType: "savings_goal",
+    summary: goalSummary(f, parsed),
+  });
+
   revalidateSavingsGoalsPaths();
 }
 
 export async function deleteSavingsGoalAction(id: string) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
+  const before = await findGoalInHousehold(householdId, id);
+  if (!before) return;
+
   await db.delete(savingsGoals).where(and(eq(savingsGoals.id, id), eq(savingsGoals.householdId, householdId)));
+
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "deleted",
+    entityId: id,
+    entityType: "savings_goal",
+    summary: goalSummary(f, before),
+  });
 
   revalidateSavingsGoalsPaths();
 }
 
 async function getGoalInHousehold(householdId: string, goalId: string) {
-  const [goal] = await db
-    .select()
-    .from(savingsGoals)
-    .where(and(eq(savingsGoals.id, goalId), eq(savingsGoals.householdId, householdId)));
+  const goal = await findGoalInHousehold(householdId, goalId);
   if (!goal) {
     throw new Error("Goal does not belong to this household");
   }
@@ -99,7 +143,8 @@ async function getGoalInHousehold(householdId: string, goalId: string) {
 }
 
 export async function addContributionAction(goalId: string, input: ContributionInput) {
-  const { householdId, name: actorName } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId, name: actorName } = member;
   const parsed = contributionSchema.parse(input);
   const goal = await getGoalInHousehold(householdId, goalId);
   await assertMemberInHousehold(householdId, parsed.memberId);
@@ -121,6 +166,14 @@ export async function addContributionAction(goalId: string, input: ContributionI
     householdId,
     severity: "success",
     title: "New contribution added",
+  });
+
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "created",
+    entityId: created.id,
+    entityType: "savings_contribution",
+    summary: contributionSummary(f, created, goal.name),
   });
 
   revalidateSavingsGoalsPaths();
