@@ -20,6 +20,8 @@ const expense = {
   ownerMemberId: null,
   paidByMemberId: "m-2",
   recurringExpenseId: null,
+  // defaults to now() on insert, so a never-edited row is within a few ms of createdAt
+  updatedAt: at("2026-08-23T10:14:29.071Z"),
 };
 const loan = {
   counterpartyName: "Hari",
@@ -65,6 +67,26 @@ describe("buildBackfillRows", () => {
     ]);
   });
 
+  it("adds an imported edit, without field changes, for an expense updated after it was created", () => {
+    const edited = { ...expense, amount: "1500.00", updatedAt: at("2026-10-02T04:46:13.234Z") };
+    const rows = build(source({ expenses: [edited] }));
+    expect(rows.map((r) => [r.action, r.createdAt, r.actorName, r.summary, r.changes])).toEqual([
+      ["created", expense.createdAt, "Ravi", "Groceries · RS 1,500 · Shared", undefined],
+      ["updated", edited.updatedAt, "Ravi", "Groceries · RS 1,500 · Shared", undefined],
+    ]);
+  });
+
+  it("treats an updatedAt within a second of creation as never edited", () => {
+    const rows = build(source({ expenses: [{ ...expense, updatedAt: at("2026-08-23T10:14:29.900Z") }] }));
+    expect(rows.map((r) => r.action)).toEqual(["created"]);
+  });
+
+  it("skips an imported edit when the expense already has a logged edit", () => {
+    const edited = { ...expense, updatedAt: at("2026-10-02T04:46:13.234Z") };
+    const rows = build(source({ expenses: [edited] }), new Set(["updated:expense:e-1"]));
+    expect(rows.map((r) => r.action)).toEqual(["created"]);
+  });
+
   it("logs a recurring-bill expense as the bill being marked paid plus the expense", () => {
     const recurring = {
       amount: "1500.00",
@@ -101,7 +123,7 @@ describe("buildBackfillRows", () => {
   });
 
   it("skips anything already in the log, so re-running adds nothing", () => {
-    const rows = build(source({ expenses: [expense], loans: [loan] }), new Set(["expense:e-1"]));
+    const rows = build(source({ expenses: [expense], loans: [loan] }), new Set(["created:expense:e-1"]));
     expect(rows.map((r) => r.entityId)).toEqual(["l-1"]);
   });
 

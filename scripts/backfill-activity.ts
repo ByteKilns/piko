@@ -1,5 +1,6 @@
-// One-off: reconstructs "added" activity-log entries for rows that existed
-// before the activity log did (see src/modules/activity/lib/backfill.ts).
+// One-off: reconstructs "added" (and, for expenses, "edited") activity-log
+// entries for rows that existed before the activity log did (see
+// src/modules/activity/lib/backfill.ts).
 // Only ever INSERTs into activity_logs — no other table is written.
 //
 //   npx tsx scripts/backfill-activity.ts           # dry run: counts + samples
@@ -71,13 +72,13 @@ async function main() {
       };
 
       const logged = await db
-        .select({ entityId: activityLogs.entityId, entityType: activityLogs.entityType })
+        .select({ action: activityLogs.action, entityId: activityLogs.entityId, entityType: activityLogs.entityType })
         .from(activityLogs)
-        .where(and(eq(activityLogs.householdId, householdId), eq(activityLogs.action, "created")));
+        .where(and(eq(activityLogs.householdId, householdId), inArray(activityLogs.action, ["created", "updated"])));
 
       const memberNames = new Map(members.map((m) => [m.id, m.name]));
       const rows = buildBackfillRows({
-        alreadyLogged: new Set(logged.map((l) => `${l.entityType}:${l.entityId}`)),
+        alreadyLogged: new Set(logged.map((l) => `${l.action}:${l.entityType}:${l.entityId}`)),
         f: activityFormatters({
           categoryNames: new Map(categoryRows.map((c) => [c.id, c.name])),
           dateFormat: household.dateFormat,

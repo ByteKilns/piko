@@ -11,7 +11,7 @@ type Created = { createdAt: Date; id: string };
 export type BackfillSource = {
   dhukuEntries: (Created & { amount: number | string; dhukuId: string; type: string })[];
   dhukus: (Created & DhukuSnapshot)[];
-  expenses: (Created & ExpenseSnapshot & { recurringExpenseId: null | string })[];
+  expenses: (Created & ExpenseSnapshot & { recurringExpenseId: null | string; updatedAt: Date })[];
   loanPayments: (Created & { amount: number | string; loanId: string; memberId: string })[];
   loans: (Created & LoanSnapshot)[];
   recurring: (RecurringSnapshot & { id: string })[];
@@ -20,12 +20,18 @@ export type BackfillSource = {
 type BackfillRow = typeof activityLogs.$inferInsert;
 
 const UNKNOWN_ACTOR = "Imported";
+// updated_at defaults to now() on insert, so it trails created_at by a few ms
+// on rows that were never edited.
+const EDIT_THRESHOLD_MS = 1000;
 
 // Reconstructs "added" entries for rows that existed before the activity log
-// did. Nothing records who *entered* a row, so the actor is a best guess: an
-// expense's payer, a payment's payer, a loan/dhuku's owner (shared → unknown).
-// Every row is source "import" so the page can say so. `alreadyLogged` holds
-// "<entityType>:<entityId>" keys, which makes re-running add nothing.
+// did, plus one "edited" entry for each expense whose updated_at shows a later
+// edit (only expenses track that; what changed was never recorded, so those
+// entries carry no field changes). Nothing records who *entered* a row, so the
+// actor is a best guess: an expense's payer, a payment's payer, a loan/dhuku's
+// owner (shared → unknown). Every row is source "import" so the page can say
+// so. `alreadyLogged` holds "<action>:<entityType>:<entityId>" keys, which
+// makes re-running add nothing.
 export function buildBackfillRows({
   alreadyLogged,
   f,
@@ -40,7 +46,8 @@ export function buildBackfillRows({
   source: BackfillSource;
 }): BackfillRow[] {
   const rows: BackfillRow[] = [];
-  const isNew = (entityType: BackfillRow["entityType"], id: string) => !alreadyLogged.has(`${entityType}:${id}`);
+  const isNew = (entityType: BackfillRow["entityType"], id: string, action: BackfillRow["action"] = "created") =>
+    !alreadyLogged.has(`${action}:${entityType}:${id}`);
   const actor = (memberId: null | string) => {
     const name = memberId ? memberNames.get(memberId) : undefined;
     return name && memberId ? { actorMemberId: memberId, actorName: name } : { actorMemberId: null, actorName: UNKNOWN_ACTOR };
@@ -56,14 +63,20 @@ export function buildBackfillRows({
 
   const recurringById = new Map(source.recurring.map((r) => [r.id, r]));
   for (const expense of source.expenses) {
-    if (!isNew("expense", expense.id)) continue;
-    // Expenses created by "mark paid" get the same pair the live action logs.
-    const bill = expense.recurringExpenseId ? recurringById.get(expense.recurringExpenseId) : undefined;
-    if (bill) {
-      const summary = `${recurringSummary(f, bill)} · for ${f.date(expense.date)}`;
-      rows.push(row("recurring_expense", "paid", bill.id, expense.createdAt, expense.paidByMemberId, summary));
+    const summary = expenseSummary(f, expense);
+    if (isNew("expense", expense.id)) {
+      // Expenses created by "mark paid" get the same pair the live action logs.
+      const bill = expense.recurringExpenseId ? recurringById.get(expense.recurringExpenseId) : undefined;
+      if (bill) {
+        const billSummary = `${recurringSummary(f, bill)} · for ${f.date(expense.date)}`;
+        rows.push(row("recurring_expense", "paid", bill.id, expense.createdAt, expense.paidByMemberId, billSummary));
+      }
+      rows.push(row("expense", "created", expense.id, expense.createdAt, expense.paidByMemberId, summary));
     }
-    rows.push(row("expense", "created", expense.id, expense.createdAt, expense.paidByMemberId, expenseSummary(f, expense)));
+    const wasEdited = expense.updatedAt.getTime() - expense.createdAt.getTime() > EDIT_THRESHOLD_MS;
+    if (wasEdited && isNew("expense", expense.id, "updated")) {
+      rows.push(row("expense", "updated", expense.id, expense.updatedAt, expense.paidByMemberId, summary));
+    }
   }
 
   const loansById = new Map(source.loans.map((l) => [l.id, l]));
