@@ -51,6 +51,15 @@ describe("parseActivityFilters", () => {
     expect(filters).toEqual({});
   });
 
+  it("drops dates and cursors outside the range Postgres can store", () => {
+    // Chrome's date input passes through years like 0002 while a year is being typed.
+    const filters = parseActivityFilters(
+      { cursor: `999999999999999_${MEMBER}`, from: "0001-01-01", to: "0000-01-01" },
+      members,
+    );
+    expect(filters).toEqual({});
+  });
+
   it("uses the first value of repeated params and caps search length", () => {
     const filters = parseActivityFilters({ q: ["first", "second"], section: ["loans", "dhuku"] }, members);
     expect(filters).toEqual({ q: "first", section: "loans" });

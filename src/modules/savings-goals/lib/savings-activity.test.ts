@@ -26,6 +26,16 @@ describe("savings activity", () => {
     ]);
   });
 
+  it("records a photo change without exposing the image data", () => {
+    const withPhoto = { ...goal, image: "data:image/jpeg;base64,AAAA" };
+    expect(goalChanges(f, goal, withPhoto)).toEqual([{ field: "Photo", from: null, to: "New photo" }]);
+    expect(goalChanges(f, withPhoto, { ...withPhoto, image: "data:image/jpeg;base64,BBBB" })).toEqual([
+      { field: "Photo", from: "Old photo", to: "New photo" },
+    ]);
+    expect(goalChanges(f, withPhoto, { ...goal, image: null })).toEqual([{ field: "Photo", from: "Old photo", to: null }]);
+    expect(goalChanges(f, withPhoto, withPhoto)).toEqual([]);
+  });
+
   it("summarises a contribution", () => {
     expect(contributionSummary(f, { amount: "5000.00", memberId: "m-1" }, "Emergency fund")).toBe(
       "RS 5,000 to Emergency fund · by Asha",

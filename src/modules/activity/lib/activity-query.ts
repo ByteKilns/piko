@@ -11,6 +11,8 @@ export type ActivityFilterParams = {
 };
 
 const CURSOR_PATTERN = /^(\d{1,15})_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+// End of year 9999 — beyond it Postgres rejects the timestamp and the page would 500.
+const MAX_CURSOR_MS = 253402300799999;
 
 // "<createdAt ms>_<id>" — the last row on a page; the next page is everything
 // strictly older in (createdAt desc, id desc) order.
@@ -20,7 +22,7 @@ export function encodeCursor({ createdAt, id }: ActivityCursor): string {
 
 export function decodeCursor(raw: string): ActivityCursor | null {
   const match = CURSOR_PATTERN.exec(raw);
-  if (!match) return null;
+  if (!match || Number(match[1]) > MAX_CURSOR_MS) return null;
   return { createdAt: new Date(Number(match[1])), id: match[2] };
 }
 

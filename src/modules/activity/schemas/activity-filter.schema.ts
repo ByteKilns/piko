@@ -5,11 +5,18 @@ import { ACTION_GROUP_VALUES, type ActionGroup, type ActivitySection, SECTION_VA
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_QUERY_LENGTH = 100;
+// Postgres rejects year-0 timestamps, and Chrome's date input passes through
+// years like 0002 while a year is being typed — keep to a plausible window.
+const MIN_YEAR = 1900;
+const MAX_YEAR = 2999;
 
 // Rejects shape-valid but impossible dates like 2026-02-31.
 function isRealDate(value: string): boolean {
   const parsed = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(value);
+  const year = parsed.getUTCFullYear();
+  return (
+    !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(value) && year >= MIN_YEAR && year <= MAX_YEAR
+  );
 }
 
 const dateKey = z.string().regex(DATE_KEY).refine(isRealDate).optional().catch(undefined);
