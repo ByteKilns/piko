@@ -81,6 +81,7 @@ export async function createExpenseForHousehold(input: ExpenseInput, actor: Acti
   const f = await loadActivityFormatters(householdId);
   await logActivity(actor, {
     action: "created",
+    after: created,
     entityId: created.id,
     entityType: "expense",
     summary: expenseSummary(f, created),
@@ -165,6 +166,7 @@ export async function createExpensesBulkAction(inputs: ExpenseInput[]) {
     activityActor(member),
     created.map((row) => ({
       action: "created" as const,
+      after: row,
       entityId: row.id,
       entityType: "expense" as const,
       summary: expenseSummary(f, row),
@@ -188,7 +190,7 @@ export async function updateExpenseAction(id: string, input: ExpenseInput) {
   const before = await findExpenseInHousehold(householdId, id);
   if (!before) return;
 
-  await db
+  const [updated] = await db
     .update(expenses)
     .set({
       amount: String(parsed.amount),
@@ -199,11 +201,14 @@ export async function updateExpenseAction(id: string, input: ExpenseInput) {
       note: parsed.note ?? null,
       updatedAt: new Date(),
     })
-    .where(and(eq(expenses.id, id), eq(expenses.householdId, householdId)));
+    .where(and(eq(expenses.id, id), eq(expenses.householdId, householdId)))
+    .returning();
 
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "updated",
+    after: updated,
+    before,
     changes: expenseChanges(f, before, parsed),
     entityId: id,
     entityType: "expense",
@@ -227,6 +232,7 @@ export async function deleteExpenseAction(id: string) {
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "deleted",
+    before,
     entityId: id,
     entityType: "expense",
     summary: expenseSummary(f, before),

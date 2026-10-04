@@ -70,7 +70,7 @@ export async function setBudgetItemAction(input: SetBudgetItemInput) {
   // hidden duplicate that `budgetItems.find()` on the page may or may not
   // surface. Wrapped in the same transaction as the upsert so the
   // delete+write is atomic.
-  const itemId = await db.transaction(async (tx) => {
+  const item = await db.transaction(async (tx) => {
     await tx
       .delete(budgetItems)
       .where(
@@ -106,11 +106,12 @@ export async function setBudgetItemAction(input: SetBudgetItemInput) {
         .for("update");
 
       if (existing) {
-        await tx
+        const [updated] = await tx
           .update(budgetItems)
           .set({ plannedAmount: String(parsed.plannedAmount) })
-          .where(eq(budgetItems.id, existing.id));
-        return existing.id;
+          .where(eq(budgetItems.id, existing.id))
+          .returning();
+        return updated;
       }
       const [inserted] = await tx
         .insert(budgetItems)
@@ -120,8 +121,8 @@ export async function setBudgetItemAction(input: SetBudgetItemInput) {
           ownerMemberId: null,
           plannedAmount: String(parsed.plannedAmount),
         })
-        .returning({ id: budgetItems.id });
-      return inserted.id;
+        .returning();
+      return inserted;
     } else {
       // For a non-null owner, the composite unique constraint does detect
       // conflicts correctly, so the atomic upsert is safe here.
@@ -137,19 +138,20 @@ export async function setBudgetItemAction(input: SetBudgetItemInput) {
           target: [budgetItems.monthlyBudgetId, budgetItems.categoryId, budgetItems.ownerMemberId],
           set: { plannedAmount: String(parsed.plannedAmount) },
         })
-        .returning({ id: budgetItems.id });
-      return upserted.id;
+        .returning();
+      return upserted;
     }
   });
 
+  const itemId = item.id;
   const f = await loadActivityFormatters(householdId);
   const after = { categoryId: parsed.categoryId, ownerMemberId: parsed.ownerMemberId, plannedAmount: parsed.plannedAmount };
   const summary = budgetItemSummary(f, after, { month: parsed.month, year: parsed.year });
   await logActivity(
     activityActor(member),
     before
-      ? { action: "updated", changes: budgetItemChanges(f, before, after), entityId: itemId, entityType: "budget_item", summary }
-      : { action: "created", entityId: itemId, entityType: "budget_item", summary },
+      ? { action: "updated", after: item, before, changes: budgetItemChanges(f, before, after), entityId: itemId, entityType: "budget_item", summary }
+      : { action: "created", after: item, before: null, entityId: itemId, entityType: "budget_item", summary },
   );
 
   revalidatePath("/budget");
@@ -203,6 +205,7 @@ export async function copyPreviousMonthBudgetAction(year: number, month: number)
       activityActor(member),
       inserted.map((item) => ({
         action: "created" as const,
+        after: item,
         entityId: item.id,
         entityType: "budget_item" as const,
         summary: budgetItemSummary(f, item, { month, year }),
@@ -263,15 +266,15 @@ export async function setIncomeAction(input: SetIncomeInput) {
       target: [incomes.memberId, incomes.year, incomes.month],
       set: { amount: String(parsed.amount), note: parsed.note ?? null },
     })
-    .returning({ id: incomes.id });
+    .returning();
 
   const f = await loadActivityFormatters(householdId);
   const after = { amount: parsed.amount, memberId: parsed.memberId, month: parsed.month, note: parsed.note, year: parsed.year };
   await logActivity(
     activityActor(member),
     before
-      ? { action: "updated", changes: incomeChanges(f, before, after), entityId: saved.id, entityType: "income", summary: incomeSummary(f, after) }
-      : { action: "created", entityId: saved.id, entityType: "income", summary: incomeSummary(f, after) },
+      ? { action: "updated", after: saved, before, changes: incomeChanges(f, before, after), entityId: saved.id, entityType: "income", summary: incomeSummary(f, after) }
+      : { action: "created", after: saved, before: null, entityId: saved.id, entityType: "income", summary: incomeSummary(f, after) },
   );
 
   revalidatePath("/budget");
