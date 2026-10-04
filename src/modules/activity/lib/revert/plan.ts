@@ -48,12 +48,25 @@ function labelOf(fields: FieldSpec<Row>[], key: string): string {
   return fields.find((s) => s.key === key)?.label ?? key;
 }
 
-// current → target for every displayed field whose raw value differs. Two raw
-// values can format the same (e.g. two photos), so those still get a line.
-function describeChanges(fields: FieldSpec<Row>[], current: Row, target: Row): ActivityChange[] {
+type Differs = (key: string, a: unknown, b: unknown) => boolean;
+
+// Like the log's diffFields, a field differs only when its *formatted* value
+// does, so "" vs null or "1200.00" vs 1200 never count as a change. Opaque
+// fields (e.g. a photo) format the same whatever they hold, so they compare raw.
+function differsFor(config: EntityRevert, fields: FieldSpec<Row>[]): Differs {
+  return (key, a, b) => {
+    const spec = fields.find((s) => s.key === key);
+    if (!spec || config.opaque?.includes(key)) return !rawEqual(a, b);
+    return spec.format(a) !== spec.format(b);
+  };
+}
+
+// current → target for every displayed field that differs. Only an opaque
+// field can differ while formatting the same, so it gets a generic line.
+function describeChanges(fields: FieldSpec<Row>[], differs: Differs, current: Row, target: Row): ActivityChange[] {
   const changes: ActivityChange[] = [];
   for (const spec of fields) {
-    if (rawEqual(current[spec.key], target[spec.key])) continue;
+    if (!differs(spec.key, current[spec.key], target[spec.key])) continue;
     const from = spec.format(current[spec.key]);
     const to = spec.format(target[spec.key]);
     changes.push(from === to ? { field: spec.label, from: "Current version", to: "Earlier version" } : { field: spec.label, from, to });
@@ -76,20 +89,21 @@ function planUpdate(config: EntityRevert, fields: FieldSpec<Row>[], entry: Rever
   const current = context.row;
   if (!current) return blocked(`This ${config.noun} has since been deleted — revert that deletion first.`);
 
-  const keys = config.editable.filter((key) => key in before && (mode === "restore" || !rawEqual(before[key], after[key])));
+  const differs = differsFor(config, fields);
+  const keys = config.editable.filter((key) => key in before && (mode === "restore" || differs(key, before[key], after[key])));
   const set: Row = {};
-  for (const key of keys) if (!rawEqual(current[key], before[key])) set[key] = before[key] ?? null;
+  for (const key of keys) if (differs(key, current[key], before[key])) set[key] = before[key] ?? null;
   if (Object.keys(set).length === 0) return noop("Already back to how it was.");
 
   const target = { ...current, ...set };
   const warnings = Object.keys(set)
-    .filter((key) => key in after && !rawEqual(current[key], after[key]))
+    .filter((key) => key in after && differs(key, current[key], after[key]))
     .map((key) => {
       const spec = fields.find((s) => s.key === key);
       const now = spec?.format(current[key]);
       return `This also overrides a later change to ${labelOf(fields, key)}${now ? ` (now ${now})` : ""}.`;
     });
-  return { changes: describeChanges(fields, current, target), kind: "apply", operation: { set, type: "update" }, warnings };
+  return { changes: describeChanges(fields, differs, current, target), kind: "apply", operation: { set, type: "update" }, warnings };
 }
 
 function planRemove(config: EntityRevert, fields: FieldSpec<Row>[], entry: RevertableEntry, context: RevertContext, f: ActivityFormatters): RevertPlan {
@@ -136,21 +150,28 @@ function planRestore(config: EntityRevert, fields: FieldSpec<Row>[], entry: Reve
   return { changes: describeRow(fields, before, "restore"), kind: "apply", operation: { related, row: before, type: "insert" }, warnings };
 }
 
-function planUnpay(fields: FieldSpec<Row>[], entry: RevertableEntry, context: RevertContext, f: ActivityFormatters): RevertPlan {
+function planUnpay(
+  config: EntityRevert,
+  fields: FieldSpec<Row>[],
+  entry: RevertableEntry,
+  context: RevertContext,
+  f: ActivityFormatters,
+): RevertPlan {
   const before = entry.before ?? {};
   const after = entry.after ?? {};
   const bill = context.row;
   if (!bill) return blocked("This recurring bill has since been deleted — revert that deletion first.");
 
+  const differs = differsFor(config, fields);
   const set: Row = {};
-  for (const key of ["nextDueDate", "status"]) if (key in before && !rawEqual(bill[key], before[key])) set[key] = before[key] ?? null;
+  for (const key of ["nextDueDate", "status"]) if (key in before && differs(key, bill[key], before[key])) set[key] = before[key] ?? null;
   const expense = context.children.createdExpense?.[0] ?? null;
   if (!expense && Object.keys(set).length === 0) return noop("Already back to how it was.");
 
-  const changes = describeChanges(fields, bill, { ...bill, ...set });
+  const changes = describeChanges(fields, differs, bill, { ...bill, ...set });
   if (expense) changes.push({ field: "Expense", from: expenseSummary(f, expense as ExpenseSnapshot), to: null });
   const warnings: string[] = [];
-  if ("nextDueDate" in set && !rawEqual(bill.nextDueDate, after.nextDueDate)) {
+  if ("nextDueDate" in set && differs("nextDueDate", bill.nextDueDate, after.nextDueDate)) {
     warnings.push(`This also overrides a later change to Next due (now ${f.date(bill.nextDueDate)}).`);
   }
   if (!expense) warnings.push("The expense it created was already removed.");
@@ -164,6 +185,6 @@ export function planRevert(entry: RevertableEntry, context: RevertContext, mode:
 
   if (entry.action === "created") return planRemove(config, fields, entry, context, f);
   if (entry.action === "deleted") return planRestore(config, fields, entry, context);
-  if (entry.action === "paid") return planUnpay(fields, entry, context, f);
+  if (entry.action === "paid") return planUnpay(config, fields, entry, context, f);
   return planUpdate(config, fields, entry, context, mode);
 }

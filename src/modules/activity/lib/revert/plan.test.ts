@@ -61,6 +61,27 @@ describe("planRevert — edits", () => {
     });
   });
 
+  describe("compares fields by formatted value, like the log", () => {
+    // Note null → "" formats the same (no note), so this edit changed only the amount.
+    const blankNote = entry({ action: "updated", after: { ...after2pm, note: "" }, before: { ...original, note: null }, entityType: "expense" });
+
+    it("ignores a representation-only change when undoing", () => {
+      expect(planRevert(blankNote, context({ ...after2pm, note: "" }), "undo", f)).toEqual({
+        changes: [{ field: "Amount", from: "RS 800", to: "RS 500" }],
+        kind: "apply",
+        operation: { set: { amount: "500.00" }, type: "update" },
+        warnings: [],
+      });
+    });
+
+    it("is a no-op once the real change is already reverted", () => {
+      expect(planRevert(blankNote, context({ ...original, note: "" }), "undo", f)).toEqual({
+        kind: "noop",
+        reason: "Already back to how it was.",
+      });
+    });
+  });
+
   it("is blocked when the item was deleted since", () => {
     expect(planRevert(edit2pm, context(null), "undo", f)).toEqual({
       kind: "blocked",

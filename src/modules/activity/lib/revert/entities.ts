@@ -20,6 +20,8 @@ export type EntityRevert = {
   editable: string[];
   fields: (f: ActivityFormatters) => FieldSpec<Row>[];
   noun: string;
+  // Fields whose formatted value can't show a difference, so they compare raw.
+  opaque?: string[];
   parentNoun?: string;
   references: (row: Row) => { categoryIds: string[]; memberIds: string[]; parentId?: string };
   summary: (f: ActivityFormatters, row: Row) => string;
@@ -162,6 +164,7 @@ export const ENTITY_REVERT: Partial<Record<ActivityEntityType, EntityRevert>> = 
     editable: ["description", "image", "name", "ownerMemberId", "targetAmount", "targetDate"],
     fields: (f) => [...rowFields(goalFields(f)), { format: (v) => (v ? "Photo" : null), key: "image", label: "Photo" }],
     noun: "savings goal",
+    opaque: ["image"],
     references: (r) => ({ categoryIds: [], memberIds: ids(r.ownerMemberId) }),
     summary: (f, r) => goalSummary(f, r as SavingsGoalSnapshot),
   },
