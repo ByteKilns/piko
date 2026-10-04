@@ -1,4 +1,15 @@
-import type { ActivityAction, ActivityEntityType } from "@/db/schema";
+import type { ActivityAction, ActivityEntityType, ActivitySource } from "@/db/schema";
+
+const SOURCE_BADGES: Record<ActivitySource, null | string> = {
+  import: "imported",
+  mobile: "via mobile",
+  web: null,
+};
+
+// Small badge beside an entry; web is the default and gets none.
+export function sourceBadge(source: ActivitySource): null | string {
+  return SOURCE_BADGES[source];
+}
 
 const ENTITY_NOUNS: Record<ActivityEntityType, string> = {
   account: "their account",

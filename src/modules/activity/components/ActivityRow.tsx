@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import type { ActivityAction, ActivityLog } from "@/db/schema";
 
-import { describeActivity } from "../lib/activity-format";
+import { describeActivity, sourceBadge } from "../lib/activity-format";
 import { formatKathmanduTime } from "../lib/activity-time";
 import { type ActivitySection, sectionForEntityType } from "../lib/sections";
 
@@ -36,6 +36,7 @@ type Props = { actorImage: null | string; entry: ActivityLog };
 
 export function ActivityRow({ actorImage, entry }: Props) {
   const changes = entry.changes ?? [];
+  const badge = sourceBadge(entry.source);
 
   return (
     <li className="flex gap-3 px-4 py-3">
@@ -49,9 +50,9 @@ export function ActivityRow({ actorImage, entry }: Props) {
           <p className="text-sm">
             <span className="font-medium">{entry.actorName}</span> {describeActivity(entry.action, entry.entityType)}
           </p>
-          {entry.source === "mobile" && (
+          {badge && (
             <Badge className="text-[10px]" variant="outline">
-              via mobile
+              {badge}
             </Badge>
           )}
           <time className="ml-auto text-xs text-muted-foreground" dateTime={entry.createdAt.toISOString()}>

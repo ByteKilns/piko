@@ -29,7 +29,9 @@ export const activityActionEnum = pgEnum("activity_action", [
   "resumed",
   "updated",
 ]);
-export const activitySourceEnum = pgEnum("activity_source", ["mobile", "web"]);
+// "import" = reconstructed from rows that existed before the log did
+// (scripts/backfill-activity.ts), so the page can mark them as such.
+export const activitySourceEnum = pgEnum("activity_source", ["import", "mobile", "web"]);
 
 export type ActivityAction = (typeof activityActionEnum.enumValues)[number];
 export type ActivityEntityType = (typeof activityEntityTypeEnum.enumValues)[number];

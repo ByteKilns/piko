@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { describeActivity } from "./activity-format";
+import { describeActivity, sourceBadge } from "./activity-format";
+
+describe("sourceBadge", () => {
+  it("labels mobile and imported entries, not web ones", () => {
+    expect(sourceBadge("mobile")).toBe("via mobile");
+    expect(sourceBadge("import")).toBe("imported");
+    expect(sourceBadge("web")).toBeNull();
+  });
+});
 
 describe("describeActivity", () => {
   it("builds a verb phrase for the action and entity", () => {
