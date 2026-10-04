@@ -176,6 +176,17 @@ describe("planRevert — deletes", () => {
       reason: "The loan it belonged to no longer exists — revert that deletion first.",
     });
   });
+
+  it("is blocked when a budget line's month budget isn't this household's", () => {
+    const line = { categoryId: "cat-1", id: "bi-1", monthlyBudgetId: "mb-other", ownerMemberId: null, plannedAmount: "1000.00" };
+    const budgetLine = entry({ action: "deleted", before: line, entityType: "budget_item" });
+    expect(planRevert(budgetLine, context(null), "undo", f)).toEqual({
+      kind: "blocked",
+      reason: "The month's budget it belonged to no longer exists — revert that deletion first.",
+    });
+    const ownBudget = context(null, { references: { categoryIds: new Set(["cat-1"]), memberIds: new Set(), parentIds: new Set(["mb-other"]) } });
+    expect(planRevert(budgetLine, ownBudget, "undo", f).kind).toBe("apply");
+  });
 });
 
 describe("planRevert — marked paid", () => {

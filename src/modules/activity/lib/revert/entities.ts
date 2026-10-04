@@ -43,7 +43,8 @@ export const ENTITY_REVERT: Partial<Record<ActivityEntityType, EntityRevert>> = 
     editable: ["ownerMemberId", "plannedAmount"],
     fields: (f) => [{ format: f.category, key: "categoryId", label: "Category" }, ...rowFields(budgetItemFields(f))],
     noun: "budget line",
-    references: (r) => ({ categoryIds: ids(r.categoryId), memberIds: ids(r.ownerMemberId) }),
+    parentNoun: "month's budget",
+    references: (r) => ({ categoryIds: ids(r.categoryId), memberIds: ids(r.ownerMemberId), parentId: String(r.monthlyBudgetId) }),
     summary: (f, r) => [f.category(r.categoryId), f.owner(r.ownerMemberId), f.money(r.plannedAmount)].filter(Boolean).join(" · "),
   },
   category: {

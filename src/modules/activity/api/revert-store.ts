@@ -100,6 +100,13 @@ const budgetIdsOf = (householdId: string) =>
   db.select({ id: monthlyBudgets.id }).from(monthlyBudgets).where(eq(monthlyBudgets.householdId, householdId));
 const idsOf = async (query: Promise<{ id: string }[]>) => (await query).map((r) => r.id);
 
+// Tables without a householdId are scoped through their parent. The planner
+// already blocks a restore whose parent isn't this household's; this repeats
+// the check inside the transaction, so the write itself is scoped too.
+async function requireParent(found: Promise<unknown[]>) {
+  if ((await found).length === 0) throw new Error("Parent not found in this household");
+}
+
 const expenseStore = tableStore({
   find: async (h, id) => (await db.select().from(expenses).where(and(eq(expenses.id, id), eq(expenses.householdId, h))))[0],
   insert: async (tx, h, row) => {
@@ -148,7 +155,16 @@ const categoryStore = tableStore({
 const budgetItemStore = tableStore({
   find: async (h, id) =>
     (await db.select().from(budgetItems).where(and(eq(budgetItems.id, id), inArray(budgetItems.monthlyBudgetId, budgetIdsOf(h)))))[0],
-  insert: (tx, _h, row) => tx.insert(budgetItems).values(reviveRow(budgetItems, row)),
+  insert: async (tx, h, row) => {
+    const values = reviveRow(budgetItems, row);
+    await requireParent(
+      tx
+        .select({ id: monthlyBudgets.id })
+        .from(monthlyBudgets)
+        .where(and(eq(monthlyBudgets.id, values.monthlyBudgetId), eq(monthlyBudgets.householdId, h))),
+    );
+    await tx.insert(budgetItems).values(values);
+  },
   parentIds: (h) => idsOf(budgetIdsOf(h)),
   remove: (tx, h, id) => tx.delete(budgetItems).where(and(eq(budgetItems.id, id), inArray(budgetItems.monthlyBudgetId, budgetIdsOf(h)))),
   update: (tx, h, id, set) =>
@@ -166,7 +182,7 @@ const goalStore = tableStore({
           .select()
           .from(savingsContributions)
           .where(and(eq(savingsContributions.goalId, goalId), inArray(savingsContributions.goalId, goalIdsOf(h)))),
-      insert: (tx, _h, _goalId, rows) => tx.insert(savingsContributions).values(rows.map((r) => reviveRow(savingsContributions, r))),
+      insert: (tx, _h, goalId, rows) => tx.insert(savingsContributions).values(rows.map((r) => ({ ...reviveRow(savingsContributions, r), goalId }))),
       kind: "contributions",
     },
   ],
@@ -188,7 +204,16 @@ const contributionStore = tableStore({
         .from(savingsContributions)
         .where(and(eq(savingsContributions.id, id), inArray(savingsContributions.goalId, goalIdsOf(h))))
     )[0],
-  insert: (tx, _h, row) => tx.insert(savingsContributions).values(reviveRow(savingsContributions, row)),
+  insert: async (tx, h, row) => {
+    const values = reviveRow(savingsContributions, row);
+    await requireParent(
+      tx
+        .select({ id: savingsGoals.id })
+        .from(savingsGoals)
+        .where(and(eq(savingsGoals.id, values.goalId), eq(savingsGoals.householdId, h))),
+    );
+    await tx.insert(savingsContributions).values(values);
+  },
   parentIds: (h) => idsOf(goalIdsOf(h)),
   remove: (tx, h, id) =>
     tx.delete(savingsContributions).where(and(eq(savingsContributions.id, id), inArray(savingsContributions.goalId, goalIdsOf(h)))),
@@ -207,7 +232,7 @@ const loanStore = tableStore({
           .select()
           .from(loanPayments)
           .where(and(eq(loanPayments.loanId, loanId), inArray(loanPayments.loanId, loanIdsOf(h)))),
-      insert: (tx, _h, _loanId, rows) => tx.insert(loanPayments).values(rows.map((r) => reviveRow(loanPayments, r))),
+      insert: (tx, _h, loanId, rows) => tx.insert(loanPayments).values(rows.map((r) => ({ ...reviveRow(loanPayments, r), loanId }))),
       kind: "loanPayments",
     },
   ],
@@ -231,7 +256,16 @@ const loanPaymentStore = tableStore({
   },
   find: async (h, id) =>
     (await db.select().from(loanPayments).where(and(eq(loanPayments.id, id), inArray(loanPayments.loanId, loanIdsOf(h)))))[0],
-  insert: (tx, _h, row) => tx.insert(loanPayments).values(reviveRow(loanPayments, row)),
+  insert: async (tx, h, row) => {
+    const values = reviveRow(loanPayments, row);
+    await requireParent(
+      tx
+        .select({ id: loans.id })
+        .from(loans)
+        .where(and(eq(loans.id, values.loanId), eq(loans.householdId, h))),
+    );
+    await tx.insert(loanPayments).values(values);
+  },
   parentIds: (h) => idsOf(loanIdsOf(h)),
   remove: async (tx, h, id, op) => {
     await tx.delete(loanPayments).where(and(eq(loanPayments.id, id), inArray(loanPayments.loanId, loanIdsOf(h))));
@@ -257,7 +291,7 @@ const dhukuStore = tableStore({
           .select()
           .from(dhukuEntries)
           .where(and(eq(dhukuEntries.dhukuId, dhukuId), inArray(dhukuEntries.dhukuId, dhukuIdsOf(h)))),
-      insert: (tx, _h, _dhukuId, rows) => tx.insert(dhukuEntries).values(rows.map((r) => reviveRow(dhukuEntries, r))),
+      insert: (tx, _h, dhukuId, rows) => tx.insert(dhukuEntries).values(rows.map((r) => ({ ...reviveRow(dhukuEntries, r), dhukuId }))),
       kind: "dhukuEntries",
     },
   ],
@@ -274,7 +308,16 @@ const dhukuStore = tableStore({
 const dhukuEntryStore = tableStore({
   find: async (h, id) =>
     (await db.select().from(dhukuEntries).where(and(eq(dhukuEntries.id, id), inArray(dhukuEntries.dhukuId, dhukuIdsOf(h)))))[0],
-  insert: (tx, _h, row) => tx.insert(dhukuEntries).values(reviveRow(dhukuEntries, row)),
+  insert: async (tx, h, row) => {
+    const values = reviveRow(dhukuEntries, row);
+    await requireParent(
+      tx
+        .select({ id: dhukus.id })
+        .from(dhukus)
+        .where(and(eq(dhukus.id, values.dhukuId), eq(dhukus.householdId, h))),
+    );
+    await tx.insert(dhukuEntries).values(values);
+  },
   parentIds: (h) => idsOf(dhukuIdsOf(h)),
   remove: (tx, h, id) => tx.delete(dhukuEntries).where(and(eq(dhukuEntries.id, id), inArray(dhukuEntries.dhukuId, dhukuIdsOf(h)))),
   update: (tx, h, id, set) =>
