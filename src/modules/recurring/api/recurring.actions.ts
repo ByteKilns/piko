@@ -6,7 +6,10 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { expenses, recurringExpenses } from "@/db/schema";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
+import { activityActor, loadActivityFormatters, logActivities, logActivity } from "@/modules/activity/api/activity";
 import { listCategories } from "@/modules/categories/api/categories";
+import { expenseSummary } from "@/modules/expenses/lib/expense-activity";
+import { recurringChanges, recurringSummary } from "@/modules/recurring/lib/recurring-activity";
 import { type RecurringExpenseInput, recurringExpenseSchema } from "@/modules/recurring/schemas/recurring.schema";
 
 function revalidateRecurringPaths() {
@@ -38,15 +41,24 @@ export async function listRecurringExpenses(householdId: string) {
     .orderBy(recurringExpenses.nextDueDate);
 }
 
+async function findRecurringInHousehold(householdId: string, id: string) {
+  const [item] = await db
+    .select()
+    .from(recurringExpenses)
+    .where(and(eq(recurringExpenses.id, id), eq(recurringExpenses.householdId, householdId)));
+  return item;
+}
+
 export async function createRecurringExpenseAction(input: RecurringExpenseInput) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const parsed = recurringExpenseSchema.parse(input);
   await assertCategoryInHousehold(householdId, parsed.categoryId);
   if (parsed.ownerMemberId) {
     await assertMemberInHousehold(householdId, parsed.ownerMemberId);
   }
 
-  await db.insert(recurringExpenses).values({
+  const [created] = await db.insert(recurringExpenses).values({
     amount: String(parsed.amount),
     categoryId: parsed.categoryId,
     endDate: parsed.endDate,
@@ -57,18 +69,30 @@ export async function createRecurringExpenseAction(input: RecurringExpenseInput)
     nextDueDate: parsed.nextDueDate,
     ownerMemberId: parsed.ownerMemberId,
     vendor: parsed.vendor?.trim() || null,
+  }).returning();
+
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "created",
+    entityId: created.id,
+    entityType: "recurring_expense",
+    summary: recurringSummary(f, created),
   });
 
   revalidateRecurringPaths();
 }
 
 export async function updateRecurringExpenseAction(id: string, input: RecurringExpenseInput) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const parsed = recurringExpenseSchema.parse(input);
   await assertCategoryInHousehold(householdId, parsed.categoryId);
   if (parsed.ownerMemberId) {
     await assertMemberInHousehold(householdId, parsed.ownerMemberId);
   }
+
+  const before = await findRecurringInHousehold(householdId, id);
+  if (!before) return;
 
   await db
     .update(recurringExpenses)
@@ -85,38 +109,75 @@ export async function updateRecurringExpenseAction(id: string, input: RecurringE
     })
     .where(and(eq(recurringExpenses.id, id), eq(recurringExpenses.householdId, householdId)));
 
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "updated",
+    changes: recurringChanges(f, before, parsed),
+    entityId: id,
+    entityType: "recurring_expense",
+    summary: recurringSummary(f, parsed),
+  });
+
   revalidateRecurringPaths();
 }
 
 export async function deleteRecurringExpenseAction(id: string) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
+  const before = await findRecurringInHousehold(householdId, id);
+  if (!before) return;
+
   await db
     .delete(recurringExpenses)
     .where(and(eq(recurringExpenses.id, id), eq(recurringExpenses.householdId, householdId)));
 
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "deleted",
+    entityId: id,
+    entityType: "recurring_expense",
+    summary: recurringSummary(f, before),
+  });
+
   revalidateRecurringPaths();
 }
 
-async function setRecurringStatus(id: string, status: "active" | "completed" | "paused") {
-  const { householdId } = await getCurrentMember();
+async function setRecurringStatus(
+  id: string,
+  status: "active" | "completed" | "paused",
+  action: "completed" | "paused" | "resumed",
+) {
+  const member = await getCurrentMember();
+  const { householdId } = member;
+  const before = await findRecurringInHousehold(householdId, id);
+  if (!before || before.status === status) return;
+
   await db
     .update(recurringExpenses)
     .set({ status })
     .where(and(eq(recurringExpenses.id, id), eq(recurringExpenses.householdId, householdId)));
 
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action,
+    entityId: id,
+    entityType: "recurring_expense",
+    summary: recurringSummary(f, before),
+  });
+
   revalidateRecurringPaths();
 }
 
 export async function pauseRecurringExpenseAction(id: string) {
-  await setRecurringStatus(id, "paused");
+  await setRecurringStatus(id, "paused", "paused");
 }
 
 export async function resumeRecurringExpenseAction(id: string) {
-  await setRecurringStatus(id, "active");
+  await setRecurringStatus(id, "active", "resumed");
 }
 
 export async function completeRecurringExpenseAction(id: string) {
-  await setRecurringStatus(id, "completed");
+  await setRecurringStatus(id, "completed", "completed");
 }
 
 function advanceDueDate(dueDate: string, frequency: "monthly" | "yearly"): string {
@@ -133,12 +194,10 @@ function advanceDueDate(dueDate: string, frequency: "monthly" | "yearly"): strin
 // up in Budget actuals and Dashboard totals like any other expense) and
 // rolls its next due date forward by one cycle.
 export async function markRecurringExpensePaidAction(id: string) {
-  const { householdId, memberId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId, memberId } = member;
 
-  const [item] = await db
-    .select()
-    .from(recurringExpenses)
-    .where(and(eq(recurringExpenses.id, id), eq(recurringExpenses.householdId, householdId)));
+  const item = await findRecurringInHousehold(householdId, id);
   if (!item) {
     throw new Error("Recurring expense not found");
   }
@@ -149,23 +208,46 @@ export async function markRecurringExpensePaidAction(id: string) {
   // "active" item whose due date will never actually come due.
   const isLastOccurrence = item.endDate !== null && nextDueDate > item.endDate;
 
-  await db.transaction(async (tx) => {
-    await tx.insert(expenses).values({
-      amount: item.amount,
-      categoryId: item.categoryId,
-      date: item.nextDueDate,
-      householdId,
-      note: item.name,
-      ownerMemberId: item.ownerMemberId,
-      paidByMemberId: item.ownerMemberId ?? memberId,
-      recurringExpenseId: item.id,
-    });
+  const createdExpense = await db.transaction(async (tx) => {
+    const [expense] = await tx
+      .insert(expenses)
+      .values({
+        amount: item.amount,
+        categoryId: item.categoryId,
+        date: item.nextDueDate,
+        householdId,
+        note: item.name,
+        ownerMemberId: item.ownerMemberId,
+        paidByMemberId: item.ownerMemberId ?? memberId,
+        recurringExpenseId: item.id,
+      })
+      .returning();
 
     await tx
       .update(recurringExpenses)
       .set({ nextDueDate, status: isLastOccurrence ? "completed" : item.status })
       .where(eq(recurringExpenses.id, id));
+
+    return expense;
   });
+
+  // Two entries: the bill being marked paid, and the real expense it created
+  // (so the expense also shows up under the Expenses section filter).
+  const f = await loadActivityFormatters(householdId);
+  await logActivities(activityActor(member), [
+    {
+      action: "paid",
+      entityId: item.id,
+      entityType: "recurring_expense",
+      summary: `${recurringSummary(f, item)} · for ${f.date(item.nextDueDate)}`,
+    },
+    {
+      action: "created",
+      entityId: createdExpense.id,
+      entityType: "expense",
+      summary: expenseSummary(f, createdExpense),
+    },
+  ]);
 
   revalidateRecurringPaths();
 }
