@@ -38,8 +38,9 @@ const ACTION_VERBS: Record<Exclude<ActivityAction, "paid">, string> = {
   updated: "edited",
 };
 
-// "added an expense", "marked a recurring bill paid" — follows the actor's name.
-export function describeActivity(action: ActivityAction, entityType: ActivityEntityType): string {
+// "added an expense", "marked a recurring bill paid", "reverted a change to an expense".
+export function describeActivity(action: ActivityAction, entityType: ActivityEntityType, reverted = false): string {
   const noun = ENTITY_NOUNS[entityType];
+  if (reverted) return `reverted a change to ${noun}`;
   return action === "paid" ? `marked ${noun} paid` : `${ACTION_VERBS[action]} ${noun}`;
 }

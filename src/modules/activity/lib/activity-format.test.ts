@@ -17,4 +17,8 @@ describe("describeActivity", () => {
     expect(describeActivity("archived", "category")).toBe("archived a category");
     expect(describeActivity("paid", "recurring_expense")).toBe("marked a recurring bill paid");
   });
+
+  it("describes an entry written by a revert", () => {
+    expect(describeActivity("updated", "expense", true)).toBe("reverted a change to an expense");
+  });
 });

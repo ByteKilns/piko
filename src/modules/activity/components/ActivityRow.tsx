@@ -3,11 +3,15 @@ import { HandCoins, List, type LucideIcon, PiggyBank, Receipt, Repeat, Settings,
 import { type Tone, ToneIcon } from "@/components/ToneIcon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import type { ActivityAction, ActivityLog } from "@/db/schema";
+import type { ActivityAction } from "@/db/schema";
 
+import type { ActivityListEntry } from "../api/activity";
 import { describeActivity, sourceBadge } from "../lib/activity-format";
 import { formatKathmanduTime } from "../lib/activity-time";
+import { isRevertible, revertModes } from "../lib/revert/plan";
 import { type ActivitySection, sectionForEntityType } from "../lib/sections";
+import { ChangeList } from "./ChangeList";
+import { RevertButton } from "./RevertButton";
 
 const SECTION_ICONS: Record<ActivitySection, LucideIcon> = {
   budget: Wallet,
@@ -32,11 +36,12 @@ const ACTION_TONES: Record<ActivityAction, Tone> = {
   updated: "amber",
 };
 
-type Props = { actorImage: null | string; entry: ActivityLog };
+type Props = { actorImage: null | string; entry: ActivityListEntry };
 
 export function ActivityRow({ actorImage, entry }: Props) {
   const changes = entry.changes ?? [];
   const badge = sourceBadge(entry.source);
+  const sentence = describeActivity(entry.action, entry.entityType, entry.revertOfId !== null);
 
   return (
     <li className="flex gap-3 px-4 py-3">
@@ -48,7 +53,7 @@ export function ActivityRow({ actorImage, entry }: Props) {
             <AvatarFallback className="text-[10px]">{entry.actorName.charAt(0).toUpperCase()}</AvatarFallback>
           </Avatar>
           <p className="text-sm">
-            <span className="font-medium">{entry.actorName}</span> {describeActivity(entry.action, entry.entityType)}
+            <span className="font-medium">{entry.actorName}</span> {sentence}
           </p>
           {badge && (
             <Badge className="text-[10px]" variant="outline">
@@ -60,21 +65,21 @@ export function ActivityRow({ actorImage, entry }: Props) {
           </time>
         </div>
         <p className="text-sm break-words text-muted-foreground">{entry.summary}</p>
+        {isRevertible(entry) && (
+          <RevertButton
+            description={`${entry.actorName} ${sentence} · ${entry.summary} · ${formatKathmanduTime(entry.createdAt)}`}
+            entryId={entry.id}
+            modes={revertModes(entry.action)}
+          />
+        )}
         {changes.length > 0 && (
           <details className="group text-sm">
             <summary className="cursor-pointer text-xs font-medium text-primary select-none">
               Show changes ({changes.length})
             </summary>
-            <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-lg bg-muted px-3 py-2">
-              {changes.map((change) => (
-                <div className="contents" key={change.field}>
-                  <dt className="text-muted-foreground">{change.field}</dt>
-                  <dd className="break-words">
-                    <span className="line-through opacity-60">{change.from ?? "—"}</span> → {change.to ?? "—"}
-                  </dd>
-                </div>
-              ))}
-            </dl>
+            <div className="mt-2">
+              <ChangeList changes={changes} />
+            </div>
           </details>
         )}
       </div>

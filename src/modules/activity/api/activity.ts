@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, ilike, inArray, lt, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, lt, or, type SQL, sql } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import {
@@ -88,10 +88,29 @@ export async function loadActivityFormatters(householdId: string): Promise<Activ
   });
 }
 
+export type ActivityListEntry = Omit<ActivityLog, "after" | "before" | "related"> & { hasSnapshot: boolean };
+
+// Every column except the snapshots (which can hold goal photos); the list never needs them.
+const LIST_COLUMNS = {
+  action: activityLogs.action,
+  actorMemberId: activityLogs.actorMemberId,
+  actorName: activityLogs.actorName,
+  changes: activityLogs.changes,
+  createdAt: activityLogs.createdAt,
+  entityId: activityLogs.entityId,
+  entityType: activityLogs.entityType,
+  hasSnapshot: sql<boolean>`(${activityLogs.before} is not null or ${activityLogs.after} is not null)`,
+  householdId: activityLogs.householdId,
+  id: activityLogs.id,
+  revertOfId: activityLogs.revertOfId,
+  source: activityLogs.source,
+  summary: activityLogs.summary,
+};
+
 export async function listActivity(
   householdId: string,
   filters: ActivityFilters,
-): Promise<{ entries: ActivityLog[]; nextCursor: null | string }> {
+): Promise<{ entries: ActivityListEntry[]; nextCursor: null | string }> {
   const conditions: SQL[] = [eq(activityLogs.householdId, householdId)];
   if (filters.member) conditions.push(eq(activityLogs.actorMemberId, filters.member));
   if (filters.section) conditions.push(inArray(activityLogs.entityType, entityTypesForSection(filters.section)));
@@ -110,7 +129,7 @@ export async function listActivity(
 
   // One extra row tells us whether an older page exists.
   const rows = await db
-    .select()
+    .select(LIST_COLUMNS)
     .from(activityLogs)
     .where(and(...conditions))
     .orderBy(desc(activityLogs.createdAt), desc(activityLogs.id))

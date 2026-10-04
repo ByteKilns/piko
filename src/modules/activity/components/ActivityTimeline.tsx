@@ -1,10 +1,10 @@
-import type { ActivityLog } from "@/db/schema";
 import type { DateFormat } from "@/lib/date-format-cookie";
 
+import type { ActivityListEntry } from "../api/activity";
 import { groupActivityByDay } from "../lib/activity-days";
 import { ActivityRow } from "./ActivityRow";
 
-type Props = { dateFormat: DateFormat; entries: ActivityLog[]; memberImages: Map<string, null | string> };
+type Props = { dateFormat: DateFormat; entries: ActivityListEntry[]; memberImages: Map<string, null | string> };
 
 export function ActivityTimeline({ dateFormat, entries, memberImages }: Props) {
   const days = groupActivityByDay(entries, dateFormat, new Date());
