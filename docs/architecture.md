@@ -173,6 +173,10 @@ Conventions to keep when adding columns/tables:
   stays next to the fields. Values are formatted at write time (names, `formatNPR`,
   BS/AD dates) — never raw IDs or image data. An edit with no real change
   (`changes: []`) is skipped. Times/day filters use Asia/Kathmandu.
+  Entries also store raw `before`/`after` snapshots (and cascaded `related` rows on
+  deletes); `src/modules/activity/lib/revert/` plans a revert (pure, per-entity
+  registry in `entities.ts`) and `api/revert.actions.ts` applies it — household-scoped,
+  re-planned at apply time, and logged with `revertOfId`.
 
 ## Task playbooks
 
@@ -188,7 +192,8 @@ Conventions to keep when adding columns/tables:
 3. Add the nav entry in `src/components/nav/` (`SidebarNav` / `BottomNav`).
 4. Queries/actions must scope by `householdId` via `getCurrentMember()`.
 5. Log every mutation: add `lib/<x>-activity.ts` (summary + diff specs) and call
-   `logActivity` after each write; add the entity type to `activityEntityTypeEnum`
+   `logActivity` after each write (pass `before`/`after`, and `related` for cascading
+   deletes); add the entity to `ENTITY_REVERT` + `REVERT_STORES`; add the entity type to `activityEntityTypeEnum`
    and to a section in `src/modules/activity/lib/sections.ts`.
 
 **Add a mobile endpoint**
