@@ -128,7 +128,9 @@ put the tenancy-agnostic logic in a `...ForHousehold` function so web and mobile
   `loans` + `loan_payments` (`direction` given/taken), `dhukus` + `dhuku_entries`
   (rotating savings group: contribution/payout).
 - **System** — `notifications` (deduped via unique `(householdId, dedupeKey)`),
-  `app_releases` (global, not per-household; published APK builds).
+  `activity_logs` (append-only audit trail: actor, entity, action, display-ready
+  summary + field diffs, web/mobile source; written by actions via `logActivity`,
+  shown on `/activity`), `app_releases` (global, not per-household; published APK builds).
 
 Conventions to keep when adding columns/tables:
 
@@ -165,6 +167,12 @@ Conventions to keep when adding columns/tables:
   (`src/lib/release-admin.ts`); APKs are uploaded to Vercel Blob via a client-token
   flow (`src/app/api/app-releases/upload/route.ts`). `handleUpload` requires
   `BLOB_READ_WRITE_TOKEN` (OIDC alone is not enough). Full procedure in `mobile/README.md`.
+- **Activity log** (`src/modules/activity/`): every household data mutation calls
+  `logActivity(activityActor(member), entry)` after its write succeeds. Each module
+  owns a pure `lib/<x>-activity.ts` (summary + `diffFields` specs) so field knowledge
+  stays next to the fields. Values are formatted at write time (names, `formatNPR`,
+  BS/AD dates) — never raw IDs or image data. An edit with no real change
+  (`changes: []`) is skipped. Times/day filters use Asia/Kathmandu.
 
 ## Task playbooks
 
@@ -179,11 +187,16 @@ Conventions to keep when adding columns/tables:
 2. Add a thin route: `src/app/(app)/<x>/page.tsx` re-exporting the page.
 3. Add the nav entry in `src/components/nav/` (`SidebarNav` / `BottomNav`).
 4. Queries/actions must scope by `householdId` via `getCurrentMember()`.
+5. Log every mutation: add `lib/<x>-activity.ts` (summary + diff specs) and call
+   `logActivity` after each write; add the entity type to `activityEntityTypeEnum`
+   and to a section in `src/modules/activity/lib/sections.ts`.
 
 **Add a mobile endpoint**
 1. `src/app/api/mobile/<x>/route.ts` using `requireMobileAuth`.
 2. Put the real logic in a `...ForHousehold` function in the owning module so the web
    and mobile paths stay in sync; validate with the module's Zod schema.
+3. Pass `activityActor(auth, "mobile")` into the shared `...ForHousehold` core so the
+   activity log records the change as coming from mobile.
 
 **Publish an app release** → follow `mobile/README.md`.
 
