@@ -213,6 +213,7 @@ npm run db:generate         # generate a migration from schema changes
 npm run db:migrate          # apply migrations to .env.local's DATABASE_URL
 npm run db:seed             # seed household + 2 users + default categories
 npm run eval:planner        # offline AI eval over fixtures (needs AI_BUDGET_PLANNER=live)
+npx tsx scripts/backfill-activity.ts [--apply]  # one-off: log pre-existing rows as "imported" (dry run without --apply; re-runnable)
 
 # mobile (from mobile/)
 flutter build apk --release --split-per-abi
