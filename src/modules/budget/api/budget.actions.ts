@@ -6,8 +6,10 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { budgetItems, incomes, monthlyBudgets } from "@/db/schema";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
+import { activityActor, loadActivityFormatters, logActivities, logActivity } from "@/modules/activity/api/activity";
 import { listCategories } from "@/modules/categories/api/categories";
 
+import { budgetItemChanges, budgetItemSummary, incomeChanges, incomeSummary } from "../lib/budget-activity";
 import { type SetBudgetItemInput, setBudgetItemSchema } from "../schemas/budget-item.schema";
 import { type SetIncomeInput, setIncomeSchema } from "../schemas/income.schema";
 
@@ -34,7 +36,8 @@ export async function getBudgetItemsForMonth(year: number, month: number) {
 }
 
 export async function setBudgetItemAction(input: SetBudgetItemInput) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const parsed = setBudgetItemSchema.parse(input);
 
   const categories = await listCategories(householdId);
@@ -51,6 +54,13 @@ export async function setBudgetItemAction(input: SetBudgetItemInput) {
 
   const budget = await getOrCreateMonthlyBudget(householdId, parsed.year, parsed.month);
 
+  // The current row for this category/month (any owner) — the transaction
+  // below collapses them to one, so this is what the log diffs against.
+  const [before] = await db
+    .select()
+    .from(budgetItems)
+    .where(and(eq(budgetItems.monthlyBudgetId, budget.id), eq(budgetItems.categoryId, parsed.categoryId)));
+
   // The UI shows exactly one row per category (with an owner dropdown), which
   // implies "each category has at most one current owner/allocation per
   // month." Enforce that invariant here: before writing the row for the
@@ -60,7 +70,7 @@ export async function setBudgetItemAction(input: SetBudgetItemInput) {
   // hidden duplicate that `budgetItems.find()` on the page may or may not
   // surface. Wrapped in the same transaction as the upsert so the
   // delete+write is atomic.
-  await db.transaction(async (tx) => {
+  const itemId = await db.transaction(async (tx) => {
     await tx
       .delete(budgetItems)
       .where(
@@ -100,18 +110,22 @@ export async function setBudgetItemAction(input: SetBudgetItemInput) {
           .update(budgetItems)
           .set({ plannedAmount: String(parsed.plannedAmount) })
           .where(eq(budgetItems.id, existing.id));
-      } else {
-        await tx.insert(budgetItems).values({
+        return existing.id;
+      }
+      const [inserted] = await tx
+        .insert(budgetItems)
+        .values({
           monthlyBudgetId: budget.id,
           categoryId: parsed.categoryId,
           ownerMemberId: null,
           plannedAmount: String(parsed.plannedAmount),
-        });
-      }
+        })
+        .returning({ id: budgetItems.id });
+      return inserted.id;
     } else {
       // For a non-null owner, the composite unique constraint does detect
       // conflicts correctly, so the atomic upsert is safe here.
-      await tx
+      const [upserted] = await tx
         .insert(budgetItems)
         .values({
           monthlyBudgetId: budget.id,
@@ -122,9 +136,21 @@ export async function setBudgetItemAction(input: SetBudgetItemInput) {
         .onConflictDoUpdate({
           target: [budgetItems.monthlyBudgetId, budgetItems.categoryId, budgetItems.ownerMemberId],
           set: { plannedAmount: String(parsed.plannedAmount) },
-        });
+        })
+        .returning({ id: budgetItems.id });
+      return upserted.id;
     }
   });
+
+  const f = await loadActivityFormatters(householdId);
+  const after = { categoryId: parsed.categoryId, ownerMemberId: parsed.ownerMemberId, plannedAmount: parsed.plannedAmount };
+  const summary = budgetItemSummary(f, after, { month: parsed.month, year: parsed.year });
+  await logActivity(
+    activityActor(member),
+    before
+      ? { action: "updated", changes: budgetItemChanges(f, before, after), entityId: itemId, entityType: "budget_item", summary }
+      : { action: "created", entityId: itemId, entityType: "budget_item", summary },
+  );
 
   revalidatePath("/budget");
   revalidatePath("/dashboard");
@@ -138,7 +164,8 @@ function previousMonth(year: number, month: number) {
 // budget_items row for the target month, so re-running this (or copying into
 // a month you've already partly filled out) never clobbers anything.
 export async function copyPreviousMonthBudgetAction(year: number, month: number) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const prev = previousMonth(year, month);
 
   const [prevBudget] = await db
@@ -170,7 +197,17 @@ export async function copyPreviousMonthBudgetAction(year: number, month: number)
     }));
 
   if (toInsert.length > 0) {
-    await db.insert(budgetItems).values(toInsert);
+    const inserted = await db.insert(budgetItems).values(toInsert).returning();
+    const f = await loadActivityFormatters(householdId);
+    await logActivities(
+      activityActor(member),
+      inserted.map((item) => ({
+        action: "created" as const,
+        entityId: item.id,
+        entityType: "budget_item" as const,
+        summary: budgetItemSummary(f, item, { month, year }),
+      })),
+    );
   }
 
   revalidatePath("/budget");
@@ -191,7 +228,8 @@ export async function listAllIncomes() {
 }
 
 export async function setIncomeAction(input: SetIncomeInput) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const parsed = setIncomeSchema.parse(input);
 
   const members = await getHouseholdMembers(householdId);
@@ -199,7 +237,19 @@ export async function setIncomeAction(input: SetIncomeInput) {
     throw new Error("Member does not belong to this household");
   }
 
-  await db
+  const [before] = await db
+    .select()
+    .from(incomes)
+    .where(
+      and(
+        eq(incomes.householdId, householdId),
+        eq(incomes.memberId, parsed.memberId),
+        eq(incomes.year, parsed.year),
+        eq(incomes.month, parsed.month),
+      ),
+    );
+
+  const [saved] = await db
     .insert(incomes)
     .values({
       householdId,
@@ -212,7 +262,17 @@ export async function setIncomeAction(input: SetIncomeInput) {
     .onConflictDoUpdate({
       target: [incomes.memberId, incomes.year, incomes.month],
       set: { amount: String(parsed.amount), note: parsed.note ?? null },
-    });
+    })
+    .returning({ id: incomes.id });
+
+  const f = await loadActivityFormatters(householdId);
+  const after = { amount: parsed.amount, memberId: parsed.memberId, month: parsed.month, note: parsed.note, year: parsed.year };
+  await logActivity(
+    activityActor(member),
+    before
+      ? { action: "updated", changes: incomeChanges(f, before, after), entityId: saved.id, entityType: "income", summary: incomeSummary(f, after) }
+      : { action: "created", entityId: saved.id, entityType: "income", summary: incomeSummary(f, after) },
+  );
 
   revalidatePath("/budget");
   revalidatePath("/dashboard");
