@@ -68,6 +68,7 @@ export async function createDhukuAction(input: DhukuInput) {
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "created",
+    after: created,
     entityId: created.id,
     entityType: "dhuku",
     summary: dhukuSummary(f, created),
@@ -87,7 +88,7 @@ export async function updateDhukuAction(id: string, input: DhukuInput) {
   const before = await findDhukuInHousehold(householdId, id);
   if (!before) return;
 
-  await db
+  const [updated] = await db
     .update(dhukus)
     .set({
       interestPerMonth: parsed.interestPerMonth === null ? null : String(parsed.interestPerMonth),
@@ -98,11 +99,14 @@ export async function updateDhukuAction(id: string, input: DhukuInput) {
       startDate: parsed.startDate,
       totalMembers: parsed.totalMembers,
     })
-    .where(and(eq(dhukus.id, id), eq(dhukus.householdId, householdId)));
+    .where(and(eq(dhukus.id, id), eq(dhukus.householdId, householdId)))
+    .returning();
 
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "updated",
+    after: updated,
+    before,
     changes: dhukuChanges(f, before, parsed),
     entityId: id,
     entityType: "dhuku",
@@ -118,13 +122,17 @@ export async function deleteDhukuAction(id: string) {
   const before = await findDhukuInHousehold(householdId, id);
   if (!before) return;
 
+  const entries = await db.select().from(dhukuEntries).where(eq(dhukuEntries.dhukuId, id));
+
   await db.delete(dhukus).where(and(eq(dhukus.id, id), eq(dhukus.householdId, householdId)));
 
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "deleted",
+    before,
     entityId: id,
     entityType: "dhuku",
+    related: { dhukuEntries: entries },
     summary: dhukuSummary(f, before),
   });
 
@@ -172,6 +180,7 @@ export async function addDhukuEntryAction(dhukuId: string, input: DhukuEntryInpu
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "created",
+    after: created,
     entityId: created.id,
     entityType: "dhuku_entry",
     summary: dhukuEntrySummary(f, created, dhuku.name),
@@ -192,6 +201,7 @@ export async function deleteDhukuEntryAction(id: string) {
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "deleted",
+    before: entry,
     entityId: id,
     entityType: "dhuku_entry",
     summary: dhukuEntrySummary(f, entry, dhuku.name),

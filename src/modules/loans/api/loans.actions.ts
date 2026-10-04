@@ -70,6 +70,7 @@ export async function createLoanAction(input: LoanInput) {
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "created",
+    after: created,
     entityId: created.id,
     entityType: "loan",
     summary: loanSummary(f, created),
@@ -89,7 +90,7 @@ export async function updateLoanAction(id: string, input: LoanInput) {
   const before = await findLoanInHousehold(householdId, id);
   if (!before) return;
 
-  await db
+  const [updated] = await db
     .update(loans)
     .set({
       counterpartyName: parsed.counterpartyName,
@@ -103,11 +104,14 @@ export async function updateLoanAction(id: string, input: LoanInput) {
       ownerMemberId: parsed.ownerMemberId,
       principalAmount: String(parsed.principalAmount),
     })
-    .where(and(eq(loans.id, id), eq(loans.householdId, householdId)));
+    .where(and(eq(loans.id, id), eq(loans.householdId, householdId)))
+    .returning();
 
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "updated",
+    after: updated,
+    before,
     changes: loanChanges(f, before, parsed),
     entityId: id,
     entityType: "loan",
@@ -123,13 +127,17 @@ export async function deleteLoanAction(id: string) {
   const before = await findLoanInHousehold(householdId, id);
   if (!before) return;
 
+  const payments = await db.select().from(loanPayments).where(eq(loanPayments.loanId, id));
+
   await db.delete(loans).where(and(eq(loans.id, id), eq(loans.householdId, householdId)));
 
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "deleted",
+    before,
     entityId: id,
     entityType: "loan",
+    related: { loanPayments: payments },
     summary: loanSummary(f, before),
   });
 
@@ -161,7 +169,7 @@ export async function addLoanPaymentAction(loanId: string, input: LoanPaymentInp
   const loan = await getLoanInHousehold(householdId, loanId);
   await assertMemberInHousehold(householdId, parsed.memberId);
 
-  const created = await db.transaction(async (tx) => {
+  const { advancedTo, row: created } = await db.transaction(async (tx) => {
     const [row] = await tx
       .insert(loanPayments)
       .values({
@@ -173,6 +181,8 @@ export async function addLoanPaymentAction(loanId: string, input: LoanPaymentInp
       })
       .returning();
 
+    let advancedTo: null | string = null;
+
     // Roll the next installment forward by one cycle, unless this payment
     // has now settled the loan — same "one cycle at a time" behavior as
     // markRecurringExpensePaidAction's nextDueDate advance.
@@ -183,10 +193,11 @@ export async function addLoanPaymentAction(loanId: string, input: LoanPaymentInp
       if (outstanding > 0) {
         const nextInstallmentDate = advanceInstallmentDate(loan.nextInstallmentDate, loan.installmentFrequency);
         await tx.update(loans).set({ nextInstallmentDate }).where(eq(loans.id, loanId));
+        advancedTo = nextInstallmentDate;
       }
     }
 
-    return row;
+    return { advancedTo, row };
   });
 
   const verb = loan.direction === "given" ? "received from" : "paid to";
@@ -205,8 +216,12 @@ export async function addLoanPaymentAction(loanId: string, input: LoanPaymentInp
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "created",
+    after: created,
     entityId: created.id,
     entityType: "loan_payment",
+    related: advancedTo
+      ? { loan: [{ id: loan.id, nextInstallmentDateAfter: advancedTo, nextInstallmentDateBefore: loan.nextInstallmentDate }] }
+      : undefined,
     summary: loanPaymentSummary(f, created, loan),
   });
 
@@ -225,6 +240,7 @@ export async function deleteLoanPaymentAction(id: string) {
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "deleted",
+    before: payment,
     entityId: id,
     entityType: "loan_payment",
     summary: loanPaymentSummary(f, payment, loan),

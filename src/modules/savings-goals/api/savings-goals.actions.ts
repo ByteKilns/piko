@@ -72,6 +72,7 @@ export async function createSavingsGoalAction(input: SavingsGoalInput) {
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "created",
+    after: created,
     entityId: created.id,
     entityType: "savings_goal",
     summary: goalSummary(f, created),
@@ -91,7 +92,7 @@ export async function updateSavingsGoalAction(id: string, input: SavingsGoalInpu
   const before = await findGoalInHousehold(householdId, id);
   if (!before) return;
 
-  await db
+  const [updated] = await db
     .update(savingsGoals)
     .set({
       description: parsed.description?.trim() || null,
@@ -101,11 +102,14 @@ export async function updateSavingsGoalAction(id: string, input: SavingsGoalInpu
       targetAmount: parsed.targetAmount === null ? null : String(parsed.targetAmount),
       targetDate: parsed.targetDate,
     })
-    .where(and(eq(savingsGoals.id, id), eq(savingsGoals.householdId, householdId)));
+    .where(and(eq(savingsGoals.id, id), eq(savingsGoals.householdId, householdId)))
+    .returning();
 
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "updated",
+    after: updated,
+    before,
     changes: goalChanges(f, before, parsed),
     entityId: id,
     entityType: "savings_goal",
@@ -121,13 +125,17 @@ export async function deleteSavingsGoalAction(id: string) {
   const before = await findGoalInHousehold(householdId, id);
   if (!before) return;
 
+  const contributions = await db.select().from(savingsContributions).where(eq(savingsContributions.goalId, id));
+
   await db.delete(savingsGoals).where(and(eq(savingsGoals.id, id), eq(savingsGoals.householdId, householdId)));
 
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "deleted",
+    before,
     entityId: id,
     entityType: "savings_goal",
+    related: { contributions },
     summary: goalSummary(f, before),
   });
 
@@ -171,6 +179,7 @@ export async function addContributionAction(goalId: string, input: ContributionI
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "created",
+    after: created,
     entityId: created.id,
     entityType: "savings_contribution",
     summary: contributionSummary(f, created, goal.name),
