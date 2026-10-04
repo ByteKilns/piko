@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { testFormatters } from "@/modules/activity/lib/test-formatters";
 
-import { loanChanges, loanPaymentSummary, type LoanSnapshot, loanSummary } from "./loan-activity";
+import { loanChanges, loanPaymentFields, loanPaymentSummary, type LoanSnapshot, loanSummary } from "./loan-activity";
 
 const f = testFormatters();
 const loan: LoanSnapshot = {
@@ -36,5 +36,11 @@ describe("loan activity", () => {
     expect(loanPaymentSummary(f, { amount: 5000, memberId: "m-2" }, { ...loan, direction: "taken" })).toBe(
       "RS 5,000 paid to Hari · by Ravi",
     );
+  });
+});
+
+describe("loanPaymentFields", () => {
+  it("lists amount, payer, date and note", () => {
+    expect(loanPaymentFields(f).map((s) => s.label)).toEqual(["Amount", "By", "Date", "Note"]);
   });
 });

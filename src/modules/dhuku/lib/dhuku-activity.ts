@@ -1,5 +1,5 @@
 import type { ActivityFormatters } from "@/modules/activity/lib/activity-values";
-import { diffFields } from "@/modules/activity/lib/diff";
+import { diffFields, type FieldSpec } from "@/modules/activity/lib/diff";
 
 export type DhukuSnapshot = {
   interestPerMonth?: null | number | string;
@@ -16,8 +16,8 @@ export function dhukuSummary(f: ActivityFormatters, dhuku: DhukuSnapshot): strin
   return `${dhuku.name} · ${f.money(dhuku.monthlyContribution)}/month · ${dhuku.totalMembers} members`;
 }
 
-export function dhukuChanges(f: ActivityFormatters, before: DhukuSnapshot, after: DhukuSnapshot) {
-  return diffFields(before, after, [
+export function dhukuFields(f: ActivityFormatters): FieldSpec<DhukuSnapshot>[] {
+  return [
     { format: f.text, key: "name", label: "Name" },
     { format: f.text, key: "totalMembers", label: "Members" },
     { format: f.money, key: "monthlyContribution", label: "Monthly contribution" },
@@ -25,7 +25,28 @@ export function dhukuChanges(f: ActivityFormatters, before: DhukuSnapshot, after
     { format: f.date, key: "startDate", label: "Start date" },
     { format: f.owner, key: "ownerMemberId", label: "For" },
     { format: f.text, key: "note", label: "Note" },
-  ]);
+  ];
+}
+
+export function dhukuChanges(f: ActivityFormatters, before: DhukuSnapshot, after: DhukuSnapshot) {
+  return diffFields(before, after, dhukuFields(f));
+}
+
+export type DhukuEntrySnapshot = { amount: number | string; date?: null | string; note?: null | string; type: string };
+
+function entryTypeLabel(value: unknown): null | string {
+  if (value === "payout") return "Payout";
+  if (value === "contribution") return "Contribution";
+  return null;
+}
+
+export function dhukuEntryFields(f: ActivityFormatters): FieldSpec<DhukuEntrySnapshot>[] {
+  return [
+    { format: entryTypeLabel, key: "type", label: "Type" },
+    { format: f.money, key: "amount", label: "Amount" },
+    { format: f.date, key: "date", label: "Date" },
+    { format: f.text, key: "note", label: "Note" },
+  ];
 }
 
 // "Payout · RS 120,000 · Office dhuku"

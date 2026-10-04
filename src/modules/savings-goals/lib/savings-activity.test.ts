@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { testFormatters } from "@/modules/activity/lib/test-formatters";
 
-import { contributionSummary, goalChanges, goalSummary, type SavingsGoalSnapshot } from "./savings-activity";
+import { contributionFields, contributionSummary, goalChanges, goalSummary, type SavingsGoalSnapshot } from "./savings-activity";
 
 const f = testFormatters();
 const goal: SavingsGoalSnapshot = {
@@ -40,5 +40,16 @@ describe("savings activity", () => {
     expect(contributionSummary(f, { amount: "5000.00", memberId: "m-1" }, "Emergency fund")).toBe(
       "RS 5,000 to Emergency fund · by Asha",
     );
+  });
+});
+
+describe("contributionFields", () => {
+  it("lists amount, member and date", () => {
+    const row: Record<string, unknown> = { amount: "5000.00", date: "2026-10-01", memberId: "m-1" };
+    expect(contributionFields(f).map((s) => [s.label, s.format(row[s.key])])).toEqual([
+      ["Amount", "RS 5,000"],
+      ["By", "Asha"],
+      ["Date", "1 October 2026"],
+    ]);
   });
 });

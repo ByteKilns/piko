@@ -10,7 +10,7 @@ export type ExpenseSnapshot = {
   paidByMemberId: string;
 };
 
-function expenseFields(f: ActivityFormatters): FieldSpec<ExpenseSnapshot>[] {
+export function expenseFields(f: ActivityFormatters): FieldSpec<ExpenseSnapshot>[] {
   return [
     { format: f.money, key: "amount", label: "Amount" },
     { format: f.category, key: "categoryId", label: "Category" },

@@ -1,5 +1,5 @@
 import type { ActivityFormatters } from "@/modules/activity/lib/activity-values";
-import { diffFields } from "@/modules/activity/lib/diff";
+import { diffFields, type FieldSpec } from "@/modules/activity/lib/diff";
 
 export type LoanSnapshot = {
   counterpartyName: string;
@@ -26,8 +26,8 @@ export function loanSummary(f: ActivityFormatters, loan: LoanSnapshot): string {
   return [lead, f.money(loan.principalAmount), f.owner(loan.ownerMemberId)].filter(Boolean).join(" · ");
 }
 
-export function loanChanges(f: ActivityFormatters, before: LoanSnapshot, after: LoanSnapshot) {
-  return diffFields(before, after, [
+export function loanFields(f: ActivityFormatters): FieldSpec<LoanSnapshot>[] {
+  return [
     { format: f.text, key: "counterpartyName", label: "Person" },
     { format: directionLabel, key: "direction", label: "Type" },
     { format: f.money, key: "principalAmount", label: "Amount" },
@@ -38,7 +38,22 @@ export function loanChanges(f: ActivityFormatters, before: LoanSnapshot, after: 
     { format: f.date, key: "nextInstallmentDate", label: "Next installment" },
     { format: f.owner, key: "ownerMemberId", label: "For" },
     { format: f.text, key: "note", label: "Note" },
-  ]);
+  ];
+}
+
+export function loanChanges(f: ActivityFormatters, before: LoanSnapshot, after: LoanSnapshot) {
+  return diffFields(before, after, loanFields(f));
+}
+
+export type LoanPaymentSnapshot = { amount: number | string; date?: null | string; memberId: string; note?: null | string };
+
+export function loanPaymentFields(f: ActivityFormatters): FieldSpec<LoanPaymentSnapshot>[] {
+  return [
+    { format: f.money, key: "amount", label: "Amount" },
+    { format: f.member, key: "memberId", label: "By" },
+    { format: f.date, key: "date", label: "Date" },
+    { format: f.text, key: "note", label: "Note" },
+  ];
 }
 
 // "RS 5,000 received from Hari · by Ravi" — same wording as the payment notification.

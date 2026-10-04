@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { testFormatters } from "@/modules/activity/lib/test-formatters";
 
-import { dhukuChanges, dhukuEntrySummary, type DhukuSnapshot, dhukuSummary } from "./dhuku-activity";
+import { dhukuChanges, dhukuEntryFields, dhukuEntrySummary, type DhukuSnapshot, dhukuSummary } from "./dhuku-activity";
 
 const f = testFormatters();
 const dhuku: DhukuSnapshot = {
@@ -32,5 +32,12 @@ describe("dhuku activity", () => {
     expect(dhukuEntrySummary(f, { amount: 10000, type: "contribution" }, "Office dhuku")).toBe(
       "Contribution · RS 10,000 · Office dhuku",
     );
+  });
+});
+
+describe("dhukuEntryFields", () => {
+  it("labels the entry type", () => {
+    const type = dhukuEntryFields(f).find((s) => s.key === "type")!;
+    expect([type.format("payout"), type.format("contribution")]).toEqual(["Payout", "Contribution"]);
   });
 });

@@ -1,5 +1,5 @@
 import type { ActivityFormatters } from "@/modules/activity/lib/activity-values";
-import { diffFields } from "@/modules/activity/lib/diff";
+import { diffFields, type FieldSpec } from "@/modules/activity/lib/diff";
 
 export type SavingsGoalSnapshot = {
   description?: null | string;
@@ -16,20 +16,34 @@ export function goalSummary(f: ActivityFormatters, goal: SavingsGoalSnapshot): s
   return [goal.name, f.owner(goal.ownerMemberId), target && `target ${target}`].filter(Boolean).join(" · ");
 }
 
-export function goalChanges(f: ActivityFormatters, before: SavingsGoalSnapshot, after: SavingsGoalSnapshot) {
-  const changes = diffFields(before, after, [
+export function goalFields(f: ActivityFormatters): FieldSpec<SavingsGoalSnapshot>[] {
+  return [
     { format: f.text, key: "name", label: "Name" },
     { format: f.text, key: "description", label: "Description" },
     { format: f.owner, key: "ownerMemberId", label: "For" },
     { format: f.money, key: "targetAmount", label: "Target" },
     { format: f.date, key: "targetDate", label: "Target date" },
-  ]);
+  ];
+}
+
+export function goalChanges(f: ActivityFormatters, before: SavingsGoalSnapshot, after: SavingsGoalSnapshot) {
+  const changes = diffFields(before, after, goalFields(f));
   // The image is a data URL, so the log records only that it changed — never
   // the image itself.
   if ((before.image ?? null) !== (after.image ?? null)) {
     changes.push({ field: "Photo", from: before.image ? "Old photo" : null, to: after.image ? "New photo" : null });
   }
   return changes;
+}
+
+export type ContributionSnapshot = { amount: number | string; date?: null | string; memberId: string };
+
+export function contributionFields(f: ActivityFormatters): FieldSpec<ContributionSnapshot>[] {
+  return [
+    { format: f.money, key: "amount", label: "Amount" },
+    { format: f.member, key: "memberId", label: "By" },
+    { format: f.date, key: "date", label: "Date" },
+  ];
 }
 
 // "RS 5,000 to Emergency fund · by Asha"

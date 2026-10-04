@@ -1,5 +1,5 @@
 import type { ActivityFormatters } from "@/modules/activity/lib/activity-values";
-import { diffFields } from "@/modules/activity/lib/diff";
+import { diffFields, type FieldSpec } from "@/modules/activity/lib/diff";
 
 export type RecurringSnapshot = {
   amount: number | string;
@@ -18,8 +18,8 @@ export function recurringSummary(f: ActivityFormatters, item: RecurringSnapshot)
   return [item.name, `${f.money(item.amount)} ${item.frequency}`, f.category(item.categoryId)].filter(Boolean).join(" · ");
 }
 
-export function recurringChanges(f: ActivityFormatters, before: RecurringSnapshot, after: RecurringSnapshot) {
-  return diffFields(before, after, [
+export function recurringFields(f: ActivityFormatters): FieldSpec<RecurringSnapshot>[] {
+  return [
     { format: f.text, key: "name", label: "Name" },
     { format: f.money, key: "amount", label: "Amount" },
     { format: f.category, key: "categoryId", label: "Category" },
@@ -29,5 +29,9 @@ export function recurringChanges(f: ActivityFormatters, before: RecurringSnapsho
     { format: f.owner, key: "ownerMemberId", label: "For" },
     { format: f.text, key: "vendor", label: "Vendor" },
     { format: f.text, key: "icon", label: "Icon" },
-  ]);
+  ];
+}
+
+export function recurringChanges(f: ActivityFormatters, before: RecurringSnapshot, after: RecurringSnapshot) {
+  return diffFields(before, after, recurringFields(f));
 }
