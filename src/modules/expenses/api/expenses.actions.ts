@@ -8,10 +8,12 @@ import { expenses } from "@/db/schema";
 import type { DateFormat } from "@/lib/date-format-cookie";
 import { resolvePeriod } from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
+import { type ActivityActor, activityActor, loadActivityFormatters, logActivities, logActivity } from "@/modules/activity/api/activity";
 import { listCategories } from "@/modules/categories/api/categories";
 import { formatNPR } from "@/modules/dashboard/lib/format";
 import { checkBudgetThreshold, insertNotification } from "@/modules/notifications/api/notifications.actions";
 
+import { expenseChanges, expenseSummary } from "../lib/expense-activity";
 import { type ExpenseInput, expenseSchema } from "../schemas/expense.schema";
 import { ExpenseValidationError } from "./expense-errors";
 
@@ -29,10 +31,16 @@ async function assertCategoryInHousehold(householdId: string, categoryId: string
   }
 }
 
-export async function createExpenseForHousehold(
-  input: ExpenseInput,
-  { actorName, householdId }: { actorName: string; householdId: string },
-) {
+async function findExpenseInHousehold(householdId: string, id: string) {
+  const [row] = await db
+    .select()
+    .from(expenses)
+    .where(and(eq(expenses.id, id), eq(expenses.householdId, householdId)));
+  return row;
+}
+
+export async function createExpenseForHousehold(input: ExpenseInput, actor: ActivityActor) {
+  const { householdId, name: actorName } = actor;
   const parsed = expenseSchema.parse(input);
   const categories = await listCategories(householdId);
   if (!categories.some((c) => c.id === parsed.categoryId)) {
@@ -70,6 +78,14 @@ export async function createExpenseForHousehold(
   }
   await checkBudgetThreshold(householdId, parsed.categoryId, parsed.ownerMemberId, parsed.date);
 
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(actor, {
+    action: "created",
+    entityId: created.id,
+    entityType: "expense",
+    summary: expenseSummary(f, created),
+  });
+
   revalidatePath("/expenses");
   revalidatePath("/dashboard");
 
@@ -77,8 +93,7 @@ export async function createExpenseForHousehold(
 }
 
 export async function createExpenseAction(input: ExpenseInput) {
-  const { householdId, name: actorName } = await getCurrentMember();
-  await createExpenseForHousehold(input, { actorName, householdId });
+  await createExpenseForHousehold(input, activityActor(await getCurrentMember()));
 }
 
 // Inserts every row in one batch and fires at most one summary notification
@@ -88,7 +103,8 @@ export async function createExpenseAction(input: ExpenseInput) {
 export async function createExpensesBulkAction(inputs: ExpenseInput[]) {
   if (inputs.length === 0) return;
 
-  const { householdId, name: actorName } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId, name: actorName } = member;
   const parsedList = inputs.map((input) => expenseSchema.parse(input));
 
   const categories = await listCategories(householdId);
@@ -144,18 +160,33 @@ export async function createExpensesBulkAction(inputs: ExpenseInput[]) {
     await checkBudgetThreshold(householdId, parsed.categoryId, parsed.ownerMemberId, parsed.date);
   }
 
+  const f = await loadActivityFormatters(householdId);
+  await logActivities(
+    activityActor(member),
+    created.map((row) => ({
+      action: "created" as const,
+      entityId: row.id,
+      entityType: "expense" as const,
+      summary: expenseSummary(f, row),
+    })),
+  );
+
   revalidatePath("/expenses");
   revalidatePath("/dashboard");
 }
 
 export async function updateExpenseAction(id: string, input: ExpenseInput) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const parsed = expenseSchema.parse(input);
   await assertCategoryInHousehold(householdId, parsed.categoryId);
   await assertMemberInHousehold(householdId, parsed.paidByMemberId);
   if (parsed.ownerMemberId) {
     await assertMemberInHousehold(householdId, parsed.ownerMemberId);
   }
+
+  const before = await findExpenseInHousehold(householdId, id);
+  if (!before) return;
 
   await db
     .update(expenses)
@@ -170,15 +201,36 @@ export async function updateExpenseAction(id: string, input: ExpenseInput) {
     })
     .where(and(eq(expenses.id, id), eq(expenses.householdId, householdId)));
 
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "updated",
+    changes: expenseChanges(f, before, parsed),
+    entityId: id,
+    entityType: "expense",
+    summary: expenseSummary(f, parsed),
+  });
+
   revalidatePath("/expenses");
   revalidatePath("/dashboard");
 }
 
 export async function deleteExpenseAction(id: string) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
+  const before = await findExpenseInHousehold(householdId, id);
+  if (!before) return;
+
   await db
     .delete(expenses)
     .where(and(eq(expenses.id, id), eq(expenses.householdId, householdId)));
+
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "deleted",
+    entityId: id,
+    entityType: "expense",
+    summary: expenseSummary(f, before),
+  });
 
   revalidatePath("/expenses");
   revalidatePath("/dashboard");
