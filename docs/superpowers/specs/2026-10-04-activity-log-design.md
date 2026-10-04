@@ -58,9 +58,11 @@ export const activityLogs = pgTable(
     // for "updated": [{ field, from, to }] with display-ready strings; null otherwise
     changes: jsonb("changes").$type<ActivityChange[]>(),
     source: activitySourceEnum("source").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    // ms precision + timestamptz: a JS Date round-trips exactly, which the
+    // keyset cursor (createdAt, id) relies on
+    createdAt: timestamp("created_at", { precision: 3, withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [index("activity_logs_household_created_idx").on(table.householdId, table.createdAt.desc())],
+  (table) => [index("activity_logs_household_created_idx").on(table.householdId, table.createdAt.desc(), table.id.desc())],
 );
 ```
 
@@ -161,13 +163,16 @@ involved.
   - `section` — Expenses · Income & budget · Savings · Loans · Dhuku ·
     Recurring · Categories · Settings (maps to entity types in `sections.ts`).
   - `action` — Created · Edited · Deleted · Other (pause/resume/archive/…).
-  - `from` / `to` — date range on `createdAt`, entered in the household's
-    BS/AD format, converted to AD day bounds (Asia/Kathmandu) for the query.
+  - `from` / `to` — date range on `createdAt`, using the same native date
+    inputs as the Expenses page filter, interpreted as Asia/Kathmandu day
+    bounds for the query. Day headings and times on the page are rendered in
+    Asia/Kathmandu and the household's BS/AD format.
   - `q` — case-insensitive substring match on `summary` (`ilike`).
   - "Clear filters" link when any filter is active.
-- **Paging:** 50 rows per page, "Load more" using a keyset cursor
-  `(createdAt, id)` carried in the URL (`cursor`). Uses the
-  `(householdId, createdAt desc)` index.
+- **Paging:** 50 rows per page. An "Older activity" link carries a keyset
+  cursor `(createdAt, id)` in the URL (`cursor`), and "Back to newest"
+  drops it. Changing any filter drops the cursor. Uses the
+  `(householdId, createdAt desc, id desc)` index.
 - **Empty states:** "No activity yet" (no rows at all) vs "No activity
   matches these filters".
 
