@@ -7,6 +7,7 @@ import {
   Bell,
   ChevronDown,
   HandCoins,
+  History,
   Home,
   List,
   LogOut,
@@ -47,6 +48,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/reports", label: "Reports", icon: BarChart3, enabled: true },
   { href: "/categories", label: "Categories", icon: List, enabled: true },
   { href: "/notifications", label: "Notifications", icon: Bell, enabled: true },
+  { href: "/activity", label: "Activity", icon: History, enabled: true },
   { href: "/settings", label: "Settings", icon: Settings, enabled: true },
 ];
 

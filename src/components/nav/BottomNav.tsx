@@ -6,6 +6,7 @@ import {
   BarChart3,
   Bell,
   HandCoins,
+  History,
   Home,
   List,
   type LucideIcon,
@@ -43,6 +44,7 @@ const MORE_ITEMS: { href: string; icon: LucideIcon; label: string }[] = [
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/categories", label: "Categories", icon: List },
   { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/activity", label: "Activity", icon: History },
 ];
 
 type Category = { groupName: string; id: string; name: string };

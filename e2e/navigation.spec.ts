@@ -13,6 +13,7 @@ const routes = [
   { label: "Reports", path: "/reports", title: "Reports · Piko" },
   { label: "Categories", path: "/categories", title: "Categories · Piko" },
   { label: "Notifications", path: "/notifications", title: "Notifications · Piko" },
+  { label: "Activity", path: "/activity", title: "Activity · Piko" },
   { label: "Settings", path: "/settings", title: "Settings · Piko" },
 ];
 

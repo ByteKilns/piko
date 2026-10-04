@@ -15,7 +15,7 @@ export function RowActionsMenu({ children }: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="rounded-md p-1 text-muted-foreground hover:bg-accent" type="button">
+        <button aria-label="Row actions" className="rounded-md p-1 text-muted-foreground hover:bg-accent" type="button">
           <MoreVertical className="h-4 w-4" />
         </button>
       </DropdownMenuTrigger>
