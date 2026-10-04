@@ -31,7 +31,7 @@ export async function createCategoryAction(input: CategoryInput) {
   const { householdId } = member;
   const parsed = categorySchema.parse(input);
 
-  const [category] = await db
+  const [row] = await db
     .insert(categories)
     .values({
       budgetType: parsed.budgetType,
@@ -39,16 +39,12 @@ export async function createCategoryAction(input: CategoryInput) {
       householdId,
       name: parsed.name,
     })
-    .returning({
-      archived: categories.archived,
-      budgetType: categories.budgetType,
-      groupName: categories.groupName,
-      id: categories.id,
-      name: categories.name,
-    });
+    .returning();
+  const category = { archived: row.archived, budgetType: row.budgetType, groupName: row.groupName, id: row.id, name: row.name };
 
   await logActivity(activityActor(member), {
     action: "created",
+    after: row,
     entityId: category.id,
     entityType: "category",
     summary: categorySummary(category),
@@ -67,13 +63,16 @@ export async function updateCategoryAction(id: string, input: CategoryInput) {
   const before = await findCategoryInHousehold(householdId, id);
   if (!before) return;
 
-  await db
+  const [updated] = await db
     .update(categories)
     .set({ budgetType: parsed.budgetType, groupName: parsed.groupName, name: parsed.name })
-    .where(and(eq(categories.id, id), eq(categories.householdId, householdId)));
+    .where(and(eq(categories.id, id), eq(categories.householdId, householdId)))
+    .returning();
 
   await logActivity(activityActor(member), {
     action: "updated",
+    after: updated,
+    before,
     changes: categoryChanges(before, parsed),
     entityId: id,
     entityType: "category",
@@ -89,13 +88,16 @@ async function setCategoryArchived(id: string, archived: boolean) {
   const before = await findCategoryInHousehold(householdId, id);
   if (!before || before.archived === archived) return;
 
-  await db
+  const [updated] = await db
     .update(categories)
     .set({ archived })
-    .where(and(eq(categories.id, id), eq(categories.householdId, householdId)));
+    .where(and(eq(categories.id, id), eq(categories.householdId, householdId)))
+    .returning();
 
   await logActivity(activityActor(member), {
     action: archived ? "archived" : "restored",
+    after: updated,
+    before,
     entityId: id,
     entityType: "category",
     summary: categorySummary(before),

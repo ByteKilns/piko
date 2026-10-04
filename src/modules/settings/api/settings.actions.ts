@@ -79,6 +79,8 @@ export async function setDateFormatAction(format: string) {
 
   await logActivity(activityActor(member), {
     action: "updated",
+    after: { dateFormat: format },
+    before: { dateFormat: before.dateFormat },
     changes: dateFormatChanges(before.dateFormat, format),
     entityId: householdId,
     entityType: "household_settings",
@@ -95,6 +97,8 @@ export async function setPlannerEnabledAction(enabled: boolean) {
 
   await logActivity(activityActor(member), {
     action: "updated",
+    after: { plannerEnabled: enabled },
+    before: { plannerEnabled: before.plannerEnabled },
     changes: plannerChanges(before.plannerEnabled, enabled),
     entityId: householdId,
     entityType: "household_settings",

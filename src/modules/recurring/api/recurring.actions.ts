@@ -74,6 +74,7 @@ export async function createRecurringExpenseAction(input: RecurringExpenseInput)
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "created",
+    after: created,
     entityId: created.id,
     entityType: "recurring_expense",
     summary: recurringSummary(f, created),
@@ -94,7 +95,7 @@ export async function updateRecurringExpenseAction(id: string, input: RecurringE
   const before = await findRecurringInHousehold(householdId, id);
   if (!before) return;
 
-  await db
+  const [updated] = await db
     .update(recurringExpenses)
     .set({
       amount: String(parsed.amount),
@@ -107,11 +108,14 @@ export async function updateRecurringExpenseAction(id: string, input: RecurringE
       ownerMemberId: parsed.ownerMemberId,
       vendor: parsed.vendor?.trim() || null,
     })
-    .where(and(eq(recurringExpenses.id, id), eq(recurringExpenses.householdId, householdId)));
+    .where(and(eq(recurringExpenses.id, id), eq(recurringExpenses.householdId, householdId)))
+    .returning();
 
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "updated",
+    after: updated,
+    before,
     changes: recurringChanges(f, before, parsed),
     entityId: id,
     entityType: "recurring_expense",
@@ -127,6 +131,11 @@ export async function deleteRecurringExpenseAction(id: string) {
   const before = await findRecurringInHousehold(householdId, id);
   if (!before) return;
 
+  const linked = await db
+    .select({ id: expenses.id })
+    .from(expenses)
+    .where(and(eq(expenses.recurringExpenseId, id), eq(expenses.householdId, householdId)));
+
   await db
     .delete(recurringExpenses)
     .where(and(eq(recurringExpenses.id, id), eq(recurringExpenses.householdId, householdId)));
@@ -134,8 +143,10 @@ export async function deleteRecurringExpenseAction(id: string) {
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action: "deleted",
+    before,
     entityId: id,
     entityType: "recurring_expense",
+    related: { linkedExpenseIds: linked },
     summary: recurringSummary(f, before),
   });
 
@@ -152,14 +163,17 @@ async function setRecurringStatus(
   const before = await findRecurringInHousehold(householdId, id);
   if (!before || before.status === status) return;
 
-  await db
+  const [updated] = await db
     .update(recurringExpenses)
     .set({ status })
-    .where(and(eq(recurringExpenses.id, id), eq(recurringExpenses.householdId, householdId)));
+    .where(and(eq(recurringExpenses.id, id), eq(recurringExpenses.householdId, householdId)))
+    .returning();
 
   const f = await loadActivityFormatters(householdId);
   await logActivity(activityActor(member), {
     action,
+    after: updated,
+    before,
     entityId: id,
     entityType: "recurring_expense",
     summary: recurringSummary(f, before),
@@ -208,7 +222,7 @@ export async function markRecurringExpensePaidAction(id: string) {
   // "active" item whose due date will never actually come due.
   const isLastOccurrence = item.endDate !== null && nextDueDate > item.endDate;
 
-  const createdExpense = await db.transaction(async (tx) => {
+  const { bill, expense: createdExpense } = await db.transaction(async (tx) => {
     const [expense] = await tx
       .insert(expenses)
       .values({
@@ -223,12 +237,13 @@ export async function markRecurringExpensePaidAction(id: string) {
       })
       .returning();
 
-    await tx
+    const [bill] = await tx
       .update(recurringExpenses)
       .set({ nextDueDate, status: isLastOccurrence ? "completed" : item.status })
-      .where(eq(recurringExpenses.id, id));
+      .where(eq(recurringExpenses.id, id))
+      .returning();
 
-    return expense;
+    return { bill, expense };
   });
 
   // Two entries: the bill being marked paid, and the real expense it created
@@ -237,12 +252,16 @@ export async function markRecurringExpensePaidAction(id: string) {
   await logActivities(activityActor(member), [
     {
       action: "paid",
+      after: bill,
+      before: item,
       entityId: item.id,
       entityType: "recurring_expense",
+      related: { createdExpense: [createdExpense] },
       summary: `${recurringSummary(f, item)} · for ${f.date(item.nextDueDate)}`,
     },
     {
       action: "created",
+      after: createdExpense,
       entityId: createdExpense.id,
       entityType: "expense",
       summary: expenseSummary(f, createdExpense),
