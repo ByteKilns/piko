@@ -89,10 +89,13 @@ export async function revertActivityAction(entryId: string, mode: RevertMode): P
   }
   const { config, context, entityId, entry, f, plan, store } = prepared;
   const op = plan.operation;
+  // Changes land on the row the store found, which for a budget line may have
+  // replaced the logged one; the log keeps the entry's entity id.
+  const targetId = op.type === "insert" ? entityId : String(context.row?.id ?? entityId);
 
   try {
     // Entity, children and any parent update / re-link land together or not at all.
-    await db.transaction((tx) => store.apply(tx, member.householdId, entityId, op));
+    await db.transaction((tx) => store.apply(tx, member.householdId, targetId, op));
   } catch (error) {
     const reason = revertFailureReason(error);
     if (reason) return { ok: false, reason };

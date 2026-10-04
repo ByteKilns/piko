@@ -24,6 +24,9 @@ export type EntityRevert = {
   opaque?: string[];
   parentNoun?: string;
   references: (row: Row) => { categoryIds: string[]; memberIds: string[]; parentId?: string };
+  // Its identity isn't the row id, so restoring it over the row there now
+  // sets that row back instead of being blocked.
+  restoreReplacesExisting?: true;
   summary: (f: ActivityFormatters, row: Row) => string;
 };
 
@@ -45,6 +48,8 @@ export const ENTITY_REVERT: Partial<Record<ActivityEntityType, EntityRevert>> = 
     noun: "budget line",
     parentNoun: "month's budget",
     references: (r) => ({ categoryIds: ids(r.categoryId), memberIds: ids(r.ownerMemberId), parentId: String(r.monthlyBudgetId) }),
+    // A budget line is its category/month: an owner change deletes the row and inserts another.
+    restoreReplacesExisting: true,
     summary: (f, r) => [f.category(r.categoryId), f.owner(r.ownerMemberId), f.money(r.plannedAmount)].filter(Boolean).join(" · "),
   },
   category: {

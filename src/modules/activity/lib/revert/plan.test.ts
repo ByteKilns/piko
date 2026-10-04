@@ -189,6 +189,74 @@ describe("planRevert — deletes", () => {
   });
 });
 
+// A budget line's identity is its category/month: changing the owner deletes
+// the row and inserts another, so the store loads whatever line that
+// category/month has now — which may carry a different id than the entry.
+describe("planRevert — budget lines", () => {
+  const lineA = { categoryId: "cat-1", id: "bi-A", monthlyBudgetId: "mb-1", ownerMemberId: null, plannedAmount: "5000.00" };
+  const budgetContext = (row: ActivitySnapshot | null) =>
+    context(row, { references: { categoryIds: new Set(["cat-1"]), memberIds: new Set(["m-1", "m-2"]), parentIds: new Set(["mb-1"]) } });
+
+  it("reverts an edit onto the line that replaced it after an owner switch", () => {
+    const edit = entry({ action: "updated", after: { ...lineA, plannedAmount: "4000.00" }, before: lineA, entityType: "budget_item" });
+    const lineB = { ...lineA, id: "bi-B", ownerMemberId: "m-1", plannedAmount: "4000.00" };
+
+    expect(planRevert(edit, budgetContext(lineB), "undo", f)).toEqual({
+      changes: [{ field: "Planned", from: "RS 4,000", to: "RS 5,000" }],
+      kind: "apply",
+      operation: { set: { plannedAmount: "5000.00" }, type: "update" },
+      warnings: [],
+    });
+    const restore = planRevert(edit, budgetContext(lineB), "restore", f);
+    expect(restore.kind === "apply" && restore.operation).toEqual({ set: { ownerMemberId: null, plannedAmount: "5000.00" }, type: "update" });
+  });
+
+  it("restoring a deleted line replaces the one there now instead of adding a second", () => {
+    const deleted = entry({ action: "deleted", before: lineA, entityType: "budget_item" });
+    const lineC = { ...lineA, id: "bi-C", plannedAmount: "4000.00" };
+
+    expect(planRevert(deleted, budgetContext(lineC), "undo", f)).toEqual({
+      changes: [{ field: "Planned", from: "RS 4,000", to: "RS 5,000" }],
+      kind: "apply",
+      operation: { set: { plannedAmount: "5000.00" }, type: "update" },
+      warnings: ["This replaces the budget line that's there now."],
+    });
+    expect(planRevert(deleted, budgetContext({ ...lineA, id: "bi-C" }), "undo", f)).toEqual({
+      kind: "noop",
+      reason: "Already back to how it was.",
+    });
+  });
+
+  it("still checks a replaced line's references", () => {
+    const deleted = entry({ action: "deleted", before: { ...lineA, ownerMemberId: "m-gone" }, entityType: "budget_item" });
+    expect(planRevert(deleted, budgetContext({ ...lineA, id: "bi-C" }), "undo", f)).toEqual({
+      kind: "blocked",
+      reason: "A member it belonged to is no longer in the household.",
+    });
+  });
+
+  it("removing an added line removes the one there now, even after an owner switch", () => {
+    const created = entry({ action: "created", after: lineA, entityType: "budget_item" });
+    const plan = planRevert(created, budgetContext({ ...lineA, id: "bi-B", ownerMemberId: "m-1" }), "undo", f);
+    expect(plan.kind === "apply" && [plan.operation, plan.changes]).toEqual([
+      { type: "delete" },
+      [
+        { field: "Category", from: "Groceries", to: null },
+        { field: "Planned", from: "RS 5,000", to: null },
+        { field: "For", from: "Asha", to: null },
+      ],
+    ]);
+  });
+
+  it("other entities restoring over an existing row stay blocked", () => {
+    const deleted = entry({ action: "deleted", before: original, entityType: "expense" });
+    expect(planRevert(deleted, context({ ...original, amount: "900.00" }), "undo", f)).toEqual({
+      kind: "blocked",
+      reason: "This expense already exists again.",
+    });
+  });
+});
+
 describe("planRevert — marked paid", () => {
   it("removes the created expense and rolls the bill back", () => {
     const bill = { amount: "1500.00", categoryId: "cat-1", endDate: null, frequency: "monthly", icon: "wifi", id: "r-1", name: "Internet", nextDueDate: "2026-10-15", ownerMemberId: null, status: "active", vendor: null };

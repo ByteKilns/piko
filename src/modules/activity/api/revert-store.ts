@@ -45,7 +45,7 @@ type ChildOps = {
 type TableOps = {
   children?: ChildOps[];
   extra?: (householdId: string, entry: ActivityLog) => Promise<Record<string, object[]>>;
-  find: (householdId: string, id: string) => Promise<object | undefined>;
+  find: (householdId: string, id: string, entry: ActivityLog) => Promise<object | undefined>;
   insert: (tx: Tx, householdId: string, row: Row) => Promise<unknown>;
   parentIds?: (householdId: string) => Promise<string[]>;
   remove: (tx: Tx, householdId: string, id: string, op: Extract<RevertOperation, { type: "delete" }>) => Promise<unknown>;
@@ -77,7 +77,7 @@ function tableStore(ops: TableOps): RevertStore {
     },
     async load(householdId, entityId, entry) {
       const [row, refs, parentIds, children, extra] = await Promise.all([
-        ops.find(householdId, entityId),
+        ops.find(householdId, entityId, entry),
         householdReferences(householdId),
         ops.parentIds ? ops.parentIds(householdId) : Promise.resolve([]),
         Promise.all((ops.children ?? []).map(async (c) => [c.kind, await c.find(householdId, entityId)] as const)),
@@ -153,8 +153,27 @@ const categoryStore = tableStore({
 });
 
 const budgetItemStore = tableStore({
-  find: async (h, id) =>
-    (await db.select().from(budgetItems).where(and(eq(budgetItems.id, id), inArray(budgetItems.monthlyBudgetId, budgetIdsOf(h)))))[0],
+  // A budget line is its category/month: changing the owner deletes the row
+  // and inserts another, so the line there now may carry a different id.
+  // Prefer the entry's own row if several owners share the category.
+  find: async (h, id, entry) => {
+    const { categoryId, monthlyBudgetId } = entry.after ?? entry.before ?? {};
+    if (typeof categoryId === "string" && typeof monthlyBudgetId === "string") {
+      const lines = await db
+        .select()
+        .from(budgetItems)
+        .where(
+          and(
+            eq(budgetItems.monthlyBudgetId, monthlyBudgetId),
+            eq(budgetItems.categoryId, categoryId),
+            inArray(budgetItems.monthlyBudgetId, budgetIdsOf(h)),
+          ),
+        );
+      const line = lines.find((l) => l.id === id) ?? lines[0];
+      if (line) return line;
+    }
+    return (await db.select().from(budgetItems).where(and(eq(budgetItems.id, id), inArray(budgetItems.monthlyBudgetId, budgetIdsOf(h)))))[0];
+  },
   insert: async (tx, h, row) => {
     const values = reviveRow(budgetItems, row);
     await requireParent(

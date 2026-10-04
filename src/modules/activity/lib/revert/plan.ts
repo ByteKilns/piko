@@ -128,10 +128,25 @@ function planRemove(config: EntityRevert, fields: FieldSpec<Row>[], entry: Rever
   return { changes, kind: "apply", operation: parentUpdate ? { parentUpdate, type: "delete" } : { type: "delete" }, warnings };
 }
 
+// Restoring an entity whose identity outlives its row (a budget line is its
+// category/month) sets the row there now back to `before` rather than adding a second.
+function planReplace(config: EntityRevert, fields: FieldSpec<Row>[], before: Row, current: Row): RevertPlan {
+  const differs = differsFor(config, fields);
+  const set: Row = {};
+  for (const key of config.editable) if (key in before && differs(key, current[key], before[key])) set[key] = before[key] ?? null;
+  if (Object.keys(set).length === 0) return noop("Already back to how it was.");
+  return {
+    changes: describeChanges(fields, differs, current, { ...current, ...set }),
+    kind: "apply",
+    operation: { set, type: "update" },
+    warnings: [`This replaces the ${config.noun} that's there now.`],
+  };
+}
+
 function planRestore(config: EntityRevert, fields: FieldSpec<Row>[], entry: RevertableEntry, context: RevertContext): RevertPlan {
   const before = entry.before;
   if (!before) return blocked("This change can't be reverted.");
-  if (context.row) return blocked(`This ${config.noun} already exists again.`);
+  if (context.row && !config.restoreReplacesExisting) return blocked(`This ${config.noun} already exists again.`);
 
   const refs = config.references(before);
   if (refs.categoryIds.some((id) => !context.references.categoryIds.has(id))) return blocked("Its category no longer exists.");
@@ -141,6 +156,7 @@ function planRestore(config: EntityRevert, fields: FieldSpec<Row>[], entry: Reve
   if (refs.parentId !== undefined && !context.references.parentIds.has(refs.parentId)) {
     return blocked(`The ${config.parentNoun ?? "item"} it belonged to no longer exists — revert that deletion first.`);
   }
+  if (context.row) return planReplace(config, fields, before, context.row);
 
   const related = entry.related ?? {};
   const warnings = config.children.flatMap((child) => {
