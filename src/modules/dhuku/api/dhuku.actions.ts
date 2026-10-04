@@ -7,7 +7,9 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { dhukuEntries, dhukus } from "@/db/schema";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
+import { activityActor, loadActivityFormatters, logActivity } from "@/modules/activity/api/activity";
 import { formatNPR } from "@/modules/dashboard/lib/format";
+import { dhukuChanges, dhukuEntrySummary, dhukuSummary } from "@/modules/dhuku/lib/dhuku-activity";
 import { type DhukuEntryInput, dhukuEntrySchema, type DhukuInput, dhukuSchema } from "@/modules/dhuku/schemas/dhuku.schema";
 import { insertNotification } from "@/modules/notifications/api/notifications.actions";
 
@@ -39,14 +41,20 @@ export async function listDhukuEntries(householdId: string) {
     .orderBy(desc(dhukuEntries.date), desc(dhukuEntries.createdAt));
 }
 
+async function findDhukuInHousehold(householdId: string, dhukuId: string) {
+  const [dhuku] = await db.select().from(dhukus).where(and(eq(dhukus.id, dhukuId), eq(dhukus.householdId, householdId)));
+  return dhuku;
+}
+
 export async function createDhukuAction(input: DhukuInput) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const parsed = dhukuSchema.parse(input);
   if (parsed.ownerMemberId) {
     await assertMemberInHousehold(householdId, parsed.ownerMemberId);
   }
 
-  await db.insert(dhukus).values({
+  const [created] = await db.insert(dhukus).values({
     householdId,
     interestPerMonth: parsed.interestPerMonth === null ? null : String(parsed.interestPerMonth),
     monthlyContribution: String(parsed.monthlyContribution),
@@ -55,17 +63,29 @@ export async function createDhukuAction(input: DhukuInput) {
     ownerMemberId: parsed.ownerMemberId,
     startDate: parsed.startDate,
     totalMembers: parsed.totalMembers,
+  }).returning();
+
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "created",
+    entityId: created.id,
+    entityType: "dhuku",
+    summary: dhukuSummary(f, created),
   });
 
   revalidateDhukuPaths();
 }
 
 export async function updateDhukuAction(id: string, input: DhukuInput) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const parsed = dhukuSchema.parse(input);
   if (parsed.ownerMemberId) {
     await assertMemberInHousehold(householdId, parsed.ownerMemberId);
   }
+
+  const before = await findDhukuInHousehold(householdId, id);
+  if (!before) return;
 
   await db
     .update(dhukus)
@@ -80,18 +100,39 @@ export async function updateDhukuAction(id: string, input: DhukuInput) {
     })
     .where(and(eq(dhukus.id, id), eq(dhukus.householdId, householdId)));
 
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "updated",
+    changes: dhukuChanges(f, before, parsed),
+    entityId: id,
+    entityType: "dhuku",
+    summary: dhukuSummary(f, parsed),
+  });
+
   revalidateDhukuPaths();
 }
 
 export async function deleteDhukuAction(id: string) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
+  const before = await findDhukuInHousehold(householdId, id);
+  if (!before) return;
+
   await db.delete(dhukus).where(and(eq(dhukus.id, id), eq(dhukus.householdId, householdId)));
+
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "deleted",
+    entityId: id,
+    entityType: "dhuku",
+    summary: dhukuSummary(f, before),
+  });
 
   revalidateDhukuPaths();
 }
 
 async function getDhukuInHousehold(householdId: string, dhukuId: string) {
-  const [dhuku] = await db.select().from(dhukus).where(and(eq(dhukus.id, dhukuId), eq(dhukus.householdId, householdId)));
+  const dhuku = await findDhukuInHousehold(householdId, dhukuId);
   if (!dhuku) {
     throw new Error("Dhuku does not belong to this household");
   }
@@ -99,7 +140,8 @@ async function getDhukuInHousehold(householdId: string, dhukuId: string) {
 }
 
 export async function addDhukuEntryAction(dhukuId: string, input: DhukuEntryInput) {
-  const { householdId, name: actorName } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId, name: actorName } = member;
   const parsed = dhukuEntrySchema.parse(input);
   const dhuku = await getDhukuInHousehold(householdId, dhukuId);
 
@@ -127,16 +169,33 @@ export async function addDhukuEntryAction(dhukuId: string, input: DhukuEntryInpu
     title: parsed.type === "payout" ? "Dhuku payout recorded" : "Dhuku contribution recorded",
   });
 
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "created",
+    entityId: created.id,
+    entityType: "dhuku_entry",
+    summary: dhukuEntrySummary(f, created, dhuku.name),
+  });
+
   revalidateDhukuPaths();
 }
 
 export async function deleteDhukuEntryAction(id: string) {
-  const { householdId } = await getCurrentMember();
+  const member = await getCurrentMember();
+  const { householdId } = member;
   const [entry] = await db.select().from(dhukuEntries).where(eq(dhukuEntries.id, id));
   if (!entry) return;
-  await getDhukuInHousehold(householdId, entry.dhukuId);
+  const dhuku = await getDhukuInHousehold(householdId, entry.dhukuId);
 
   await db.delete(dhukuEntries).where(eq(dhukuEntries.id, id));
+
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "deleted",
+    entityId: id,
+    entityType: "dhuku_entry",
+    summary: dhukuEntrySummary(f, entry, dhuku.name),
+  });
 
   revalidateDhukuPaths();
 }
