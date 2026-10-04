@@ -11,3 +11,4 @@ export * from "./notifications";
 export * from "./loans";
 export * from "./dhukus";
 export * from "./appReleases";
+export * from "./activityLogs";
