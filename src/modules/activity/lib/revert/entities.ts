@@ -93,7 +93,9 @@ export const ENTITY_REVERT: Partial<Record<ActivityEntityType, EntityRevert>> = 
   },
   household_settings: {
     children: [],
-    editable: ["dateFormat", "plannerEnabled"],
+    // The AI budget planner toggle was removed (and its column dropped), so
+    // reverting an old toggle entry is a no-op; the summary still names it.
+    editable: ["dateFormat"],
     fields: () => rowFields(settingsFields()),
     noun: "household setting",
     references: noRefs,

@@ -107,7 +107,7 @@ describe("planRevert — edits", () => {
   it("restores only the setting the entry touched", () => {
     const plan = planRevert(
       entry({ action: "updated", after: { dateFormat: "english" }, before: { dateFormat: "nepali" }, entityType: "household_settings" }),
-      context({ dateFormat: "english", plannerEnabled: true }),
+      context({ dateFormat: "english", name: "Home" }),
       "restore",
       f,
     );

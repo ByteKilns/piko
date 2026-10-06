@@ -10,7 +10,6 @@ import {
   resolvePeriod,
 } from "@/lib/month-period";
 import { getEffectiveMember, getHouseholdMembers } from "@/lib/session";
-import { buildPacingSchedule, currentWeekPacing } from "@/modules/budget-planner/lib/pacing";
 import {
   getBudgetItemsForMonth,
   getIncomesForMonth,
@@ -26,6 +25,7 @@ import { SummaryCards } from "@/modules/dashboard/components/SummaryCards";
 import { daysLeftInMonth, dhukuCashFlow, loanNetFlowByOwner, loanPaymentCashFlow, netMonthlyOutflow, safeToSpendToday } from "@/modules/dashboard/lib/cash-flow";
 import { toBudgetItemInputs, toExpenseInputs, toIncomeInputs } from "@/modules/dashboard/lib/map-rows";
 import { classifyOwnerLabel } from "@/modules/dashboard/lib/owner-label";
+import { buildPacingSchedule, currentWeekPacing } from "@/modules/dashboard/lib/pacing";
 import { listDhukuEntries } from "@/modules/dhuku/api/dhuku.actions";
 import { listExpensesForMonth, listRecentExpenses } from "@/modules/expenses/api/expenses.actions";
 import { listLoanPayments, listLoans } from "@/modules/loans/api/loans.actions";

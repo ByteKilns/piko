@@ -14,7 +14,6 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "e2e:serve": "tsx scripts/seed-e2e.ts && next build && next start -p 3100",
-    "eval:planner": "tsx scripts/eval-planner.ts",
     "prepare": "husky"
   },
   "dependencies": {

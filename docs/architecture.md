@@ -149,20 +149,9 @@ Conventions to keep when adding columns/tables:
 - **Error logging**: `src/instrumentation.ts` (`onRequestError`) unwraps `error.cause`
   chains so the real Postgres error is visible server-side — the client error boundary
   (`src/components/ErrorState.tsx`) only sees a stripped message.
-- **AI budget planner** (`src/modules/budget-planner/`): derives an envelope
-  (income − fixed commitments − savings) and a masked payload for the AI. The
-  privacy boundary is `lib/mask-financial-context.ts` — the only producer of
-  `MaskedFinancialContext` (shares + opaque category/owner tokens; no amounts,
-  names, dates or notes). The model returns token-keyed shares of the envelope;
-  `lib/build-plan.ts` maps them back to real categories/owners, converts to
-  amounts, and enforces invariants (drops unknown tokens, scales into the
-  flexible pool) for review — nothing is written until the user applies a row
-  via `setBudgetItemAction`. Weekly pacing (`lib/pacing.ts`) splits the flexible
-  budget into a weekly release with a last-week buffer, surfaced on the
-  dashboard. Two gates: the deployment `AI_BUDGET_PLANNER=off|mock|live` (mock
-  is deterministic and offline) and a per-household opt-in
-  (`households.plannerEnabled`, toggled in Settings). `npm run eval:planner`
-  runs the real model offline against fixtures (not part of CI).
+- **Safe-to-spend pacing** (`src/modules/dashboard/lib/pacing.ts`): splits the
+  month's flexible budget into a weekly release with a last-week buffer,
+  surfaced on the dashboard.
 - **App releases**: publishing is gated by `APP_RELEASE_ADMIN_EMAILS`
   (`src/lib/release-admin.ts`); APKs are uploaded to Vercel Blob via a client-token
   flow (`src/app/api/app-releases/upload/route.ts`). `handleUpload` requires
@@ -217,7 +206,6 @@ npm run build               # production build (runs tsc too; part of the pre-co
 npm run db:generate         # generate a migration from schema changes
 npm run db:migrate          # apply migrations to .env.local's DATABASE_URL
 npm run db:seed             # seed household + 2 users + default categories
-npm run eval:planner        # offline AI eval over fixtures (needs AI_BUDGET_PLANNER=live)
 npx tsx scripts/backfill-activity.ts [--apply]  # one-off: log pre-existing rows as "imported" (dry run without --apply; re-runnable)
 
 # mobile (from mobile/)

@@ -12,7 +12,7 @@ import { isDateFormat } from "@/lib/date-format-cookie";
 import { getCurrentMember } from "@/lib/session";
 import { activityActor, logActivity } from "@/modules/activity/api/activity";
 
-import { dateFormatChanges, dateFormatLabel, plannerChanges } from "../lib/settings-activity";
+import { dateFormatChanges, dateFormatLabel } from "../lib/settings-activity";
 import { type ChangePasswordInput, changePasswordSchema } from "../schemas/password.schema";
 import { profileImageSchema } from "../schemas/profile-image.schema";
 
@@ -85,24 +85,6 @@ export async function setDateFormatAction(format: string) {
     entityId: householdId,
     entityType: "household_settings",
     summary: `Date format → ${dateFormatLabel(format)}`,
-  });
-  revalidatePath("/", "layout");
-}
-
-export async function setPlannerEnabledAction(enabled: boolean) {
-  const member = await getCurrentMember();
-  const { householdId } = member;
-  const [before] = await db.select().from(households).where(eq(households.id, householdId));
-  await db.update(households).set({ plannerEnabled: enabled }).where(eq(households.id, householdId));
-
-  await logActivity(activityActor(member), {
-    action: "updated",
-    after: { plannerEnabled: enabled },
-    before: { plannerEnabled: before.plannerEnabled },
-    changes: plannerChanges(before.plannerEnabled, enabled),
-    entityId: householdId,
-    entityType: "household_settings",
-    summary: `AI budget planner → ${enabled ? "On" : "Off"}`,
   });
   revalidatePath("/", "layout");
 }

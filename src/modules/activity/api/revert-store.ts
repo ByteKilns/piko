@@ -412,7 +412,7 @@ const settingsStore: RevertStore = {
     const [row] =
       entityId === householdId
         ? await db
-            .select({ dateFormat: households.dateFormat, plannerEnabled: households.plannerEnabled })
+            .select({ dateFormat: households.dateFormat })
             .from(households)
             .where(eq(households.id, householdId))
         : [];

@@ -29,6 +29,6 @@ describe("reviveRow", () => {
   });
 
   it("leaves non-timestamp columns alone", () => {
-    expect(reviveRow(households, { dateFormat: "english", plannerEnabled: true })).toEqual({ dateFormat: "english", plannerEnabled: true });
+    expect(reviveRow(households, { dateFormat: "english", name: "Home" })).toEqual({ dateFormat: "english", name: "Home" });
   });
 });

@@ -1,7 +1,7 @@
 import { WalletCards } from "lucide-react";
 
-import type { PacingSchedule, WeekPacing } from "@/modules/budget-planner/lib/pacing";
 import { formatNPR } from "@/modules/dashboard/lib/format";
+import type { PacingSchedule, WeekPacing } from "@/modules/dashboard/lib/pacing";
 
 type Props = {
   daysLeft: number;

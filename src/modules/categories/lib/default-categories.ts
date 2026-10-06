@@ -1,9 +1,5 @@
 // The canonical category set every new household is seeded with (see
-// src/db/seed.ts). Kept here as the single source of truth so "is this a
-// default category?" has exactly one definition: the budget planner relies on
-// it to decide whether a category name is safe to send to the AI. Default
-// names are generic; a user-created name may contain personal details, so
-// anything not in this list is treated as custom and never sent by name.
+// src/db/seed.ts and scripts/seed-e2e.ts).
 export type DefaultCategory = { budgetType: "fixed" | "flexible"; group: string; name: string };
 
 export const DEFAULT_CATEGORIES: DefaultCategory[] = [
@@ -32,7 +28,3 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
   { budgetType: "flexible", group: "Financial", name: "Savings" },
   { budgetType: "flexible", group: "Other", name: "Miscellaneous" },
 ];
-
-export function isDefaultCategory(name: string, groupName: string): boolean {
-  return DEFAULT_CATEGORIES.some((c) => c.name === name && c.group === groupName);
-}

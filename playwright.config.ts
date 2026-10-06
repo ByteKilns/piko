@@ -54,7 +54,6 @@ export default defineConfig({
     // e2e runs a local `next start`, so it needs this. Test-only.
     // DATABASE_URL points the server (and the seeder) at the e2e database.
     env: {
-      AI_BUDGET_PLANNER: "mock",
       AUTH_TRUST_HOST: "true",
       ...(e2eDatabaseUrl ? { DATABASE_URL: e2eDatabaseUrl } : {}),
     },

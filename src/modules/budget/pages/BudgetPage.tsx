@@ -2,7 +2,6 @@ import { getDateFormatPref } from "@/lib/date-format-cookie";
 import { nextMonth, parseMonthParam, previousMonth } from "@/lib/month-nav";
 import { currentPeriodYearMonth, formatPeriodLabel, MAX_NAVIGABLE_YEAR, MIN_NAVIGABLE_YEAR } from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
-import { isPlannerEnabled } from "@/modules/budget-planner/lib/flag";
 import { getBudgetItemsForMonth, getIncomesForMonth } from "@/modules/budget/api/budget.actions";
 import { AllocationSummaryCard } from "@/modules/budget/components/AllocationSummaryCard";
 import { BudgetGroups } from "@/modules/budget/components/BudgetGroups";
@@ -28,14 +27,13 @@ export async function BudgetPage({ searchParams }: Props) {
   const prev = previousMonth(year, month);
   const next = nextMonth(year, month);
 
-  const [members, categories, incomes, budgetItems, expenseRows, prevBudgetItems, plannerEnabled] = await Promise.all([
+  const [members, categories, incomes, budgetItems, expenseRows, prevBudgetItems] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
     getIncomesForMonth(year, month),
     getBudgetItemsForMonth(year, month),
     listExpensesForMonth(year, month, dateFormat),
     getBudgetItemsForMonth(prev.year, prev.month),
-    isPlannerEnabled(householdId),
   ]);
 
   if (year === currentYear && month === currentMonth) {
@@ -82,7 +80,6 @@ export async function BudgetPage({ searchParams }: Props) {
         month={month}
         monthLabel={monthLabel}
         nextHref={`/budget?year=${next.year}&month=${next.month}`}
-        plannerEnabled={plannerEnabled}
         prevHref={`/budget?year=${prev.year}&month=${prev.month}`}
         year={year}
       />

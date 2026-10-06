@@ -1,6 +1,6 @@
 // Prepares the dedicated e2e database: creates it if missing, resets the
 // schema, applies migrations, and inserts a deterministic fixture (6 months of
-// history) so the planner has something to plan from.
+// history) so the reports and dashboard have data to show.
 //
 // Run by `npm run e2e:serve` with DATABASE_URL pointed at the e2e database
 // (Playwright's webServer sets it). Refuses to touch a database whose name
@@ -98,8 +98,7 @@ async function main() {
 
   const [household] = await db
     .insert(households)
-    // plannerEnabled: so the e2e fixture can exercise the planner end-to-end.
-    .values({ name: "E2E Household", dateFormat: "english", plannerEnabled: true })
+    .values({ name: "E2E Household", dateFormat: "english" })
     .returning();
   const [user1] = await db
     .insert(users)
