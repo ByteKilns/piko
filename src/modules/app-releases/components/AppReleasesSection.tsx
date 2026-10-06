@@ -50,6 +50,12 @@ export function AppReleasesSection({ releases }: Props) {
       toast.error("Choose an APK file first");
       return;
     }
+    // Checked before uploading too, so a rejected build number doesn't leave
+    // an orphaned APK in storage (the server re-checks on publish).
+    if (latest && Number(versionCode) <= latest.versionCode) {
+      toast.error(`Build number must be higher than the current ${latest.versionCode}`);
+      return;
+    }
 
     setProgress(0);
     try {
@@ -62,7 +68,7 @@ export function AppReleasesSection({ releases }: Props) {
         onUploadProgress: ({ percentage }) => setProgress(percentage),
       });
 
-      await publishReleaseAction({
+      const { cleanupFailed } = await publishReleaseAction({
         apkUrl: blob.url,
         notes: notes || undefined,
         sha256,
@@ -72,6 +78,7 @@ export function AppReleasesSection({ releases }: Props) {
       });
 
       toast.success(`Published v${versionName} — the app will prompt users to update`);
+      if (cleanupFailed) toast.warning("Older APK files couldn't be deleted and may still be downloadable.");
       setFile(null);
       setVersionName("");
       setVersionCode(String(Number(versionCode) + 1));
@@ -87,6 +94,16 @@ export function AppReleasesSection({ releases }: Props) {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-medium">App updates</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          {latest ? (
+            <>
+              Live now: <span className="font-medium text-foreground">v{latest.versionName}</span> (build {latest.versionCode}). Publishing a
+              new build removes the previous APK.
+            </>
+          ) : (
+            "No build published yet — installed apps won't see any update until you publish one."
+          )}
+        </p>
       </CardHeader>
       <CardContent className="space-y-6">
         <form className="max-w-sm space-y-3" onSubmit={handleSubmit}>
@@ -155,23 +172,46 @@ export function AppReleasesSection({ releases }: Props) {
           </Button>
         </form>
 
-        {releases.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Published builds</p>
-            <ul className="divide-y rounded-md border text-sm">
-              {releases.map((r) => (
-                <li className="flex items-center justify-between gap-3 px-3 py-2" key={r.id}>
-                  <span>
-                    v{r.versionName} <span className="text-muted-foreground">(build {r.versionCode})</span>
-                  </span>
-                  <span className="text-muted-foreground">
-                    {formatMb(r.sizeBytes)} · {r.createdAt.toLocaleDateString()}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Published builds</p>
+          {releases.length === 0 ? (
+            <p className="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">No builds published yet.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Version</th>
+                    <th className="px-3 py-2 font-medium">Build</th>
+                    <th className="px-3 py-2 font-medium">Size</th>
+                    <th className="px-3 py-2 font-medium">Published</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {releases.map((r, i) => (
+                    <tr key={r.id}>
+                      <td className="px-3 py-2 font-medium">v{r.versionName}</td>
+                      <td className="px-3 py-2">{r.versionCode}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{formatMb(r.sizeBytes)}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{r.createdAt.toLocaleDateString()}</td>
+                      <td className="px-3 py-2">
+                        {/* Only the newest build stays downloadable; publishing deletes older APK files. */}
+                        {i === 0 ? (
+                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-950 dark:text-green-400">
+                            Live
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Removed</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
