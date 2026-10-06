@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { requireMobileAuth } from "@/lib/mobile-request";
-import { getLatestRelease } from "@/modules/app-releases/api/app-releases";
+import { getLatestRelease, signedApkDownloadUrl } from "@/modules/app-releases/api/app-releases";
 
 export async function GET(request: NextRequest) {
   const auth = await requireMobileAuth(request);
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     latest: {
-      apkUrl: latest.apkUrl,
+      apkUrl: await signedApkDownloadUrl(latest.apkUrl),
       notes: latest.notes,
       sha256: latest.sha256,
       sizeBytes: latest.sizeBytes,

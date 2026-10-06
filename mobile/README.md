@@ -31,8 +31,9 @@ SHA-256 and opens Android's installer.
    Builds made before this were signed with a debug key, so existing installs
    need one manual uninstall + reinstall of the first release-signed APK.
 
-2. **Web.** In Vercel, create a Blob store and connect it to the project (this sets
-   `BLOB_READ_WRITE_TOKEN`). Add `APP_RELEASE_ADMIN_EMAILS` with the emails
+2. **Web.** In Vercel, create a **private** Blob store and connect it to the project (this sets
+   `BLOB_READ_WRITE_TOKEN`). APKs are uploaded privately; the app downloads the
+   latest one through a short-lived signed link from `/api/mobile/app-version`. Add `APP_RELEASE_ADMIN_EMAILS` with the emails
    allowed to publish, then run `npm run db:migrate`.
 
 ### Each release

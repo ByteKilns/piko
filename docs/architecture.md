@@ -155,7 +155,9 @@ Conventions to keep when adding columns/tables:
 - **App releases**: publishing is gated by `APP_RELEASE_ADMIN_EMAILS`
   (`src/lib/release-admin.ts`); APKs are uploaded to Vercel Blob via a client-token
   flow (`src/app/api/app-releases/upload/route.ts`). `handleUpload` requires
-  `BLOB_READ_WRITE_TOKEN` (OIDC alone is not enough). Full procedure in `mobile/README.md`.
+  `BLOB_READ_WRITE_TOKEN` (OIDC alone is not enough). The store is **private**:
+  `/api/mobile/app-version` hands the app a 24h signed link to the latest APK
+  only, and publishing deletes superseded APK files. Full procedure in `mobile/README.md`.
 - **Activity log** (`src/modules/activity/`): every household data mutation calls
   `logActivity(activityActor(member), entry)` after its write succeeds. Each module
   owns a pure `lib/<x>-activity.ts` (summary + `diffFields` specs) so field knowledge

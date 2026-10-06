@@ -29,6 +29,11 @@ async function sha256Hex(file: File): Promise<string> {
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// The Blob SDK retries unrecognised failures with exponential backoff for
+// ~17 minutes, which looks like an upload frozen at 0%. Give up sooner when
+// nothing has moved for this long.
+const STALL_TIMEOUT_MS = 60_000;
+
 function formatMb(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
@@ -58,15 +63,23 @@ export function AppReleasesSection({ releases }: Props) {
     }
 
     setProgress(0);
+    const controller = new AbortController();
+    let stallTimer = setTimeout(() => controller.abort(), STALL_TIMEOUT_MS);
     try {
       const sha256 = await sha256Hex(file);
       const blob = await upload(`app-releases/piko-${versionName || "build"}.apk`, file, {
-        access: "public",
+        access: "private",
         contentType: "application/vnd.android.package-archive",
         handleUploadUrl: "/api/app-releases/upload",
+        abortSignal: controller.signal,
         multipart: true,
-        onUploadProgress: ({ percentage }) => setProgress(percentage),
+        onUploadProgress: ({ percentage }) => {
+          setProgress(percentage);
+          clearTimeout(stallTimer);
+          stallTimer = setTimeout(() => controller.abort(), STALL_TIMEOUT_MS);
+        },
       });
+      clearTimeout(stallTimer);
 
       const { cleanupFailed } = await publishReleaseAction({
         apkUrl: blob.url,
@@ -84,8 +97,15 @@ export function AppReleasesSection({ releases }: Props) {
       setVersionCode(String(Number(versionCode) + 1));
       setNotes("");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to publish release");
+      toast.error(
+        controller.signal.aborted
+          ? "Upload stalled with no progress for a minute — check your connection and try again."
+          : err instanceof Error
+            ? err.message
+            : "Failed to publish release",
+      );
     } finally {
+      clearTimeout(stallTimer);
       setProgress(null);
     }
   }
