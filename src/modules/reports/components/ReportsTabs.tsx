@@ -8,16 +8,17 @@ import { DailyCashFlowChart } from "@/modules/dashboard/components/DailyCashFlow
 import type { DayPoint } from "@/modules/dashboard/lib/cash-flow";
 import { formatNPR } from "@/modules/dashboard/lib/format";
 import { ExpenseSummaryCard } from "@/modules/expenses/components/ExpenseSummaryCard";
-import { ExpenseTable } from "@/modules/expenses/components/ExpenseTable";
-import type { ExpenseRow } from "@/modules/expenses/hooks/useExpenseTableColumns";
 import type { OwnerSlice } from "@/modules/expenses/lib/expense-breakdown";
+import { BudgetVsActualCard } from "@/modules/reports/components/BudgetVsActualCard";
+import { CategoryChangesCard } from "@/modules/reports/components/CategoryChangesCard";
 import { ExpenseBreakdownCard } from "@/modules/reports/components/ExpenseBreakdownCard";
 import { GoalSummaryRow } from "@/modules/reports/components/GoalSummaryRow";
 import { IncomeBreakdownCard } from "@/modules/reports/components/IncomeBreakdownCard";
 import { IncomeExpenseTrendCard } from "@/modules/reports/components/IncomeExpenseTrendCard";
 import { SmartInsightCard } from "@/modules/reports/components/SmartInsightCard";
 import { SpendingPaceCard } from "@/modules/reports/components/SpendingPaceCard";
-import type { CategorySlice, MonthPoint, PacePoint } from "@/modules/reports/lib/reports-stats";
+import { type TopExpense, TopExpensesCard } from "@/modules/reports/components/TopExpensesCard";
+import type { BudgetLine, CategoryChange, CategorySlice, MonthPoint, PacePoint } from "@/modules/reports/lib/reports-stats";
 import type { GoalCardData } from "@/modules/savings-goals/components/GoalCard";
 import { GoalProgressOverviewCard } from "@/modules/savings-goals/components/GoalProgressOverviewCard";
 import { type ContributionEntry, RecentContributionsCard } from "@/modules/savings-goals/components/RecentContributionsCard";
@@ -27,22 +28,23 @@ import type { GoalStatus } from "@/modules/savings-goals/lib/savings-stats";
 type Tab = "expenses" | "income" | "savings";
 
 type Props = {
-  categories: { groupName: string; id: string; name: string }[];
+  budgetHref: string;
+  budgetLines: BudgetLine[];
+  categoryChanges: CategoryChange[];
   combinedIncome: number;
   dailyPoints: DayPoint[];
   dateFormat: DateFormat;
-  expenseRows: ExpenseRow[];
   expenseSlices: CategorySlice[];
   goals: GoalCardData[];
   goalStatusCounts: Record<GoalStatus, number>;
   incomeSlices: OwnerSlice[];
   insightMessage: string;
-  members: { id: string; name: string }[];
+  largestExpenses: TopExpense[];
   monthLabel: string;
   ownerSlices: OwnerSlice[];
   pacePoints: PacePoint[];
-  partnerName: null | string;
   pctOfIncome: null | number;
+  previousLabel: string;
   realMemberId: string;
   recentContributions: ContributionEntry[];
   savingsAverageProgress: number;
@@ -70,25 +72,28 @@ export function ReportsTabs(props: Props) {
       />
 
       {tab === "expenses" && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <SpendingPaceCard points={props.pacePoints} totalPlanned={props.totalPlanned} />
-
-          <div className="space-y-6 lg:col-span-2">
-            <ExpenseTable
-              categories={props.categories}
-              dateFormat={props.dateFormat}
-              members={props.members}
-              partnerName={props.partnerName}
-              realMemberId={props.realMemberId}
-              rows={props.expenseRows}
-            />
-            <DailyCashFlowChart dateFormat={props.dateFormat} monthLabel={props.monthLabel} points={props.dailyPoints} />
-          </div>
-          <div className="space-y-6">
-            <ExpenseSummaryCard pctOfIncome={props.pctOfIncome} slices={props.ownerSlices} total={props.totalExpenses} />
-            <ExpenseBreakdownCard slices={props.expenseSlices} total={props.totalExpenses} />
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-3">
             <SmartInsightCard message={props.insightMessage} />
           </div>
+
+          <div className="lg:col-span-2">
+            <BudgetVsActualCard budgetHref={props.budgetHref} lines={props.budgetLines} />
+          </div>
+          <ExpenseSummaryCard pctOfIncome={props.pctOfIncome} slices={props.ownerSlices} total={props.totalExpenses} />
+
+          {/* Full width on large screens (the card sets its own col-span). */}
+          <SpendingPaceCard points={props.pacePoints} totalPlanned={props.totalPlanned} />
+
+          <div className="lg:col-span-2">
+            <DailyCashFlowChart dateFormat={props.dateFormat} monthLabel={props.monthLabel} points={props.dailyPoints} />
+          </div>
+          <CategoryChangesCard changes={props.categoryChanges} previousLabel={props.previousLabel} />
+
+          <div className="lg:col-span-2">
+            <ExpenseBreakdownCard slices={props.expenseSlices} total={props.totalExpenses} />
+          </div>
+          <TopExpensesCard dateFormat={props.dateFormat} expenses={props.largestExpenses} />
         </div>
       )}
 

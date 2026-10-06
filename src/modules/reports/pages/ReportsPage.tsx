@@ -13,7 +13,15 @@ import { roleForOwner } from "@/modules/expenses/lib/member-tone";
 import { listLoanPayments, listLoans } from "@/modules/loans/api/loans.actions";
 import { ReportsHeader } from "@/modules/reports/components/ReportsHeader";
 import { ReportsTabs } from "@/modules/reports/components/ReportsTabs";
-import { categoryBreakdown, dailySpendingPace, monthlyIncomeExpenseTrend, spendingInsight } from "@/modules/reports/lib/reports-stats";
+import {
+  budgetVsActual,
+  categoryBreakdown,
+  categoryChanges,
+  dailySpendingPace,
+  monthlyIncomeExpenseTrend,
+  spendingInsight,
+  topExpenses,
+} from "@/modules/reports/lib/reports-stats";
 import { listSavingsContributions, listSavingsGoals } from "@/modules/savings-goals/api/savings-goals.actions";
 import { buildContributionEntries, buildGoalCards, monthlyTotals, savingsOverviewStats } from "@/modules/savings-goals/lib/savings-stats";
 
@@ -65,10 +73,8 @@ export async function ReportsPage({ searchParams }: Props) {
   ]);
 
   const memberById = new Map(members.map((m) => [m.id, m]));
-  const partner = members.find((m) => m.id !== memberId) ?? null;
   const category = (id: string) => categories.find((c) => c.id === id);
   const categoryName = (id: string) => category(id)?.name ?? "Unknown";
-  const memberName = (id: string) => memberById.get(id)?.user.name ?? "Unknown";
 
   const expenses = expenseRows.map((e) => ({
     amount: Number(e.amount),
@@ -79,19 +85,26 @@ export async function ReportsPage({ searchParams }: Props) {
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
   const prevTotalExpenses = prevExpenseRows.reduce((s, e) => s + Number(e.amount), 0);
 
-  const expenseTableRows = expenseRows.map((e) => ({
-    amount: Number(e.amount),
-    categoryGroupName: category(e.categoryId)?.groupName ?? "",
-    categoryId: e.categoryId,
-    categoryName: categoryName(e.categoryId),
-    date: e.date,
-    id: e.id,
-    note: e.note,
-    ownerMemberId: e.ownerMemberId,
-    ownerName: e.ownerMemberId ? memberName(e.ownerMemberId) : null,
-    paidByMemberId: e.paidByMemberId,
-    paidByName: memberName(e.paidByMemberId),
-  }));
+  const budgetLines = budgetVsActual(
+    budgetItemRows.map((b) => ({ categoryId: b.categoryId, plannedAmount: Number(b.plannedAmount) })),
+    expenses,
+    categories,
+  );
+  const changes = categoryChanges(
+    expenses,
+    prevExpenseRows.map((e) => ({ amount: Number(e.amount), categoryId: e.categoryId })),
+    categories,
+  );
+  const largestExpenses = topExpenses(
+    expenseRows.map((e) => ({
+      amount: Number(e.amount),
+      categoryName: categoryName(e.categoryId),
+      date: e.date,
+      groupName: category(e.categoryId)?.groupName ?? "Other",
+      id: e.id,
+      note: e.note,
+    })),
+  );
 
   const ownerSlices = ownerBreakdown(
     expenses,
@@ -164,22 +177,23 @@ export async function ReportsPage({ searchParams }: Props) {
       />
 
       <ReportsTabs
-        categories={categories.map((c) => ({ groupName: c.groupName, id: c.id, name: c.name }))}
+        budgetHref={`/budget?year=${year}&month=${month}`}
+        budgetLines={budgetLines}
+        categoryChanges={changes}
         combinedIncome={combinedIncome}
         dailyPoints={dailyPoints}
         dateFormat={dateFormat}
-        expenseRows={expenseTableRows}
         expenseSlices={expenseSlices}
         goals={goals}
         goalStatusCounts={statusCounts}
         incomeSlices={incomeSlices}
         insightMessage={insightMessage}
-        members={members.map((m) => ({ id: m.id, name: m.user.name }))}
+        largestExpenses={largestExpenses}
         monthLabel={monthLabel}
         ownerSlices={ownerSlices}
         pacePoints={pacePoints}
-        partnerName={partner?.user.name ?? null}
         pctOfIncome={pctOfIncome(totalExpenses, combinedIncome)}
+        previousLabel={formatPeriodLabel(prev.year, prev.month, dateFormat)}
         realMemberId={memberId}
         recentContributions={recentContributions}
         savingsAverageProgress={savingsStats.averageProgress}

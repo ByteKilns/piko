@@ -109,3 +109,81 @@ export function spendingInsight(currentExpenses: number, previousExpenses: numbe
   if (pct > 0) return `You're spending ${pct}% more than last month. Consider reviewing your budget.`;
   return "Your spending is about the same as last month.";
 }
+
+type CategoryInfo = { groupName: string; id: string; name: string };
+
+function sumByCategory(rows: { amount: number; categoryId: string }[]): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const r of rows) totals.set(r.categoryId, (totals.get(r.categoryId) ?? 0) + r.amount);
+  return totals;
+}
+
+function describeCategory(categoryId: string, categoryById: Map<string, CategoryInfo>) {
+  const category = categoryById.get(categoryId);
+  const groupName = category?.groupName ?? "Other";
+  return { categoryId, groupName, name: category?.name ?? "Unknown", tone: getCategoryTone(groupName) };
+}
+
+export type BudgetLine = { categoryId: string; groupName: string; name: string; planned: number; spent: number; tone: Tone };
+
+// Planned vs spent per category for one month. Budget lines are per owner, so
+// a category's lines are summed. Overspent categories come first (worst
+// first), then spending with no budget (largest first), then the rest by how
+// much of their budget is used.
+export function budgetVsActual(
+  budgetItems: { categoryId: string; plannedAmount: number }[],
+  expenses: { amount: number; categoryId: string }[],
+  categories: CategoryInfo[],
+): BudgetLine[] {
+  const planned = sumByCategory(budgetItems.map((b) => ({ amount: b.plannedAmount, categoryId: b.categoryId })));
+  const spent = sumByCategory(expenses);
+  const categoryById = new Map(categories.map((c) => [c.id, c]));
+
+  const lines = [...new Set([...planned.keys(), ...spent.keys()])].map((categoryId) => ({
+    ...describeCategory(categoryId, categoryById),
+    planned: planned.get(categoryId) ?? 0,
+    spent: spent.get(categoryId) ?? 0,
+  }));
+  const rank = (l: BudgetLine) => (l.planned === 0 ? 1 : l.spent > l.planned ? 0 : 2);
+  const weight = (l: BudgetLine) => [l.spent - l.planned, l.spent, l.spent / l.planned][rank(l)];
+  return lines
+    .filter((l) => l.planned > 0 || l.spent > 0)
+    .sort((a, b) => rank(a) - rank(b) || weight(b) - weight(a));
+}
+
+export type CategoryChange = {
+  categoryId: string;
+  current: number;
+  delta: number;
+  groupName: string;
+  name: string;
+  pct: null | number;
+  previous: number;
+  tone: Tone;
+};
+
+// The categories whose spending moved most vs the previous month, either way.
+export function categoryChanges(
+  current: { amount: number; categoryId: string }[],
+  previous: { amount: number; categoryId: string }[],
+  categories: CategoryInfo[],
+  limit = 5,
+): CategoryChange[] {
+  const now = sumByCategory(current);
+  const before = sumByCategory(previous);
+  const categoryById = new Map(categories.map((c) => [c.id, c]));
+
+  return [...new Set([...now.keys(), ...before.keys()])]
+    .map((categoryId) => {
+      const cur = now.get(categoryId) ?? 0;
+      const prev = before.get(categoryId) ?? 0;
+      return { ...describeCategory(categoryId, categoryById), current: cur, delta: cur - prev, pct: trendPct(cur, prev), previous: prev };
+    })
+    .filter((c) => c.delta !== 0)
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+    .slice(0, limit);
+}
+
+export function topExpenses<T extends { amount: number }>(rows: T[], limit = 5): T[] {
+  return [...rows].sort((a, b) => b.amount - a.amount).slice(0, limit);
+}

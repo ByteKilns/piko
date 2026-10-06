@@ -12,6 +12,9 @@ test.describe("reports", () => {
     await expect(page.getByText("Understand your money, make better decisions")).toBeVisible();
     await expect(page.getByRole("tab", { name: "Expenses" })).toBeVisible();
     await expect(page.getByText("Expense Breakdown").first()).toBeVisible();
+    await expect(page.getByText("Budget vs actual", { exact: true })).toBeVisible();
+    await expect(page.getByText("Biggest changes", { exact: true })).toBeVisible();
+    await expect(page.getByText("Largest expenses", { exact: true })).toBeVisible();
   });
 
   test("switches between report tabs", async ({ page }) => {
