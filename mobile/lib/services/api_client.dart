@@ -7,6 +7,7 @@ import '../models/categories_result.dart';
 import '../models/expense.dart';
 import '../models/expense_draft.dart';
 import '../models/voice_parse_result.dart';
+import 'bs_calendar.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -104,6 +105,10 @@ class ApiClient {
   Future<Expense> createExpense(ExpenseDraft draft) async {
     final body = await _authorizedPost('/api/mobile/expenses', draft.toJson());
     return Expense.fromJson(body['expense'] as Map<String, dynamic>);
+  }
+
+  Future<BsCalendar> fetchCalendar() async {
+    return BsCalendar.fromJson(await _authorizedGet('/api/mobile/calendar'));
   }
 
   Future<AppRelease?> fetchLatestRelease() async {

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../services/bs_calendar.dart';
 import '../services/settings_service.dart';
 
 final settingsServiceProvider = Provider<SettingsService>((ref) => SettingsService());
@@ -27,4 +28,26 @@ class ServerUrlNotifier extends StateNotifier<AsyncValue<String>> {
 
 final serverUrlProvider = StateNotifierProvider<ServerUrlNotifier, AsyncValue<String>>(
   (ref) => ServerUrlNotifier(ref.watch(settingsServiceProvider)),
+);
+
+class DateFormatNotifier extends StateNotifier<AppDateFormat> {
+  final SettingsService _service;
+
+  // BS until the stored choice loads — the same default the website uses.
+  DateFormatNotifier(this._service) : super(AppDateFormat.nepali) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    state = await _service.readDateFormat();
+  }
+
+  Future<void> setFormat(AppDateFormat format) async {
+    state = format;
+    await _service.writeDateFormat(format);
+  }
+}
+
+final dateFormatProvider = StateNotifierProvider<DateFormatNotifier, AppDateFormat>(
+  (ref) => DateFormatNotifier(ref.watch(settingsServiceProvider)),
 );

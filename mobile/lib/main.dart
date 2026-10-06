@@ -1,15 +1,27 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers/auth_provider.dart';
+import 'providers/calendar_provider.dart';
+import 'services/bs_calendar.dart';
 import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
-void main() {
-  runApp(const ProviderScope(child: PikoApp()));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final calendarJson = jsonDecode(await rootBundle.loadString('assets/bs_calendar.json')) as Map<String, dynamic>;
+  runApp(
+    ProviderScope(
+      overrides: [bundledCalendarProvider.overrideWithValue(BsCalendar.fromJson(calendarJson))],
+      child: const PikoApp(),
+    ),
+  );
 }
 
 class PikoApp extends ConsumerWidget {

@@ -6,9 +6,12 @@ import '../models/categories_result.dart';
 import '../models/expense_draft.dart';
 import '../providers/api_client_provider.dart';
 import '../providers/app_update_provider.dart';
+import '../providers/calendar_provider.dart';
 import '../providers/categories_provider.dart';
 import '../providers/expenses_provider.dart';
+import '../providers/settings_provider.dart';
 import '../services/api_client.dart';
+import '../services/bs_calendar.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_update_sheet.dart';
 import '../widgets/expense_confirm_sheet.dart';
@@ -90,6 +93,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           initialDraft: draft,
           categories: categoriesResult.categories,
           members: categoriesResult.members,
+          dateFormat: ref.read(dateFormatProvider),
+          calendar: ref.read(bsCalendarProvider),
           onSave: (finalDraft) async {
             final client = ref.read(apiClientProvider);
             try {
@@ -125,6 +130,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final expensesAsync = ref.watch(recentExpensesProvider);
     final update = ref.watch(availableUpdateProvider).valueOrNull;
     final categoriesAsync = ref.watch(categoriesProvider);
+    final dateFormat = ref.watch(dateFormatProvider);
+    final calendar = ref.watch(bsCalendarProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -209,7 +216,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       itemBuilder: (context, index) {
                         final expense = expenses[index];
                         final category = categories.firstWhereOrNull((c) => c.id == expense.categoryId);
-                        return ExpenseListTile(expense: expense, category: category);
+                        return ExpenseListTile(
+                          expense: expense,
+                          category: category,
+                          dateLabel: formatAppDate(expense.date, dateFormat, calendar),
+                        );
                       },
                     );
                   },

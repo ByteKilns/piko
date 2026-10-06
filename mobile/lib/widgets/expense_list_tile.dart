@@ -8,14 +8,15 @@ import '../theme/category_style.dart';
 class ExpenseListTile extends StatelessWidget {
   final Expense expense;
   final CategoryOption? category;
+  final String dateLabel;
 
-  const ExpenseListTile({super.key, required this.expense, required this.category});
+  const ExpenseListTile({super.key, required this.expense, required this.category, required this.dateLabel});
 
   @override
   Widget build(BuildContext context) {
     final name = category?.name ?? 'Uncategorized';
     final style = styleFor(name);
-    final subtitle = '${expense.date}${expense.note != null ? ' · ${expense.note}' : ''}';
+    final subtitle = '$dateLabel${expense.note != null ? ' · ${expense.note}' : ''}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

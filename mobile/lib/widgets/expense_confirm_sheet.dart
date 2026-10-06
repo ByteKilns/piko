@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import '../models/category_option.dart';
 import '../models/expense_draft.dart';
 import '../models/member_option.dart';
+import '../services/bs_calendar.dart';
 import '../theme/app_theme.dart';
+import 'bs_date_picker.dart';
 
 class ExpenseConfirmSheet extends StatefulWidget {
   final ExpenseDraft initialDraft;
   final List<CategoryOption> categories;
   final List<MemberOption> members;
+  final AppDateFormat dateFormat;
+  final BsCalendar calendar;
   final Future<void> Function(ExpenseDraft draft) onSave;
 
   const ExpenseConfirmSheet({
@@ -17,6 +21,8 @@ class ExpenseConfirmSheet extends StatefulWidget {
     required this.initialDraft,
     required this.categories,
     required this.members,
+    required this.dateFormat,
+    required this.calendar,
     required this.onSave,
   });
 
@@ -81,6 +87,16 @@ class _ExpenseConfirmSheetState extends State<ExpenseConfirmSheet> {
   }
 
   Future<void> _pickDate() async {
+    if (widget.dateFormat == AppDateFormat.nepali) {
+      final picked = await showBsDatePicker(
+        context,
+        calendar: widget.calendar,
+        initialAd: _date,
+        todayAd: formatAd(DateTime.now()),
+      );
+      if (picked != null) setState(() => _date = picked);
+      return;
+    }
     final initial = DateTime.tryParse(_date) ?? DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -88,12 +104,7 @@ class _ExpenseConfirmSheetState extends State<ExpenseConfirmSheet> {
       firstDate: DateTime(initial.year - 5),
       lastDate: DateTime(initial.year + 1),
     );
-    if (picked != null) {
-      setState(() {
-        _date =
-            '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-      });
-    }
+    if (picked != null) setState(() => _date = formatAd(picked));
   }
 
   @override
@@ -153,7 +164,7 @@ class _ExpenseConfirmSheetState extends State<ExpenseConfirmSheet> {
             borderRadius: BorderRadius.circular(14),
             child: InputDecorator(
               decoration: const InputDecoration(labelText: 'Date'),
-              child: Text(_date, style: const TextStyle(fontFamily: 'SpaceGrotesk', color: AppColors.textPrimary)),
+              child: Text(formatAppDate(_date, widget.dateFormat, widget.calendar), style: const TextStyle(fontFamily: 'SpaceGrotesk', color: AppColors.textPrimary)),
             ),
           ),
           const SizedBox(height: 14),

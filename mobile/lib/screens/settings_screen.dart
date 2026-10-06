@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
+import '../services/bs_calendar.dart';
 import '../theme/app_theme.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -67,6 +68,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   }
                 },
                 child: const Text('Save'),
+              ),
+              const SizedBox(height: 40),
+              const Text('DATE FORMAT', style: AppTheme.eyebrow),
+              const SizedBox(height: 12),
+              SegmentedButton<AppDateFormat>(
+                key: const Key('date-format-toggle'),
+                segments: const [
+                  ButtonSegment(value: AppDateFormat.nepali, label: Text('BS (Nepali)')),
+                  ButtonSegment(value: AppDateFormat.english, label: Text('AD (English)')),
+                ],
+                selected: {ref.watch(dateFormatProvider)},
+                onSelectionChanged: (selection) => ref.read(dateFormatProvider.notifier).setFormat(selection.first),
               ),
               if (isLoggedIn) ...[
                 const SizedBox(height: 40),
