@@ -12,6 +12,7 @@ import { NepaliDateField } from "@/components/NepaliDateField";
 import { SelectField } from "@/components/SelectField";
 import { TextField } from "@/components/TextField";
 import { Button } from "@/components/ui/button";
+import { todayISO } from "@/lib/today";
 import { createExpenseAction, updateExpenseAction } from "@/modules/expenses/api/expenses.actions";
 import { type ExpenseInput, expenseSchema } from "@/modules/expenses/schemas/expense.schema";
 
@@ -35,10 +36,6 @@ type Props = {
   // The Add Expense modal overrides this to just close itself instead.
   onSuccess?: () => void;
 };
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function ExpenseForm({ categories, currentMemberId, expenseId, initial, members, onSuccess }: Props) {
   const router = useRouter();

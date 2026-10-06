@@ -33,7 +33,7 @@ Domain conventions that shape everything:
 | Auth | next-auth v5 beta, JWT sessions, credentials (`src/auth.ts`) |
 | Voice | `@google/genai` (Gemini) parses spoken text into an expense draft |
 | Storage | `@vercel/blob` for published APKs |
-| Dates | `bikram-sambat-js` for BS↔AD conversion |
+| Dates | Own BS↔AD converter (`src/lib/nepali-date.ts`) driven by `src/lib/bs-calendar-data.json`; same table served to the app via `/api/mobile/calendar` (bundled copy in `mobile/assets/bs_calendar.json`). Update yearly when the official calendar is published. |
 | Tests | Vitest, colocated `*.test.ts` (`npm test`) |
 
 ## Top-level layout

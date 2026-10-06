@@ -1,31 +1,17 @@
-import { BSToAD } from "bikram-sambat-js";
-
 import { ENGLISH_MONTHS } from "@/lib/date-format";
 import type { DateFormat } from "@/lib/date-format-cookie";
-import { adToBs, NEPALI_MONTHS } from "@/lib/nepali-date";
+import { adToBs, BS_MAX_YEAR, BS_MIN_YEAR, bsToAd, daysInBsMonth, NEPALI_MONTHS } from "@/lib/nepali-date";
+import { todayISO } from "@/lib/today";
 
 export type MonthPeriod = { daysInPeriod: number; endDate: string; month: number; startDate: string; year: number };
 
-// bikram-sambat-js's hard-coded supported range is BS 1970-2100 / AD
-// 1913-2043 — outside it, BSToAD/ADToBS throw a RangeError instead of
-// returning a date. Kept one year inside the BS ceiling since
-// resolvePeriod converts (year + 1, month 1) internally at a period's
-// December boundary, so year=2100 itself must stay reachable internally.
-export const MIN_NAVIGABLE_YEAR = { english: 1913, nepali: 1970 } as const;
-export const MAX_NAVIGABLE_YEAR = { english: 2043, nepali: 2099 } as const;
+// The BS table (bs-calendar-data.json) covers BS 1970-2100, i.e. AD
+// 1913-04-13 to 2044-04-12 — outside it, adToBs/bsToAd throw a RangeError.
+export const MIN_NAVIGABLE_YEAR = { english: 1913, nepali: BS_MIN_YEAR } as const;
+export const MAX_NAVIGABLE_YEAR = { english: 2043, nepali: BS_MAX_YEAR } as const;
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
-}
-
-// Local-time date-string arithmetic only — never toISOString(), which
-// converts to UTC and can silently shift the date back a day in any
-// timezone ahead of UTC (already caught once as a real bug in this app,
-// in dhuku-stats.ts's nextEntryDueDate).
-function adAddDays(dateStr: string, delta: number): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const dt = new Date(y, m - 1, d + delta);
-  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
 }
 
 // Inclusive-safe day count between two "YYYY-MM-DD" AD strings — both
@@ -39,24 +25,19 @@ function adDayDiff(startDate: string, endDate: string): number {
   return Math.round((end - start) / 86400000);
 }
 
-function todayAdString(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-}
-
 export function currentPeriodYearMonth(dateFormat: DateFormat): { month: number; year: number } {
+  const today = todayISO();
   if (dateFormat === "english") {
-    const now = new Date();
-    return { month: now.getMonth() + 1, year: now.getFullYear() };
+    const [year, month] = today.split("-").map(Number);
+    return { month, year };
   }
-  const { month, year } = adToBs(todayAdString());
+  const { month, year } = adToBs(today);
   return { month, year };
 }
 
 // AD start/end date + day count for a native (year, month) pair — native
 // meaning already BS if dateFormat is "nepali", already AD if "english".
-// Never hardcodes BS month lengths: derives them from BSToAD on both this
-// period's day-1 and the next period's day-1.
+// BS month lengths come from the shared BS calendar table (nepali-date.ts).
 export function resolvePeriod(year: number, month: number, dateFormat: DateFormat): MonthPeriod {
   let startDate: string;
   let endDate: string;
@@ -64,10 +45,8 @@ export function resolvePeriod(year: number, month: number, dateFormat: DateForma
     startDate = `${year}-${pad(month)}-01`;
     endDate = `${year}-${pad(month)}-${pad(new Date(year, month, 0).getDate())}`;
   } else {
-    startDate = BSToAD(`${year}-${pad(month)}-01`);
-    const nextYear = month === 12 ? year + 1 : year;
-    const nextMonth = month === 12 ? 1 : month + 1;
-    endDate = adAddDays(BSToAD(`${nextYear}-${pad(nextMonth)}-01`), -1);
+    startDate = bsToAd(year, month, 1);
+    endDate = bsToAd(year, month, daysInBsMonth(year, month));
   }
   const daysInPeriod = adDayDiff(startDate, endDate) + 1;
   return { daysInPeriod, endDate, month, startDate, year };
@@ -82,7 +61,7 @@ export function isCurrentPeriod(year: number, month: number, dateFormat: DateFor
 // `period` is the current period — callers combine this with
 // `period.daysInPeriod` themselves for "days left" style calculations.
 export function daysElapsedInPeriod(period: MonthPeriod): number {
-  return adDayDiff(period.startDate, todayAdString()) + 1;
+  return adDayDiff(period.startDate, todayISO()) + 1;
 }
 
 // "Bhadra 2083" / "August 2026" — the period IS one real month now, so

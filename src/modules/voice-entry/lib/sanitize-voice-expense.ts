@@ -1,3 +1,5 @@
+import { todayISO } from "@/lib/today";
+
 export type RawVoiceExpense = {
   amount: number;
   categoryId: string;
@@ -47,7 +49,7 @@ export function sanitizeVoiceExpense(raw: RawVoiceExpense, context: VoiceExpense
     ? raw.paidByMemberId
     : context.currentMemberId;
 
-  const date = DATE_SHAPE.test(raw.date) ? raw.date : new Date().toISOString().slice(0, 10);
+  const date = DATE_SHAPE.test(raw.date) ? raw.date : todayISO();
 
   return {
     draft: {

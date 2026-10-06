@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { todayISO } from "@/lib/today";
 import { createExpensesBulkAction } from "@/modules/expenses/api/expenses.actions";
 import { expenseSchema } from "@/modules/expenses/schemas/expense.schema";
 
@@ -25,10 +26,6 @@ const bulkExpenseSchema = z.object({ rows: z.array(expenseSchema).min(1) });
 type BulkExpenseInput = z.infer<typeof bulkExpenseSchema>;
 
 const DATE_INPUT_CLASS = "h-8 w-32 min-w-0 px-2 text-sm";
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function emptyRow(currentMemberId: string, categoryId: string) {
   return {

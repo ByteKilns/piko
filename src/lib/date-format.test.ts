@@ -9,7 +9,7 @@ describe("formatMonthRangeLabel", () => {
 
   it("shows the honest BS range when the AD month spans two BS months (the common case)", () => {
     // AD August 2026 runs Shrawan 16 -> Bhadra 15, 2083 (verified against
-    // bikram-sambat-js directly) — every AD month in 2026 spans two BS
+    // the published 2083 calendar) — every AD month in 2026 spans two BS
     // months, so this is the realistic case, not an edge case.
     expect(formatMonthRangeLabel(2026, 8, "nepali")).toBe("Shrawan 16 – Bhadra 15, 2083");
   });

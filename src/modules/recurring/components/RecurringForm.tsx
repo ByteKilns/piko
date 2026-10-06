@@ -10,6 +10,7 @@ import { NepaliDateField } from "@/components/NepaliDateField";
 import { SelectField } from "@/components/SelectField";
 import { TextField } from "@/components/TextField";
 import { Button } from "@/components/ui/button";
+import { todayISO } from "@/lib/today";
 import {
   createRecurringExpenseAction,
   updateRecurringExpenseAction,
@@ -31,10 +32,6 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   open: boolean;
 };
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 const EMPTY: RecurringExpenseInput = {
   amount: 0,

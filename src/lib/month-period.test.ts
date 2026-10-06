@@ -23,7 +23,7 @@ describe("resolvePeriod", () => {
   });
 
   it("resolves a real BS month spanning two AD months, in nepali mode", () => {
-    // Bhadra 2083 — verified against bikram-sambat-js directly.
+    // Bhadra 2083 — verified against the published 2083 calendar.
     expect(resolvePeriod(2083, 5, "nepali")).toEqual({
       daysInPeriod: 31,
       endDate: "2026-09-16",
@@ -46,12 +46,11 @@ describe("resolvePeriod", () => {
 });
 
 describe("MAX_NAVIGABLE_YEAR / MIN_NAVIGABLE_YEAR bounds", () => {
-  // Regression test: bikram-sambat-js throws a RangeError outside BS
-  // 1970-2100 / AD 1913-2043. Before these bounds existed, an old cached
-  // URL with an out-of-range ?year= could crash the page instead of
-  // gracefully falling back to the current period — this happened for
-  // real during development (BS year 2100's Chaitra rolls into an AD
-  // year the library doesn't support). These bounds must resolve without
+  // Regression test: the BS converter throws a RangeError outside its table
+  // (BS 1970-2100). Before these bounds existed, an old cached URL with an
+  // out-of-range ?year= could crash the page instead of gracefully falling
+  // back to the current period — this happened for real during development
+  // at the December boundary of the last BS year. These bounds must resolve without
   // throwing, at every corner.
   it("resolves without throwing at the nepali max year, December (the boundary that crashed)", () => {
     expect(() => resolvePeriod(MAX_NAVIGABLE_YEAR.nepali, 12, "nepali")).not.toThrow();

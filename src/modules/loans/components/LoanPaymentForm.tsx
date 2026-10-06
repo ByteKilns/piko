@@ -10,6 +10,7 @@ import { NepaliDateField } from "@/components/NepaliDateField";
 import { SelectField } from "@/components/SelectField";
 import { TextField } from "@/components/TextField";
 import { Button } from "@/components/ui/button";
+import { todayISO } from "@/lib/today";
 import { addLoanPaymentAction } from "@/modules/loans/api/loans.actions";
 import { type LoanPaymentInput, loanPaymentSchema } from "@/modules/loans/schemas/loan.schema";
 
@@ -23,10 +24,6 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   open: boolean;
 };
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function LoanPaymentForm({ counterpartyName, currentMemberId, loanId, members, onOpenChange, open }: Props) {
   const {

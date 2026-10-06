@@ -2,6 +2,7 @@
 
 import { parseExpenseTranscript } from "@/lib/gemini";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
+import { todayISO } from "@/lib/today";
 import { listCategories } from "@/modules/categories/api/categories";
 import { sanitizeVoiceExpense, type VoiceParseResult } from "@/modules/voice-entry/lib/sanitize-voice-expense";
 
@@ -22,7 +23,7 @@ export async function parseVoiceEntry(
     const raw = await parseExpenseTranscript(transcript, {
       categories: categoryOptions,
       members: memberOptions,
-      today: new Date().toISOString().slice(0, 10),
+      today: todayISO(),
     });
     return sanitizeVoiceExpense(raw, {
       categories: categoryOptions,
