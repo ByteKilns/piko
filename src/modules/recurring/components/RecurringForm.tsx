@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Repeat } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -79,11 +78,9 @@ export function RecurringForm({ categories, currentMemberId, editing, members, o
           {isSubmitting ? "Saving..." : editing ? "Save changes" : "Add Recurring"}
         </Button>
       }
-      icon={Repeat}
       onOpenChange={onOpenChange}
       open={open}
       title={editing ? "Edit recurring expense" : "Add recurring expense"}
-      tone="purple"
     >
       <form className="space-y-4" id="recurring-form" onSubmit={onSubmit}>
         <TextField error={errors.name?.message} id="recurring-name" label="Name" {...register("name")} />

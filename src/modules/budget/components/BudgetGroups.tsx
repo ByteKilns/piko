@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 
-import { Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 import { Modal } from "@/components/Modal";
@@ -116,11 +115,9 @@ export function BudgetGroups({ categories, groups, incomesByMember, itemsByCateg
             {pending ? "Saving..." : "Save Budget"}
           </Button>
         }
-        icon={Wallet}
         onOpenChange={setEditing}
         open={editing}
         title="Edit budget"
-        tone="purple"
       >
         <section>
           <h3 className="mb-2 text-base font-semibold text-foreground">Income</h3>

@@ -1,6 +1,5 @@
 "use client";
 
-import { Receipt } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Modal } from "@/components/Modal";
@@ -19,7 +18,7 @@ export function EditExpenseModal({ categories, currentMemberId, expense, members
   const router = useRouter();
 
   return (
-    <Modal icon={Receipt} onOpenChange={onOpenChange} open={expense !== null} title="Edit Expense" tone="pink">
+    <Modal onOpenChange={onOpenChange} open={expense !== null} title="Edit Expense">
       {expense && (
         <ExpenseForm
           categories={categories}

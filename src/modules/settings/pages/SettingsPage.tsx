@@ -1,11 +1,9 @@
 import { eq } from "drizzle-orm";
-import { cookies } from "next/headers";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
-import { ACCENT_COLOR_COOKIE_NAME, isAccentColor } from "@/lib/accent-color-cookie";
 import { logoutAction } from "@/lib/actions/auth";
 import { getDateFormatPref } from "@/lib/date-format-cookie";
 import { isReleaseAdmin } from "@/lib/release-admin";
@@ -19,16 +17,12 @@ import { ThemeSection } from "@/modules/settings/components/ThemeSection";
 
 export async function SettingsPage() {
   const { householdId, userId } = await getCurrentMember();
-  const [[user], cookieStore, dateFormat, canPublishReleases] = await Promise.all([
+  const [[user], dateFormat, canPublishReleases] = await Promise.all([
     db.select().from(users).where(eq(users.id, userId)),
-    cookies(),
     getDateFormatPref(householdId),
     isReleaseAdmin(),
   ]);
   const releases = canPublishReleases ? await listReleases() : [];
-
-  const accentCookie = cookieStore.get(ACCENT_COLOR_COOKIE_NAME)?.value ?? "";
-  const accent = isAccentColor(accentCookie) ? accentCookie : "purple";
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -37,7 +31,7 @@ export async function SettingsPage() {
         <p className="text-sm text-muted-foreground">Manage your account and appearance</p>
       </div>
 
-      <ThemeSection initialAccent={accent} />
+      <ThemeSection />
       <DateFormatSection initialFormat={dateFormat} />
       <ProfilePictureSection initialImage={user?.image ?? null} name={user?.name ?? "?"} />
       <PasswordSection />

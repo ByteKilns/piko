@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Target, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -126,11 +126,9 @@ export function GoalForm({ currentMemberId, editing, members, onOpenChange, open
           {isSubmitting ? "Saving..." : editing ? "Save changes" : "Create Goal"}
         </Button>
       }
-      icon={Target}
       onOpenChange={onOpenChange}
       open={open}
       title={editing ? "Edit savings goal" : "Create savings goal"}
-      tone="purple"
     >
       <form className="space-y-4" id="goal-form" onSubmit={onSubmit}>
         <div className="flex items-center gap-4">

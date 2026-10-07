@@ -18,7 +18,7 @@ test.describe("expenses", () => {
   });
 
   test("opens the add-expense dialog from the sidebar", async ({ page }) => {
-    await page.getByRole("complementary").getByRole("button", { name: "+ Add Expense", exact: true }).click();
+    await page.getByRole("complementary").getByRole("button", { name: "Add expense", exact: true }).click();
 
     await expect(page.getByRole("dialog").getByRole("heading", { name: "Add Expense" })).toBeVisible();
   });
@@ -28,7 +28,7 @@ test.describe("expenses", () => {
   test("saves the BS date picked in the date picker", async ({ page }) => {
     const note = `bs-date-e2e-${Date.now()}`;
 
-    await page.getByRole("complementary").getByRole("button", { name: "+ Add Expense", exact: true }).click();
+    await page.getByRole("complementary").getByRole("button", { name: "Add expense", exact: true }).click();
     const addDialog = page.getByRole("dialog", { name: "Add Expense" });
     await addDialog.getByLabel("Amount").fill("250");
     await addDialog.getByLabel("Note (optional)").fill(note);

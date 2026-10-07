@@ -26,7 +26,7 @@ test("reverts edits both ways and brings back a deleted expense", async ({ page 
 
   // Add, then edit the amount (the "2pm" edit), then the note (the "3pm" edit).
   await gotoRoute(page, "/expenses");
-  await page.getByRole("complementary").getByRole("button", { exact: true, name: "+ Add Expense" }).click();
+  await page.getByRole("complementary").getByRole("button", { exact: true, name: "Add expense" }).click();
   const add = page.getByRole("dialog");
   await add.getByLabel("Amount").fill("1234");
   await add.getByLabel("Note (optional)").fill(`${token}-a`);

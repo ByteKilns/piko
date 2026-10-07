@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PiggyBank } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -54,11 +53,9 @@ export function ContributionForm({ currentMemberId, goalId, goalName, members, o
           {isSubmitting ? "Saving..." : "Add Contribution"}
         </Button>
       }
-      icon={PiggyBank}
       onOpenChange={onOpenChange}
       open={open}
       title={`Add money to ${goalName}`}
-      tone="green"
     >
       <form className="space-y-4" id="contribution-form" onSubmit={onSubmit}>
         <TextField

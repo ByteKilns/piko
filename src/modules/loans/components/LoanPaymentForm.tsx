@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { HandCoins } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -54,11 +53,9 @@ export function LoanPaymentForm({ counterpartyName, currentMemberId, loanId, mem
           {isSubmitting ? "Saving..." : "Record Payment"}
         </Button>
       }
-      icon={HandCoins}
       onOpenChange={onOpenChange}
       open={open}
       title={`Record payment — ${counterpartyName}`}
-      tone="green"
     >
       <form className="space-y-4" id="loan-payment-form" onSubmit={onSubmit}>
         <TextField

@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Users } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -56,11 +55,9 @@ export function DhukuEntryForm({ dhuku, onOpenChange, open }: Props) {
           {isSubmitting ? "Saving..." : "Log Entry"}
         </Button>
       }
-      icon={Users}
       onOpenChange={onOpenChange}
       open={open}
       title={`Log entry — ${dhuku?.name ?? ""}`}
-      tone="green"
     >
       <form className="space-y-4" id="dhuku-entry-form" onSubmit={onSubmit}>
         <Controller

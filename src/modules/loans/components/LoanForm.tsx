@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { HandCoins } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -90,11 +89,9 @@ export function LoanForm({ currentMemberId, editing, members, onOpenChange, open
           {isSubmitting ? "Saving..." : editing ? "Save changes" : "Add Loan"}
         </Button>
       }
-      icon={HandCoins}
       onOpenChange={onOpenChange}
       open={open}
       title={editing ? "Edit loan" : "Add a loan"}
-      tone="blue"
     >
       <form className="space-y-4" id="loan-form" onSubmit={onSubmit}>
         <Controller

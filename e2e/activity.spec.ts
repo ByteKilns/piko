@@ -22,7 +22,7 @@ test.describe("activity", () => {
     const note = `activity-e2e-${Date.now()}`;
 
     await gotoRoute(page, "/expenses");
-    await page.getByRole("complementary").getByRole("button", { exact: true, name: "+ Add Expense" }).click();
+    await page.getByRole("complementary").getByRole("button", { exact: true, name: "Add expense" }).click();
     const addDialog = page.getByRole("dialog");
     await addDialog.getByLabel("Amount").fill("1234");
     await addDialog.getByLabel("Note (optional)").fill(note);

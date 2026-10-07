@@ -1,6 +1,5 @@
 "use client";
 
-import { ListPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Modal } from "@/components/Modal";
@@ -21,11 +20,9 @@ export function BulkAddExpenseModal({ categories, currentMemberId, members, onOp
     <Modal
       bodyClassName="overflow-visible"
       className="overflow-visible sm:max-w-7xl"
-      icon={ListPlus}
       onOpenChange={onOpenChange}
       open={open}
       title="Add Expenses in Bulk"
-      tone="pink"
     >
       <BulkExpenseForm
         categories={categories}

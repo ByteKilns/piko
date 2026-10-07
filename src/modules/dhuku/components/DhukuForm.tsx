@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Users } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -88,11 +87,9 @@ export function DhukuForm({ currentMemberId, editing, members, onOpenChange, ope
           {isSubmitting ? "Saving..." : editing ? "Save changes" : "Add Dhuku"}
         </Button>
       }
-      icon={Users}
       onOpenChange={onOpenChange}
       open={open}
       title={editing ? "Edit dhuku" : "Add a dhuku"}
-      tone="blue"
     >
       <form className="space-y-4" id="dhuku-form" onSubmit={onSubmit}>
         <TextField error={errors.name?.message} id="dhuku-name" label="Group name" {...register("name")} />

@@ -3,11 +3,9 @@
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 
 import { db } from "@/db/client";
 import { households, users } from "@/db/schema";
-import { ACCENT_COLOR_COOKIE_NAME, isAccentColor } from "@/lib/accent-color-cookie";
 import { isDateFormat } from "@/lib/date-format-cookie";
 import { getCurrentMember } from "@/lib/session";
 import { activityActor, logActivity } from "@/modules/activity/api/activity";
@@ -51,20 +49,6 @@ export async function updateProfileImageAction(imageDataUrl: string) {
     entityId: member.memberId,
     entityType: "account",
     summary: "Changed their profile photo",
-  });
-  revalidatePath("/", "layout");
-}
-
-export async function setAccentColorAction(color: string) {
-  if (!isAccentColor(color)) throw new Error("Invalid accent color");
-
-  const cookieStore = await cookies();
-  cookieStore.set(ACCENT_COLOR_COOKIE_NAME, color, {
-    httpOnly: true,
-    maxAge: 60 * 60 * 24 * 365,
-    path: "/",
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
   });
   revalidatePath("/", "layout");
 }

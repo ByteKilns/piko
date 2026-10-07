@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { Mic, Square } from "lucide-react";
+import { Square } from "lucide-react";
 
 import { Modal } from "@/components/Modal";
 import { Button } from "@/components/ui/button";
@@ -92,7 +92,7 @@ export function VoiceEntryModal({ onClose, onManualAdd, onParsed, open }: Props)
   }
 
   return (
-    <Modal icon={Mic} onOpenChange={(next) => !next && onClose()} open={open} title="Add by Voice" tone="pink">
+    <Modal onOpenChange={(next) => !next && onClose()} open={open} title="Add by Voice">
       {stage.type === "listening" && (
         <div className="space-y-4 text-center">
           <p className="min-h-12 text-sm text-muted-foreground">

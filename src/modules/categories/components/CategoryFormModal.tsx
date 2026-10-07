@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { List } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -58,11 +57,9 @@ export function CategoryFormModal({ category, defaultName, onCreated, onOpenChan
           {isSubmitting ? "Saving..." : "Save Category"}
         </Button>
       }
-      icon={List}
       onOpenChange={onOpenChange}
       open={open}
       title={category ? "Edit category" : "Add category"}
-      tone="blue"
     >
       <form className="space-y-4" id="category-form" onSubmit={onSubmit}>
         <TextField error={errors.name?.message} id="category-name" label="Name" {...register("name")} />

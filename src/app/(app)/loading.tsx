@@ -1,9 +1,5 @@
-import { LoadingState } from "@/components/LoadingState";
+import { PageSkeleton } from "@/components/PageSkeleton";
 
 export default function Loading() {
-  return (
-    <div className="flex h-full items-center justify-center">
-      <LoadingState />
-    </div>
-  );
+  return <PageSkeleton />;
 }

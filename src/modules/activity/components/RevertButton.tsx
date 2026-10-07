@@ -78,20 +78,13 @@ export function RevertButton({ description, entryId, modes }: Props) {
       </Button>
       <Modal
         footer={
-          <>
-            <Button onClick={() => setOpen(false)} type="button" variant="outline">
-              Cancel
-            </Button>
-            <Button disabled={preview?.kind !== "apply" || isReverting} onClick={revert} type="button">
-              {isReverting ? "Reverting..." : "Revert"}
-            </Button>
-          </>
+          <Button disabled={preview?.kind !== "apply" || isReverting} onClick={revert} type="button">
+            {isReverting ? "Reverting..." : "Revert"}
+          </Button>
         }
-        icon={Undo2}
         onOpenChange={setOpen}
         open={open}
         title="Revert this change?"
-        tone="amber"
       >
         <div className="space-y-4 text-sm">
           <p className="text-muted-foreground">{description}</p>
