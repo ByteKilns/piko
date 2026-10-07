@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/styles.css">
+<script src="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:var(--color-bg);}
+button,input,select{font-family:inherit;}
+a{color:var(--color-accent-700);}
+a:hover{color:var(--color-accent);}
+</style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+<dc-import name="Sidebar" active="reports" hint-size="244px,100vh" style="flex:none;width:244px"></dc-import>
+<main style="flex:1;min-width:0;padding:36px 48px 64px;box-sizing:border-box">
+<div ref="{{ mainRef }}" style="max-width:1120px">
+
+  <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:18px">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <h1 style="margin:0;font-size:42px;line-height:1;letter-spacing:-0.02em">Reports</h1>
+      <div style="display:flex;align-items:center;gap:2px;margin-left:-6px">
+        <button aria-label="Previous month" style="width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m15 18-6-6 6-6"></path></svg></button>
+        <button style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px;border:0;background:transparent;font-size:15px;font-weight:600;color:var(--color-text);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)">Ashwin 2083<svg width="14" height="14" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"></path></svg></button>
+        <button aria-label="Next month" disabled="{{ true }}" style="width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-neutral-400);cursor:default;padding:0"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m9 18 6-6-6-6"></path></svg></button>
+        <span style="font-size:13px;color:var(--color-neutral-600);margin-left:10px">Compared with Bhadra 2083</span>
+      </div>
+    </div>
+    <button class="btn btn-secondary" style="height:38px"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><path d="M12 15V3"></path></svg>Export</button>
+  </header>
+
+  <div style="display:flex;gap:26px;margin-bottom:28px;border-bottom:1px solid var(--color-neutral-300)">
+    <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+      <button onClick="{{ t.onClick }}" style="position:relative;padding:8px 0 11px;border:0;background:transparent;font-size:14px;font-weight:{{ t.fw }};color:{{ t.color }};cursor:pointer" style-hover="color:var(--color-text)">{{ t.label }}<sc-if value="{{ t.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--color-accent)"></span></sc-if></button>
+    </sc-for>
+  </div>
+
+  <sc-if value="{{ isExp }}" hint-placeholder-val="{{ true }}">
+    <p style="margin:0 0 28px;max-width:62ch;font-size:20px;line-height:1.45;letter-spacing:-0.005em;color:var(--color-neutral-800);text-wrap:pretty">Overall, spending is about the same as Bhadra. <strong style="color:var(--color-text)">Family Support</strong> is the exception: up Rs 24,765 on last month, and Rs 44,765 over its budget.</p>
+
+    <div style="display:grid;grid-template-columns:{{ ledCols }};border-top:2px solid var(--color-text);border-bottom:1px solid var(--color-divider)">
+      <div style="display:flex;flex-direction:column;gap:8px;grid-column:{{ allSpan }};padding:{{ allPad }};border-bottom:{{ allBorder }};min-width:0">
+        <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Spent in Ashwin</span>
+        <span style="display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums;white-space:nowrap"><span style="font-size:16px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:40px;font-weight:800;line-height:1;letter-spacing:-0.025em">158,891</span><span style="font-size:20px;font-weight:600;color:var(--color-neutral-500);margin-left:-5px">.88</span></span>
+        <span style="display:flex;gap:12px;flex-wrap:wrap;font-size:13px"><span style="color:var(--color-accent-700)">102% of income</span><span style="color:var(--color-neutral-700)">About the same as Bhadra</span></span>
+        <span style="display:flex;gap:2px;height:4px;margin-top:4px"><span style="flex:71115 1 0;background:var(--color-text)"></span><span style="flex:82170 1 0;background:var(--color-neutral-600)"></span><span style="flex:5607 1 0;background:var(--color-neutral-300)"></span></span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px {{ mePadL }};border-left:{{ meBorder }};min-width:0">
+        <span style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)"><span style="width:8px;height:8px;background:var(--color-text)"></span>Me</span>
+        <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">71,115</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">.28</span></span>
+        <span style="font-size:13px;color:var(--color-neutral-700)">45% of total</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px;border-left:1px solid var(--color-neutral-300);min-width:0">
+        <span style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)"><span style="width:8px;height:8px;background:var(--color-neutral-600)"></span>Karuna</span>
+        <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">82,169</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">.60</span></span>
+        <span style="font-size:13px;color:var(--color-neutral-700)">52% of total</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px;border-left:1px solid var(--color-neutral-300);min-width:0">
+        <span style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)"><span style="width:8px;height:8px;background:var(--color-neutral-300)"></span>Shared</span>
+        <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">5,607</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">.00</span></span>
+        <span style="font-size:13px;color:var(--color-neutral-700)">4% of total</span>
+      </div>
+    </div>
+
+    <section style="margin-top:52px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:12px;border-bottom:2px solid var(--color-divider)">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <h2 style="margin:0;font-size:20px;line-height:1.2;font-weight:800;letter-spacing:-0.01em">Spending pace</h2>
+          <span style="font-size:13px;color:var(--color-neutral-600)">Running total for the month against an even pace through your Rs 71,420 budget</span>
+        </div>
+        <span style="display:flex;align-items:center;gap:16px;font-size:12px;color:var(--color-neutral-700)">
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:16px;height:2px;background:var(--color-text)"></span>Actual</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:16px;border-top:1.5px dashed var(--color-neutral-500)"></span>Even pace</span>
+          <sc-if value="{{ showBars }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:10px;background:var(--color-neutral-400)"></span>Each day</span></sc-if>
+        </span>
+      </div>
+      <div style="position:relative;height:230px;margin-top:22px">
+        <sc-for list="{{ grid }}" as="gl" hint-placeholder-count="3">
+          <div style="position:absolute;left:0;right:0;bottom:{{ gl.b }};border-top:1px dashed var(--color-neutral-300)"><span style="position:absolute;right:0;bottom:3px;font-size:11px;color:var(--color-neutral-500);font-variant-numeric:tabular-nums">{{ gl.label }}</span></div>
+        </sc-for>
+        <div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid var(--color-divider)"></div>
+        <svg width="100%" height="100%" style="position:absolute;inset:0;overflow:visible">
+          <line x1="0%" y1="100%" x2="100%" y2="{{ paceY2 }}" style="stroke:var(--color-neutral-500);stroke-width:1.5;stroke-dasharray:5 4"></line>
+          <sc-for list="{{ segs }}" as="sg" hint-placeholder-count="20"><line x1="{{ sg.x1 }}" y1="{{ sg.y1 }}" x2="{{ sg.x2 }}" y2="{{ sg.y2 }}" style="stroke:var(--color-text);stroke-width:2;stroke-linecap:square"></line></sc-for>
+        </svg>
+        <div style="position:absolute;top:-8px;bottom:0;left:{{ todayX }};border-left:1px solid var(--color-accent)"></div>
+        <div style="position:absolute;left:{{ todayX }};bottom:{{ endY }};width:8px;height:8px;background:var(--color-text);transform:translate(-50%,50%)"></div>
+        <div style="position:absolute;left:{{ todayX }};bottom:{{ endY }};transform:translate(14px,50%);display:flex;flex-direction:column;gap:2px;white-space:nowrap">
+          <span style="font-size:15px;font-weight:800;font-variant-numeric:tabular-nums">Rs 158,892</span>
+          <span style="font-size:12px;color:var(--color-neutral-700)">Today · 3.4× the even pace</span>
+        </div>
+        <div style="position:absolute;left:calc({{ annX }} + 10px);bottom:24%;display:flex;flex-direction:column;align-items:flex-start;gap:2px;white-space:nowrap">
+          <span style="font-size:12px;font-weight:600">Family Support × 2</span>
+          <span style="font-size:12px;color:var(--color-neutral-600)">6 Ashwin · Rs 70,000</span>
+        </div>
+      </div>
+      <sc-if value="{{ showBars }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;align-items:flex-end;gap:2px;height:56px;margin-top:10px;border-bottom:1px solid var(--color-divider)">
+          <sc-for list="{{ bars }}" as="b" hint-placeholder-count="31"><span title="{{ b.title }}" style="flex:1;height:{{ b.h }};background:{{ b.bg }}"></span></sc-for>
+        </div>
+      </sc-if>
+      <div style="display:flex;gap:2px;padding-top:6px">
+        <sc-for list="{{ dayNums }}" as="dn" hint-placeholder-count="31"><span style="flex:1;text-align:center;font-size:11px;font-variant-numeric:tabular-nums;color:{{ dn.color }};font-weight:{{ dn.fw }}">{{ dn.n }}</span></sc-for>
+      </div>
+    </section>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));column-gap:56px;row-gap:52px;margin-top:56px">
+      <section style="min-width:0">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:2px solid var(--color-divider)">
+          <h2 style="margin:0;font-size:20px;line-height:1.2;font-weight:800;letter-spacing:-0.01em">Budget vs actual</h2>
+          <a href="Budget.dc.html" style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;text-decoration:none">Budget<svg width="13" height="13" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;padding:14px 0;border-bottom:1px solid var(--color-neutral-300)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px"><span style="display:flex;align-items:baseline;gap:8px;min-width:0"><span style="font-size:15px">Family Support</span><span style="font-size:12px;color:var(--color-neutral-600)">Fixed</span></span><span style="font-size:13px;font-weight:600;color:var(--color-accent-700);white-space:nowrap">Over by 44,765</span></div>
+          <span style="display:flex;height:4px;background:var(--color-neutral-200)"><span style="width:47.2%;background:var(--color-text)"></span><span style="width:52.8%;background:var(--color-accent)"></span></span>
+          <span style="font-size:13px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums">84,765 of 40,000 · 212%</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;padding:14px 0;border-bottom:1px solid var(--color-neutral-300)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px"><span style="display:flex;align-items:baseline;gap:8px;min-width:0"><span style="font-size:15px">Skin care</span><span style="font-size:12px;color:var(--color-neutral-600)">Flexible</span></span><span style="font-size:13px;font-weight:600;color:var(--color-accent-700);white-space:nowrap">Over by 1,450</span></div>
+          <span style="display:flex;height:4px;background:var(--color-neutral-200)"><span style="width:58%;background:var(--color-text)"></span><span style="width:42%;background:var(--color-accent)"></span></span>
+          <span style="font-size:13px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums">3,450 of 2,000 · 173%</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;padding:14px 0;border-bottom:1px solid var(--color-neutral-300)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px"><span style="display:flex;align-items:baseline;gap:8px;min-width:0"><span style="font-size:15px">Personal Loan</span><span style="font-size:12px;color:var(--color-neutral-600)">Fixed</span></span><span style="font-size:13px;color:var(--color-neutral-700);white-space:nowrap">1,925 left</span></div>
+          <span style="display:flex;height:4px;background:var(--color-neutral-200)"><span style="width:79.6%;background:var(--color-text)"></span></span>
+          <span style="font-size:13px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums">7,495 of 9,420 · 80%</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;padding:14px 0;border-bottom:1px solid var(--color-neutral-300)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px"><span style="display:flex;align-items:baseline;gap:8px;min-width:0"><span style="font-size:15px">Savings</span><span style="font-size:12px;color:var(--color-neutral-600)">Fixed</span></span><span style="font-size:13px;color:var(--color-neutral-700);white-space:nowrap">20,000 left</span></div>
+          <span style="display:flex;height:4px;background:var(--color-neutral-200)"></span>
+          <span style="font-size:13px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums">0 of 20,000 · 0%</span>
+        </div>
+        <p style="margin:14px 0 0;font-size:13px;line-height:1.55;color:var(--color-neutral-700);text-wrap:pretty">Internet, Shopping, Medicine and Lunch — four of your six biggest categories — have no budget. <a href="Budget.dc.html" style="font-weight:600;text-decoration:none">Set budgets</a></p>
+      </section>
+
+      <section style="min-width:0">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:2px solid var(--color-divider)">
+          <h2 style="margin:0;font-size:20px;line-height:1.2;font-weight:800;letter-spacing:-0.01em">Biggest changes</h2>
+          <span style="font-size:13px;color:var(--color-neutral-600)">vs Bhadra</span>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 112px 92px;column-gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--color-neutral-300)">
+          <span style="min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">Family Support</span><span style="font-size:12px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums;white-space:nowrap">60,000 → 84,765</span></span>
+          <span style="position:relative;height:10px"><span style="position:absolute;left:50%;top:-4px;bottom:-4px;border-left:1px solid var(--color-neutral-400)"></span><span style="position:absolute;left:50%;top:0;bottom:0;width:50%;background:var(--color-text)"></span></span>
+          <span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-variant-numeric:tabular-nums"><span style="font-size:14px;font-weight:600">+24,765</span><span style="font-size:12px;color:var(--color-neutral-600)">+41%</span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 112px 92px;column-gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--color-neutral-300)">
+          <span style="min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">Gifts</span><span style="font-size:12px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums;white-space:nowrap">17,854.83 → 0</span></span>
+          <span style="position:relative;height:10px"><span style="position:absolute;left:50%;top:-4px;bottom:-4px;border-left:1px solid var(--color-neutral-400)"></span><span style="position:absolute;right:50%;top:0;bottom:0;width:36%;background:var(--color-neutral-400)"></span></span>
+          <span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-variant-numeric:tabular-nums"><span style="font-size:14px;font-weight:600">−17,855</span><span style="font-size:12px;color:var(--color-neutral-600)">−100%</span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 112px 92px;column-gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--color-neutral-300)">
+          <span style="min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">Internet</span><span style="font-size:12px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums;white-space:nowrap">3,739 → 14,690</span></span>
+          <span style="position:relative;height:10px"><span style="position:absolute;left:50%;top:-4px;bottom:-4px;border-left:1px solid var(--color-neutral-400)"></span><span style="position:absolute;left:50%;top:0;bottom:0;width:22.1%;background:var(--color-text)"></span></span>
+          <span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-variant-numeric:tabular-nums"><span style="font-size:14px;font-weight:600">+10,951</span><span style="font-size:12px;color:var(--color-neutral-600)">+293%</span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 112px 92px;column-gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--color-neutral-300)">
+          <span style="min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">Shopping</span><span style="font-size:12px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums;white-space:nowrap">4,979 → 12,904</span></span>
+          <span style="position:relative;height:10px"><span style="position:absolute;left:50%;top:-4px;bottom:-4px;border-left:1px solid var(--color-neutral-400)"></span><span style="position:absolute;left:50%;top:0;bottom:0;width:16%;background:var(--color-text)"></span></span>
+          <span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-variant-numeric:tabular-nums"><span style="font-size:14px;font-weight:600">+7,925</span><span style="font-size:12px;color:var(--color-neutral-600)">+159%</span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 112px 92px;column-gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--color-neutral-300)">
+          <span style="min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">Miscellaneous</span><span style="font-size:12px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums;white-space:nowrap">8,465 → 2,140</span></span>
+          <span style="position:relative;height:10px"><span style="position:absolute;left:50%;top:-4px;bottom:-4px;border-left:1px solid var(--color-neutral-400)"></span><span style="position:absolute;right:50%;top:0;bottom:0;width:12.8%;background:var(--color-neutral-400)"></span></span>
+          <span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-variant-numeric:tabular-nums"><span style="font-size:14px;font-weight:600">−6,325</span><span style="font-size:12px;color:var(--color-neutral-600)">−75%</span></span>
+        </div>
+        <p style="margin:14px 0 0;font-size:13px;color:var(--color-neutral-600)">Ink bars spent more than last month; grey bars spent less.</p>
+      </section>
+
+      <section style="min-width:0">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:2px solid var(--color-divider)">
+          <h2 style="margin:0;font-size:20px;line-height:1.2;font-weight:800;letter-spacing:-0.01em">Where it went</h2>
+          <span style="font-size:13px;color:var(--color-neutral-600)">Share of Rs 158,892</span>
+        </div>
+        <div style="display:flex;gap:2px;height:14px;margin:18px 0 6px">
+          <span style="flex:84765 1 0;background:var(--color-text)"></span><span style="flex:14690 1 0;background:var(--color-neutral-700)"></span><span style="flex:12904 1 0;background:var(--color-neutral-600)"></span><span style="flex:8275 1 0;background:var(--color-neutral-500)"></span><span style="flex:7495 1 0;background:var(--color-neutral-400)"></span><span style="flex:30763 1 0;background:var(--color-neutral-300)"></span>
+        </div>
+        <div style="display:grid;grid-template-columns:10px minmax(0,1fr) auto 40px;column-gap:12px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--color-neutral-300)"><span style="width:10px;height:10px;background:var(--color-text)"></span><span style="font-size:15px">Family Support</span><span style="font-size:15px;font-variant-numeric:tabular-nums">84,765</span><span style="text-align:right;font-size:13px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums">53%</span></div>
+        <div style="display:grid;grid-template-columns:10px minmax(0,1fr) auto 40px;column-gap:12px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--color-neutral-300)"><span style="width:10px;height:10px;background:var(--color-neutral-700)"></span><span style="font-size:15px">Internet</span><span style="font-size:15px;font-variant-numeric:tabular-nums">14,690</span><span style="text-align:right;font-size:13px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums">9%</span></div>
+        <div style="display:grid;grid-template-columns:10px minmax(0,1fr) auto 40px;column-gap:12px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--color-neutral-300)"><span style="width:10px;height:10px;background:var(--color-neutral-600)"></span><span style="font-size:15px">Shopping</span><span style="font-size:15px;font-variant-numeric:tabular-nums">12,904</span><span style="text-align:right;font-size:13px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums">8%</span></div>
+        <div style="display:grid;grid-template-columns:10px minmax(0,1fr) auto 40px;column-gap:12px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--color-neutral-300)"><span style="width:10px;height:10px;background:var(--color-neutral-500)"></span><span style="font-size:15px">Medicine</span><span style="font-size:15px;font-variant-numeric:tabular-nums">8,275</span><span style="text-align:right;font-size:13px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums">5%</span></div>
+        <div style="display:grid;grid-template-columns:10px minmax(0,1fr) auto 40px;column-gap:12px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--color-neutral-300)"><span style="width:10px;height:10px;background:var(--color-neutral-400)"></span><span style="font-size:15px">Personal Loan</span><span style="font-size:15px;font-variant-numeric:tabular-nums">7,495</span><span style="text-align:right;font-size:13px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums">5%</span></div>
+        <div style="display:grid;grid-template-columns:10px minmax(0,1fr) auto 40px;column-gap:12px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--color-neutral-300)"><span style="width:10px;height:10px;background:var(--color-neutral-300)"></span><span style="font-size:15px;color:var(--color-neutral-700)">11 other categories</span><span style="font-size:15px;font-variant-numeric:tabular-nums">30,763</span><span style="text-align:right;font-size:13px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums">19%</span></div>
+      </section>
+
+      <section style="min-width:0">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:2px solid var(--color-divider)">
+          <h2 style="margin:0;font-size:20px;line-height:1.2;font-weight:800;letter-spacing:-0.01em">Largest expenses</h2>
+          <a href="Expenses.dc.html" style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;text-decoration:none">All expenses<svg width="13" height="13" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a>
+        </div>
+        <div style="display:grid;grid-template-columns:26px minmax(0,1fr) auto;column-gap:12px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--color-neutral-300)"><span style="font-size:12px;font-weight:600;color:var(--color-neutral-500);font-variant-numeric:tabular-nums">01</span><span style="min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">Family Support</span><span style="font-size:12px;color:var(--color-neutral-600)">6 Ashwin</span></span><span style="font-size:15px;font-variant-numeric:tabular-nums"><span style="font-weight:600">40,000</span><span style="color:var(--color-neutral-500)">.00</span></span></div>
+        <div style="display:grid;grid-template-columns:26px minmax(0,1fr) auto;column-gap:12px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--color-neutral-300)"><span style="font-size:12px;font-weight:600;color:var(--color-neutral-500);font-variant-numeric:tabular-nums">02</span><span style="min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">Family Support</span><span style="font-size:12px;color:var(--color-neutral-600)">6 Ashwin</span></span><span style="font-size:15px;font-variant-numeric:tabular-nums"><span style="font-weight:600">30,000</span><span style="color:var(--color-neutral-500)">.00</span></span></div>
+        <div style="display:grid;grid-template-columns:26px minmax(0,1fr) auto;column-gap:12px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--color-neutral-300)"><span style="font-size:12px;font-weight:600;color:var(--color-neutral-500);font-variant-numeric:tabular-nums">03</span><span style="min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">wlink 1 year</span><span style="font-size:12px;color:var(--color-neutral-600)">16 Ashwin · Internet</span></span><span style="font-size:15px;font-variant-numeric:tabular-nums"><span style="font-weight:600">14,690</span><span style="color:var(--color-neutral-500)">.00</span></span></div>
+        <div style="display:grid;grid-template-columns:26px minmax(0,1fr) auto;column-gap:12px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--color-neutral-300)"><span style="font-size:12px;font-weight:600;color:var(--color-neutral-500);font-variant-numeric:tabular-nums">04</span><span style="min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">MRI</span><span style="font-size:12px;color:var(--color-neutral-600)">9 Ashwin · Family Support</span></span><span style="font-size:15px;font-variant-numeric:tabular-nums"><span style="font-weight:600">12,500</span><span style="color:var(--color-neutral-500)">.00</span></span></div>
+        <div style="display:grid;grid-template-columns:26px minmax(0,1fr) auto;column-gap:12px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--color-neutral-300)"><span style="font-size:12px;font-weight:600;color:var(--color-neutral-500);font-variant-numeric:tabular-nums">05</span><span style="min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">Shopping</span><span style="font-size:12px;color:var(--color-neutral-600)">19 Ashwin · Shopping</span></span><span style="font-size:15px;font-variant-numeric:tabular-nums"><span style="font-weight:600">6,900</span><span style="color:var(--color-neutral-500)">.00</span></span></div>
+      </section>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isInc }}" hint-placeholder-val="{{ false }}">
+    <div style="display:grid;grid-template-columns:{{ ledCols }};border-top:2px solid var(--color-text);border-bottom:1px solid var(--color-divider)">
+      <div style="display:flex;flex-direction:column;gap:8px;grid-column:{{ allSpan }};padding:{{ allPad }};border-bottom:{{ allBorder }};min-width:0">
+        <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Income in Ashwin</span>
+        <span style="display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums;white-space:nowrap"><span style="font-size:16px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:40px;font-weight:800;line-height:1;letter-spacing:-0.025em">155,600</span><span style="font-size:20px;font-weight:600;color:var(--color-neutral-500);margin-left:-5px">.00</span></span>
+        <span style="font-size:13px;color:var(--color-neutral-700)">1% less than Bhadra</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px {{ mePadL }};border-left:{{ meBorder }};min-width:0">
+        <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Me</span>
+        <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1">62,000</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">.00</span></span>
+        <span style="font-size:13px;color:var(--color-neutral-700)">10% less than Bhadra</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px;border-left:1px solid var(--color-neutral-300);min-width:0">
+        <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Karuna</span>
+        <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1">93,600</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">.00</span></span>
+        <span style="font-size:13px;color:var(--color-neutral-700)">6% more than Bhadra</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px;border-left:1px solid var(--color-neutral-300);min-width:0">
+        <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Spent of income</span>
+        <span style="font-size:24px;font-weight:600;line-height:1;margin-top:12px;color:var(--color-accent-700)">102%</span>
+        <span style="font-size:13px;color:var(--color-neutral-700)">Rs 3,292 more than earned</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isSav }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:24px 0;border-top:2px solid var(--color-text)">
+      <h2 style="margin:0;font-size:28px;line-height:1.1;font-weight:800;letter-spacing:-0.02em">No savings recorded in Ashwin.</h2>
+      <p style="margin:0;max-width:52ch;font-size:15px;line-height:1.55;color:var(--color-neutral-800)">Once money goes toward a savings goal, this report shows how much you set aside each month and how close each goal is.</p>
+      <a class="btn btn-secondary" href="Savings.dc.html" style="margin-top:6px;text-decoration:none;color:var(--color-text)">Go to Savings goals</a>
+    </div>
+  </sc-if>
+
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showDailyBars&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Charts&quot;}}">
+const DAILY = [1200, 650, 6400, 3100, 1850, 71240, 980, 2760, 13420, 1150, 8980, 890, 6031.88, 1640, 7310, 15520, 2890, 4590, 8020, 270];
+const BUDGET = 71420, DAYS = 31, TODAY = 20, YMAX = 180000;
+const pc = x => (x * 100).toFixed(3) + '%';
+const CUM = DAILY.reduce((a, v) => { a.push((a.length ? a[a.length - 1] : 0) + v); return a; }, []);
+const MAXD = Math.max(...DAILY);
+
+class Component extends DCLogic {
+  state = { tab: 'Expenses', w: 0 };
+  mainRef = React.createRef();
+  componentDidMount() {
+    this._m = () => {
+      const el = document.querySelector('main > div') || this.mainRef.current;
+      if (!el) return;
+      if (window.ResizeObserver && this._obs !== el) {
+        if (!this._ro) this._ro = new ResizeObserver(() => this._m());
+        if (this._obs) this._ro.unobserve(this._obs);
+        this._ro.observe(el); this._obs = el;
+      }
+      const w = Math.round(el.getBoundingClientRect().width);
+      if (w && Math.abs(w - (this.state.w || 0)) > 4) this.setState({ w });
+    };
+    this._m();
+    let ticks = 0;
+    this._iv = setInterval(() => { this._m(); if (++ticks > 25) clearInterval(this._iv); }, 200);
+    window.addEventListener('resize', this._m);
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this._m); if (this._ro) this._ro.disconnect(); clearInterval(this._iv); }
+  renderVals() {
+    const s = this.state;
+    const narrow = (s.w || 1120) < 780;
+    const SHOW = [1, 5, 10, 15, 20, 25, 31];
+    return {
+      mainRef: this.mainRef,
+      tabs: ['Expenses', 'Income', 'Savings'].map(t => ({ label: t, on: s.tab === t, fw: s.tab === t ? 600 : 400, color: s.tab === t ? 'var(--color-text)' : 'var(--color-neutral-700)', onClick: () => this.setState({ tab: t }) })),
+      isExp: s.tab === 'Expenses', isInc: s.tab === 'Income', isSav: s.tab === 'Savings',
+      ledCols: narrow ? 'repeat(3,minmax(0,1fr))' : 'minmax(0,1.55fr) repeat(3,minmax(0,1fr))',
+      allSpan: narrow ? '1 / -1' : 'auto',
+      allPad: narrow ? '18px 0 20px' : '18px 28px 20px 0',
+      allBorder: narrow ? '1px solid var(--color-neutral-300)' : '0',
+      mePadL: narrow ? '0' : '20px',
+      meBorder: narrow ? '0' : '1px solid var(--color-neutral-300)',
+      showBars: this.props.showDailyBars ?? true,
+      grid: [50000, 100000, 150000].map(v => ({ b: pc(v / YMAX), label: (v / 1000) + 'k' })),
+      paceY2: pc(1 - BUDGET / YMAX),
+      segs: DAILY.map((_, i) => ({ x1: pc(i / DAYS), y1: pc(1 - (i ? CUM[i - 1] : 0) / YMAX), x2: pc((i + 1) / DAYS), y2: pc(1 - CUM[i] / YMAX) })),
+      todayX: pc(TODAY / DAYS), endY: pc(CUM[TODAY - 1] / YMAX),
+      annX: pc(6 / DAYS),
+      bars: Array.from({ length: DAYS }, (_, i) => {
+        const v = DAILY[i];
+        return v == null ? { h: '0%', bg: 'transparent', title: `${i + 1} Ashwin` } : { h: pc(Math.max(v / MAXD, 0.03)), bg: i + 1 === TODAY ? 'var(--color-text)' : 'var(--color-neutral-400)', title: `${i + 1} Ashwin · Rs ${v.toLocaleString('en-US')}` };
+      }),
+      dayNums: Array.from({ length: DAYS }, (_, i) => {
+        const d = i + 1;
+        return { n: !narrow || SHOW.includes(d) ? String(d) : '', color: d === TODAY ? 'var(--color-accent-700)' : d > TODAY ? 'var(--color-neutral-400)' : 'var(--color-neutral-600)', fw: d === TODAY ? 700 : 400 };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

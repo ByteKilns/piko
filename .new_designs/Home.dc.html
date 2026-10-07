@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/styles.css">
+<script src="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:var(--color-bg);}
+button,input,select{font-family:inherit;}
+a{color:var(--color-accent-700);}
+a:hover{color:var(--color-accent);}
+</style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+<dc-import name="Sidebar" active="home" hint-size="244px,100vh" style="flex:none;width:244px"></dc-import>
+<main style="flex:1;min-width:0;padding:36px 48px 64px;box-sizing:border-box">
+<div ref="{{ mainRef }}" style="max-width:1120px">
+
+  <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:26px">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <h1 style="margin:0;font-size:42px;line-height:1;letter-spacing:-0.02em">Home</h1>
+      <div style="display:flex;align-items:center;gap:2px;margin-left:-6px">
+        <button aria-label="Previous month" style="width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m15 18-6-6 6-6"></path></svg></button>
+        <button style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px;border:0;background:transparent;font-size:15px;font-weight:600;color:var(--color-text);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)">Ashwin 2083<svg width="14" height="14" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"></path></svg></button>
+        <button aria-label="Next month" disabled="{{ true }}" style="width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-neutral-400);cursor:default;padding:0"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m9 18 6-6-6-6"></path></svg></button>
+        <span style="font-size:13px;color:var(--color-neutral-600);margin-left:10px">12 days left in the month</span>
+      </div>
+    </div>
+    <a class="btn btn-ghost" href="Reports.dc.html" style="text-decoration:none;color:var(--color-text)">Full report<svg width="14" height="14" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a>
+  </header>
+
+  <section style="display:grid;grid-template-columns:{{ heroCols }};column-gap:56px;row-gap:20px;border-top:2px solid var(--color-text);padding:20px 0 8px">
+    <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Safe to spend today</span>
+        <sc-if value="{{ over }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--color-accent-700)"><span style="width:6px;height:6px;background:var(--color-accent)"></span>Over budget</span></sc-if>
+        <sc-if value="{{ onTrack }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--color-text)"><span style="width:6px;height:6px;background:var(--color-text)"></span>On track</span></sc-if>
+      </div>
+      <sc-if value="{{ over }}" hint-placeholder-val="{{ true }}">
+        <span style="display:flex;align-items:baseline;gap:8px;font-variant-numeric:tabular-nums;white-space:nowrap"><span style="font-size:22px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:76px;font-weight:800;line-height:0.95;letter-spacing:-0.035em">0</span><span style="font-size:32px;font-weight:600;color:var(--color-neutral-500);margin-left:-6px">.00</span></span>
+        <p style="margin:6px 0 0;max-width:46ch;font-size:15px;line-height:1.5;color:var(--color-neutral-800);text-wrap:pretty">This week's allowance is fully spent. A new weekly allowance of Rs 3,580 starts on Sunday.</p>
+      </sc-if>
+      <sc-if value="{{ onTrack }}" hint-placeholder-val="{{ false }}">
+        <span style="display:flex;align-items:baseline;gap:8px;font-variant-numeric:tabular-nums;white-space:nowrap"><span style="font-size:22px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:76px;font-weight:800;line-height:0.95;letter-spacing:-0.035em">512</span><span style="font-size:32px;font-weight:600;color:var(--color-neutral-500);margin-left:-6px">.00</span></span>
+        <p style="margin:6px 0 0;max-width:46ch;font-size:15px;line-height:1.5;color:var(--color-neutral-800);text-wrap:pretty">Spend up to this today and the week stays on plan. Anything you don't use carries into tomorrow.</p>
+      </sc-if>
+      <button onClick="{{ toggleExplain }}" style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;margin:2px 0 0 -6px;padding:4px 6px;border:0;background:transparent;font-size:13px;color:var(--color-neutral-700);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent);color:var(--color-text)">{{ explainLabel }}<svg width="13" height="13" viewBox="0 0 24 24" style="transform:{{ explainRot }};fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"></path></svg></button>
+      <sc-if value="{{ explain }}" hint-placeholder-val="{{ false }}">
+        <p style="margin:0;max-width:52ch;font-size:13px;line-height:1.55;color:var(--color-neutral-700);text-wrap:pretty">Your monthly plan is split into weekly allowances. Safe to spend is what's left of this week's allowance, divided by the days remaining in the week. Money you don't spend becomes next week's buffer.</p>
+      </sc-if>
+    </div>
+    <dl style="margin:0;display:flex;flex-direction:column;align-self:end;min-width:0">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:12px 0;border-bottom:1px solid var(--color-neutral-300)">
+        <dt style="font-size:14px;color:var(--color-neutral-700)">This week left</dt>
+        <sc-if value="{{ over }}" hint-placeholder-val="{{ true }}"><dd style="margin:0;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums">0<span style="font-weight:400;color:var(--color-neutral-500)">.00</span></dd></sc-if>
+        <sc-if value="{{ onTrack }}" hint-placeholder-val="{{ false }}"><dd style="margin:0;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums">2,560<span style="font-weight:400;color:var(--color-neutral-500)">.00</span></dd></sc-if>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:12px 0;border-bottom:1px solid var(--color-neutral-300)">
+        <dt style="font-size:14px;color:var(--color-neutral-700)">Weekly allowance</dt>
+        <dd style="margin:0;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums">3,580<span style="font-weight:400;color:var(--color-neutral-500)">.00</span></dd>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:12px 0">
+        <dt style="font-size:14px;color:var(--color-neutral-700)">Buffer from last week</dt>
+        <dd style="margin:0;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums">3,300<span style="font-weight:400;color:var(--color-neutral-500)">.00</span></dd>
+      </div>
+    </dl>
+  </section>
+
+  <div style="display:grid;grid-template-columns:{{ ledCols }};margin-top:36px;border-top:2px solid var(--color-text);border-bottom:1px solid var(--color-divider)">
+    <div style="display:flex;flex-direction:column;gap:8px;grid-column:{{ allSpan }};padding:{{ allPad }};border-bottom:{{ allBorder }};min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Spent in Ashwin</span>
+      <span style="display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums;white-space:nowrap"><span style="font-size:16px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:40px;font-weight:800;line-height:1;letter-spacing:-0.025em">179,291</span><span style="font-size:20px;font-weight:600;color:var(--color-neutral-500);margin-left:-5px">.88</span></span>
+      <span style="display:flex;gap:12px;flex-wrap:wrap;font-size:13px"><span style="color:var(--color-accent-700)">115% of income</span><span style="color:var(--color-neutral-700)">7% less than Bhadra</span></span>
+      <span title="Ink = covered by income, red = beyond income" style="display:flex;height:4px;margin-top:4px;background:var(--color-neutral-200)"><span style="width:87%;background:var(--color-text)"></span><span style="width:13%;background:var(--color-accent)"></span></span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px {{ mePadL }};border-left:{{ meBorder }};min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Income</span>
+      <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">155,600</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">.00</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">1% less than Bhadra</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px;border-left:1px solid var(--color-neutral-300);min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Saved</span>
+      <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">0</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">.00</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">Nothing set aside yet</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px;border-left:1px solid var(--color-neutral-300);min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Unallocated</span>
+      <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em;color:var(--color-accent-700)">−23,691</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">.88</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">Spending is above income</span>
+    </div>
+  </div>
+
+  <section style="margin-top:52px">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:14px">
+      <h2 style="margin:0;font-size:20px;line-height:1.2;font-weight:800;letter-spacing:-0.01em">By person</h2>
+      <span style="font-size:13px;color:var(--color-neutral-600)">Shared costs are paid from both incomes</span>
+    </div>
+    <div style="display:grid;grid-template-columns:{{ pCols }};column-gap:16px;padding:0 8px 10px;border-bottom:2px solid var(--color-divider);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">
+      <span>Person</span><span style="text-align:right">Income</span><span style="text-align:right">Spent</span><span style="text-align:right">Left</span><span>Income used</span>
+    </div>
+    <div style="display:grid;grid-template-columns:{{ pCols }};column-gap:16px;align-items:center;padding:14px 8px;border-bottom:1px solid var(--color-neutral-300)">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:22px;height:22px;flex:none;display:grid;place-items:center;font-size:11px;font-weight:600;background:var(--color-text);color:var(--color-bg)">N</span><span style="font-size:15px;font-weight:600">Me</span></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-variant-numeric:tabular-nums"><span style="font-size:15px;font-weight:600;white-space:nowrap">62,000<span style="font-weight:400;color:var(--color-neutral-500)">.00</span></span><span style="font-size:12px;color:var(--color-neutral-600);white-space:nowrap">10% less than Bhadra</span></div>
+      <div style="text-align:right;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap">91,515<span style="font-weight:400;color:var(--color-neutral-500)">.28</span></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-variant-numeric:tabular-nums"><span style="font-size:15px;font-weight:600;white-space:nowrap;color:var(--color-accent-700)">−29,515<span style="font-weight:400;color:var(--color-neutral-500)">.28</span></span><span style="font-size:12px;color:var(--color-neutral-600)">over income</span></div>
+      <div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="flex:1;display:flex;height:4px;background:var(--color-neutral-200)"><span style="width:67.6%;background:var(--color-text)"></span><span style="width:32.4%;background:var(--color-accent)"></span></span><span style="width:40px;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-accent-700)">148%</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:{{ pCols }};column-gap:16px;align-items:center;padding:14px 8px;border-bottom:1px solid var(--color-neutral-300)">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:22px;height:22px;flex:none;display:grid;place-items:center;font-size:11px;font-weight:600;background:var(--color-neutral-600);color:var(--color-bg)">K</span><span style="font-size:15px;font-weight:600">Karuna</span></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-variant-numeric:tabular-nums"><span style="font-size:15px;font-weight:600;white-space:nowrap">93,600<span style="font-weight:400;color:var(--color-neutral-500)">.00</span></span><span style="font-size:12px;color:var(--color-neutral-600);white-space:nowrap">6% more than Bhadra</span></div>
+      <div style="text-align:right;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap">82,169<span style="font-weight:400;color:var(--color-neutral-500)">.60</span></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-variant-numeric:tabular-nums"><span style="font-size:15px;font-weight:600;white-space:nowrap">11,430<span style="font-weight:400;color:var(--color-neutral-500)">.40</span></span><span style="font-size:12px;color:var(--color-neutral-600)">12% of income</span></div>
+      <div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="flex:1;display:flex;height:4px;background:var(--color-neutral-200)"><span style="width:88%;background:var(--color-text)"></span></span><span style="width:40px;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">88%</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:{{ pCols }};column-gap:16px;align-items:center;padding:14px 8px;border-bottom:1px solid var(--color-neutral-300)">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="display:flex;flex:none"><span style="width:22px;height:22px;display:grid;place-items:center;font-size:11px;font-weight:600;background:var(--color-text);color:var(--color-bg)">N</span><span style="width:22px;height:22px;display:grid;place-items:center;font-size:11px;font-weight:600;background:var(--color-neutral-600);color:var(--color-bg);margin-left:-5px;box-shadow:0 0 0 2px var(--color-bg)">K</span></span><span style="font-size:15px;font-weight:600">Shared</span></div>
+      <div style="text-align:right;font-size:15px;color:var(--color-neutral-500)">—</div>
+      <div style="text-align:right;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap">5,607<span style="font-weight:400;color:var(--color-neutral-500)">.00</span></div>
+      <div style="text-align:right;font-size:15px;color:var(--color-neutral-500)">—</div>
+      <div style="font-size:13px;color:var(--color-neutral-600)">Split between both</div>
+    </div>
+  </section>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:48px;margin-top:52px">
+    <section style="min-width:0">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:2px solid var(--color-divider)">
+        <h2 style="margin:0;font-size:20px;line-height:1.2;font-weight:800;letter-spacing:-0.01em">Recent expenses</h2>
+        <a href="Expenses.dc.html" style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;text-decoration:none">All expenses<svg width="13" height="13" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a>
+      </div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:14px 0 8px;border-bottom:1px solid var(--color-divider)">
+        <span style="display:flex;align-items:baseline;gap:10px"><span style="font-size:14px;font-weight:600">Today</span><span style="font-size:13px;color:var(--color-neutral-600)">20 Ashwin, Tuesday</span></span>
+        <span style="font-size:14px;font-weight:600;font-variant-numeric:tabular-nums">270<span style="font-weight:400;color:var(--color-neutral-500)">.00</span></span>
+      </div>
+      <sc-for list="{{ recent }}" as="r" hint-placeholder-count="5">
+        <a href="Expenses.dc.html" style="display:grid;grid-template-columns:28px minmax(0,1fr) auto;column-gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid var(--color-neutral-300);color:var(--color-text);text-decoration:none" style-hover="background:color-mix(in srgb, var(--color-text) 4%, transparent);color:var(--color-text)">
+          <span style="width:28px;height:28px;background-color:var(--color-surface);background-image:{{ r.icon }};background-repeat:no-repeat;background-position:center;background-size:15px 15px"></span>
+          <span style="min-width:0;display:flex;align-items:baseline;gap:10px"><span style="font-size:15px">Lunch</span><span style="min-width:0;font-size:13px;color:var(--color-neutral-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.note }}</span></span>
+          <span style="font-size:15px;font-variant-numeric:tabular-nums"><span style="font-weight:600">{{ r.int }}</span><span style="color:var(--color-neutral-500)">.00</span></span>
+        </a>
+      </sc-for>
+    </section>
+    <section style="min-width:0">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:2px solid var(--color-divider)">
+        <h2 style="margin:0;font-size:20px;line-height:1.2;font-weight:800;letter-spacing:-0.01em">Savings goals</h2>
+        <a href="Savings.dc.html" style="display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;text-decoration:none">All goals<svg width="13" height="13" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:22px 0">
+        <span style="font-size:17px;font-weight:600">No goals yet</span>
+        <p style="margin:0;max-width:42ch;font-size:14px;line-height:1.55;color:var(--color-neutral-700);text-wrap:pretty">Karuna's budget sets aside Rs 20,000 for savings this month. Give it a target and you'll see how close you are each month.</p>
+        <a class="btn btn-secondary" href="Savings.dc.html" style="margin-top:6px;text-decoration:none;color:var(--color-text)"><svg width="15" height="15" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Create a goal</a>
+      </div>
+    </section>
+  </div>
+
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;safeToSpend&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Over budget&quot;,&quot;On track&quot;],&quot;default&quot;:&quot;Over budget&quot;,&quot;tsType&quot;:&quot;'Over budget' | 'On track'&quot;,&quot;section&quot;:&quot;Preview state&quot;}}">
+const UT = '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>';
+const svgUrl = p => `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#201e1d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>')}")`;
+const LUNCH = svgUrl(UT);
+
+class Component extends DCLogic {
+  state = { w: 0, explain: false };
+  mainRef = React.createRef();
+  componentDidMount() {
+    this._m = () => {
+      const el = document.querySelector('main > div') || this.mainRef.current;
+      if (!el) return;
+      if (window.ResizeObserver && this._obs !== el) {
+        if (!this._ro) this._ro = new ResizeObserver(() => this._m());
+        if (this._obs) this._ro.unobserve(this._obs);
+        this._ro.observe(el); this._obs = el;
+      }
+      const w = Math.round(el.getBoundingClientRect().width);
+      if (w && Math.abs(w - (this.state.w || 0)) > 4) this.setState({ w });
+    };
+    this._m();
+    let ticks = 0;
+    this._iv = setInterval(() => { this._m(); if (++ticks > 25) clearInterval(this._iv); }, 200);
+    window.addEventListener('resize', this._m);
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this._m); if (this._ro) this._ro.disconnect(); clearInterval(this._iv); }
+  renderVals() {
+    const narrow = (this.state.w || 1120) < 780;
+    const onTrack = (this.props.safeToSpend ?? 'Over budget') === 'On track';
+    return {
+      mainRef: this.mainRef,
+      over: !onTrack, onTrack,
+      heroCols: narrow ? 'minmax(0,1fr)' : 'minmax(0,1.35fr) minmax(0,1fr)',
+      ledCols: narrow ? 'repeat(3,minmax(0,1fr))' : 'minmax(0,1.55fr) repeat(3,minmax(0,1fr))',
+      allSpan: narrow ? '1 / -1' : 'auto',
+      allPad: narrow ? '18px 0 20px' : '18px 28px 20px 0',
+      allBorder: narrow ? '1px solid var(--color-neutral-300)' : '0',
+      mePadL: narrow ? '0' : '20px',
+      meBorder: narrow ? '0' : '1px solid var(--color-neutral-300)',
+      pCols: narrow ? 'minmax(96px,1fr) repeat(3,minmax(0,1fr)) minmax(96px,1fr)' : 'minmax(140px,1.2fr) repeat(3,minmax(0,1fr)) minmax(150px,1.3fr)',
+      explain: this.state.explain,
+      explainLabel: this.state.explain ? 'Hide explanation' : 'How is this worked out?',
+      explainRot: this.state.explain ? 'rotate(180deg)' : 'none',
+      toggleExplain: () => this.setState(s => ({ explain: !s.explain })),
+      recent: [['tea', '80'], ['Bara', '35'], ['Tea', '25'], ['Tea', '70'], ['Chau chau', '60']].map(([note, int]) => ({ note, int, icon: LUNCH }))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/styles.css">
+<script src="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:var(--color-bg);}
+button,input,select{font-family:inherit;}
+a{color:var(--color-accent-700);}
+a:hover{color:var(--color-accent);}
+input::placeholder{color:var(--color-neutral-500);}
+</style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+<dc-import name="Sidebar" active="savings" hint-size="244px,100vh" style="flex:none;width:244px"></dc-import>
+<main style="flex:1;min-width:0;padding:36px 48px 64px;box-sizing:border-box">
+<div ref="{{ mainRef }}" style="max-width:1120px">
+
+  <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:26px">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <h1 style="margin:0;font-size:42px;line-height:1;letter-spacing:-0.02em">Savings goals</h1>
+      <div style="display:flex;align-items:center;gap:2px;margin-left:-6px">
+        <button aria-label="Previous month" style="width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m15 18-6-6 6-6"></path></svg></button>
+        <button style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px;border:0;background:transparent;font-size:15px;font-weight:600;color:var(--color-text);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)">Ashwin 2083<svg width="14" height="14" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"></path></svg></button>
+        <button aria-label="Next month" disabled="{{ true }}" style="width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-neutral-400);cursor:default;padding:0"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m9 18 6-6-6-6"></path></svg></button>
+      </div>
+    </div>
+    <button class="btn btn-secondary" onClick="{{ openNew }}" style="height:38px"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>New goal</button>
+  </header>
+
+  <div style="display:grid;grid-template-columns:{{ ledCols }};border-top:2px solid var(--color-text);border-bottom:1px solid var(--color-divider)">
+    <div style="display:flex;flex-direction:column;gap:8px;grid-column:{{ allSpan }};padding:{{ allPad }};border-bottom:{{ allBorder }};min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Saved toward goals</span>
+      <span style="display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums;white-space:nowrap"><span style="font-size:16px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:40px;font-weight:800;line-height:1;letter-spacing:-0.025em;color:{{ led.savedColor }}">{{ led.saved.int }}</span><span style="font-size:20px;font-weight:600;color:var(--color-neutral-500);margin-left:-5px">{{ led.saved.dec }}</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.savedSub }}</span>
+      <span style="display:flex;height:4px;margin-top:4px;background:var(--color-neutral-200)"><span style="width:{{ led.savedW }};background:var(--color-text)"></span></span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px {{ mePadL }};border-left:{{ meBorder }};min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Added this month</span>
+      <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">{{ led.month.int }}</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">{{ led.month.dec }}</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.monthSub }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px;border-left:1px solid var(--color-neutral-300);min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Goals</span>
+      <span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em;margin-top:12px;font-variant-numeric:tabular-nums">{{ led.count }}</span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.countSub }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px;border-left:1px solid var(--color-neutral-300);min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Average progress</span>
+      <span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em;margin-top:12px;font-variant-numeric:tabular-nums">{{ led.avg }}</span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.avgSub }}</span>
+    </div>
+  </div>
+
+  <sc-if value="{{ noGoals }}" hint-placeholder-val="{{ true }}">
+    <section style="display:grid;grid-template-columns:{{ emptyCols }};column-gap:64px;row-gap:36px;margin-top:44px">
+      <div style="display:flex;flex-direction:column;align-items:flex-start;gap:14px;min-width:0">
+        <h2 style="margin:0;max-width:15ch;font-size:34px;line-height:1.08;font-weight:800;letter-spacing:-0.02em;text-wrap:balance">Nothing saved toward a goal yet.</h2>
+        <p style="margin:0;max-width:44ch;font-size:15px;line-height:1.55;color:var(--color-neutral-800);text-wrap:pretty">Goals give leftover money a job. Karuna's budget already sets aside <strong>Rs 20,000</strong> for savings this month — name what it's for and Piko will show how close you are.</p>
+        <button class="btn btn-primary" onClick="{{ openNew }}" style="height:40px;margin-top:8px;justify-content:flex-start"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Create a goal</button>
+      </div>
+      <div style="min-width:0">
+        <div style="padding-bottom:10px;border-bottom:2px solid var(--color-divider);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Or start from</div>
+        <sc-for list="{{ starters }}" as="st" hint-placeholder-count="5">
+          <button onClick="{{ st.onClick }}" style="display:grid;grid-template-columns:minmax(0,1fr) auto 16px;column-gap:16px;align-items:center;width:100%;padding:14px 8px;border:0;border-bottom:1px solid var(--color-neutral-300);background:transparent;text-align:left;color:var(--color-text);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 4%, transparent)">
+            <span style="min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">{{ st.name }}</span><span style="font-size:13px;color:var(--color-neutral-600)">{{ st.hint }}</span></span>
+            <span style="font-size:14px;font-variant-numeric:tabular-nums;color:var(--color-neutral-700);white-space:nowrap">{{ st.target }}</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" style="color:var(--color-neutral-600);fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+          </button>
+        </sc-for>
+      </div>
+    </section>
+  </sc-if>
+
+  <sc-if value="{{ hasGoals }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;gap:26px;margin:22px 0 26px;border-bottom:1px solid var(--color-neutral-300)">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+        <button onClick="{{ t.onClick }}" style="position:relative;display:inline-flex;align-items:baseline;gap:6px;padding:8px 0 11px;border:0;background:transparent;font-size:14px;font-weight:{{ t.fw }};color:{{ t.color }};cursor:pointer" style-hover="color:var(--color-text)">{{ t.label }}<span style="font-size:12px;font-weight:400;color:var(--color-neutral-600)">{{ t.count }}</span><sc-if value="{{ t.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--color-accent)"></span></sc-if></button>
+      </sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:{{ cols }};column-gap:16px;padding:0 8px 10px;border-bottom:2px solid var(--color-divider);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">
+      <span>Goal</span><span>For</span><span style="text-align:right">Saved</span><span>Progress</span><span>Target date</span><span></span>
+    </div>
+    <sc-for list="{{ rows }}" as="r" hint-placeholder-count="3">
+      <div style="display:grid;grid-template-columns:{{ cols }};column-gap:16px;align-items:center;padding:14px 8px;border-bottom:1px solid var(--color-neutral-300)" style-hover="background:color-mix(in srgb, var(--color-text) 4%, transparent)">
+        <span style="font-size:15px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span>
+        <div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="display:flex;flex:none"><sc-for list="{{ r.monos }}" as="m" hint-placeholder-count="1"><span style="width:20px;height:20px;display:grid;place-items:center;font-size:11px;font-weight:600;background:{{ m.bg }};color:var(--color-bg);margin-left:{{ m.ml }};box-shadow:{{ m.ring }}">{{ m.ch }}</span></sc-for></span><span style="font-size:14px;white-space:nowrap">{{ r.owner }}</span></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-variant-numeric:tabular-nums"><span style="font-size:15px;font-weight:600;white-space:nowrap">{{ r.saved.int }}<span style="font-weight:400;color:var(--color-neutral-500)">{{ r.saved.dec }}</span></span><span style="font-size:12px;color:var(--color-neutral-600);white-space:nowrap">of {{ r.target }}</span></div>
+        <div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="flex:1;min-width:0;display:flex;height:4px;background:var(--color-neutral-200)"><span style="width:{{ r.w }};background:var(--color-text)"></span></span><span style="width:38px;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">{{ r.pct }}</span></div>
+        <span style="font-size:14px;color:var(--color-neutral-800);white-space:nowrap">{{ r.by }}</span>
+        <div style="display:flex;justify-content:flex-end"><button class="btn btn-ghost" onClick="{{ r.onAdd }}" style="font-size:13px;padding:3px 6px">Add money</button></div>
+      </div>
+    </sc-for>
+    <sc-if value="{{ tabEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:36px 8px;border-bottom:1px solid var(--color-neutral-300);font-size:14px;color:var(--color-neutral-700)">{{ tabEmptyText }}</div>
+    </sc-if>
+    <button onClick="{{ openNew }}" style="display:flex;align-items:center;gap:8px;width:100%;padding:14px 8px;border:0;border-bottom:1px solid var(--color-neutral-300);background:transparent;font-size:14px;color:var(--color-neutral-700);text-align:left;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 4%, transparent);color:var(--color-text)"><svg width="15" height="15" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>New goal</button>
+
+    <sc-if value="{{ hasContrib }}" hint-placeholder-val="{{ false }}">
+      <section style="margin-top:48px;max-width:640px">
+        <div style="padding-bottom:12px;border-bottom:2px solid var(--color-divider)"><h2 style="margin:0;font-size:20px;line-height:1.2;font-weight:800;letter-spacing:-0.01em">Recent contributions</h2></div>
+        <sc-for list="{{ contribs }}" as="c" hint-placeholder-count="2">
+          <div style="display:grid;grid-template-columns:90px minmax(0,1fr) auto;column-gap:16px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--color-neutral-300)">
+            <span style="font-size:13px;color:var(--color-neutral-600)">{{ c.date }}</span>
+            <span style="font-size:15px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.goal }}</span>
+            <span style="font-size:15px;font-variant-numeric:tabular-nums"><span style="font-weight:600">+{{ c.int }}</span><span style="color:var(--color-neutral-500)">{{ c.dec }}</span></span>
+          </div>
+        </sc-for>
+      </section>
+    </sc-if>
+  </sc-if>
+
+</div>
+</main>
+</div>
+
+<sc-if value="{{ goalDlg }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeDlg }}" style="position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:color-mix(in srgb, var(--color-neutral-900) 45%, transparent)">
+    <form onClick="{{ stop }}" onSubmit="{{ submitGoal }}" style="width:min(480px,100%);max-height:calc(100vh - 48px);overflow-y:auto;display:flex;flex-direction:column;background:var(--color-bg);box-shadow:var(--shadow-lg);color:var(--color-text)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;border-bottom:2px solid var(--color-divider)">
+        <span style="font-size:20px;font-weight:800;letter-spacing:-0.01em">New savings goal</span>
+        <button type="button" onClick="{{ closeDlg }}" aria-label="Close" style="width:32px;height:32px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)"><svg width="18" height="18" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:22px;padding:24px">
+        <div class="field"><label>What are you saving for?</label><input ref="{{ nameRef }}" class="input" placeholder="e.g. Emergency fund" value="{{ form.name }}" onChange="{{ onName }}"></div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;color:var(--color-neutral-700)">Target</span>
+          <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--color-text)">
+            <span style="font-size:18px;font-weight:600;color:var(--color-neutral-600)">Rs</span>
+            <input placeholder="0.00" value="{{ form.target }}" onChange="{{ onTarget }}" style="flex:1;min-width:0;border:0;background:transparent;padding:0;font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;color:var(--color-text);caret-color:var(--color-accent);outline:none;font-variant-numeric:tabular-nums">
+          </div>
+          <sc-if value="{{ err }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--color-accent-700)">{{ err }}</span></sc-if>
+        </div>
+        <div class="field"><label>For</label><div class="seg" style="display:flex"><sc-for list="{{ forOpts }}" as="o" hint-placeholder-count="3"><label class="seg-opt" style="flex:1"><input type="radio" name="piko-g-for" checked="{{ o.checked }}" onChange="{{ o.onChange }}">{{ o.label }}</label></sc-for></div></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px">
+          <div class="field"><label>Target date</label><input class="input" placeholder="e.g. Chaitra 2084" value="{{ form.by }}" onChange="{{ onBy }}"></div>
+          <div class="field"><label>Already saved</label><input class="input" placeholder="Optional" value="{{ form.start }}" onChange="{{ onStart }}"></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:16px 24px;border-top:1px solid var(--color-neutral-300)">
+        <button type="submit" class="btn btn-primary" style="height:40px;min-width:140px;justify-content:flex-start">Create goal</button>
+        <button type="button" class="btn btn-secondary" onClick="{{ closeDlg }}" style="height:40px">Cancel</button>
+      </div>
+    </form>
+  </div>
+</sc-if>
+
+<sc-if value="{{ moneyDlg }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeDlg }}" style="position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:color-mix(in srgb, var(--color-neutral-900) 45%, transparent)">
+    <form onClick="{{ stop }}" onSubmit="{{ submitMoney }}" style="width:min(420px,100%);display:flex;flex-direction:column;background:var(--color-bg);box-shadow:var(--shadow-lg);color:var(--color-text)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;border-bottom:2px solid var(--color-divider)">
+        <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:20px;font-weight:800;letter-spacing:-0.01em">Add money</span><span style="font-size:13px;color:var(--color-neutral-600)">{{ moneyGoal }}</span></span>
+        <button type="button" onClick="{{ closeDlg }}" aria-label="Close" style="width:32px;height:32px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)"><svg width="18" height="18" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding:24px">
+        <span style="font-size:12px;color:var(--color-neutral-700)">Amount</span>
+        <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--color-text)">
+          <span style="font-size:18px;font-weight:600;color:var(--color-neutral-600)">Rs</span>
+          <input ref="{{ moneyRef }}" placeholder="0.00" value="{{ moneyAmt }}" onChange="{{ onMoney }}" style="flex:1;min-width:0;border:0;background:transparent;padding:0;font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;color:var(--color-text);caret-color:var(--color-accent);outline:none;font-variant-numeric:tabular-nums">
+        </div>
+        <sc-if value="{{ err }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--color-accent-700)">{{ err }}</span></sc-if>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:16px 24px;border-top:1px solid var(--color-neutral-300)">
+        <button type="submit" class="btn btn-primary" style="height:40px;min-width:120px;justify-content:flex-start">Add</button>
+        <button type="button" class="btn btn-secondary" onClick="{{ closeDlg }}" style="height:40px">Cancel</button>
+      </div>
+    </form>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;sampleGoals&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Preview state&quot;}}">
+const MONO = {
+  Me: [{ ch: 'N', bg: 'var(--color-text)' }],
+  Karuna: [{ ch: 'K', bg: 'var(--color-neutral-600)' }],
+  Shared: [{ ch: 'N', bg: 'var(--color-text)' }, { ch: 'K', bg: 'var(--color-neutral-600)' }]
+};
+const SAMPLE = [
+  { id: 'g1', name: 'Emergency fund', owner: 'Shared', target: 537876, saved: 120000, by: 'Chaitra 2084' },
+  { id: 'g2', name: 'New scooter', owner: 'Karuna', target: 250000, saved: 85000, by: 'Mangsir 2084' },
+  { id: 'g3', name: 'Trip to Mustang', owner: 'Me', target: 60000, saved: 18500, by: 'Poush 2083' }
+];
+const SAMPLE_C = [{ goal: 'Emergency fund', amt: 10000, date: '14 Ashwin' }, { goal: 'New scooter', amt: 5000, date: '3 Ashwin' }];
+const STARTERS = [
+  { name: 'Emergency fund', hint: 'Three months of your spending', target: 537876 },
+  { name: 'New vehicle', hint: 'Bike, scooter or car', target: null },
+  { name: 'Travel', hint: 'A trip worth planning for', target: null },
+  { name: 'Education', hint: 'Courses, fees, a degree', target: null },
+  { name: 'Something else', hint: 'Name your own goal', target: null }
+];
+const fmt = n => { const [i, d] = Math.abs(n).toFixed(2).split('.'); return { int: (n < -0.004 ? '−' : '') + Number(i).toLocaleString('en-US'), dec: '.' + d }; };
+const num = v => parseFloat(String(v).replace(/,/g, ''));
+const clean = v => v.replace(/[^\d.,]/g, '');
+let uid = 10;
+const blank = (name, target) => ({ name: name || '', target: target ? String(target) : '', owner: 'Shared', by: '', start: '' });
+
+class Component extends DCLogic {
+  state = { goals: null, contribs: null, tab: 'All', dlg: null, form: blank(), moneyId: null, moneyAmt: '', err: '', w: 0 };
+  mainRef = React.createRef(); nameRef = React.createRef(); moneyRef = React.createRef();
+
+  componentDidMount() {
+    this._m = () => {
+      const el = document.querySelector('main > div') || this.mainRef.current;
+      if (!el) return;
+      if (window.ResizeObserver && this._obs !== el) {
+        if (!this._ro) this._ro = new ResizeObserver(() => this._m());
+        if (this._obs) this._ro.unobserve(this._obs);
+        this._ro.observe(el); this._obs = el;
+      }
+      const w = Math.round(el.getBoundingClientRect().width);
+      if (w && Math.abs(w - (this.state.w || 0)) > 4) this.setState({ w });
+    };
+    this._m();
+    let ticks = 0;
+    this._iv = setInterval(() => { this._m(); if (++ticks > 25) clearInterval(this._iv); }, 200);
+    window.addEventListener('resize', this._m);
+    this._key = e => { if (e.key === 'Escape') this.setState({ dlg: null }); };
+    window.addEventListener('keydown', this._key);
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this._m); window.removeEventListener('keydown', this._key); if (this._ro) this._ro.disconnect(); clearInterval(this._iv); }
+  componentDidUpdate(_, p) {
+    if (this.state.dlg && this.state.dlg !== p.dlg) setTimeout(() => { const r = this.state.dlg === 'goal' ? this.nameRef : this.moneyRef; r.current && r.current.focus(); }, 40);
+  }
+
+  goals() { return this.state.goals ?? ((this.props.sampleGoals ?? false) ? SAMPLE : []); }
+  contribs() { return this.state.contribs ?? ((this.props.sampleGoals ?? false) && !this.state.goals ? SAMPLE_C : []); }
+  setF = (k, v) => this.setState(s => ({ form: { ...s.form, [k]: v }, err: '' }));
+  openNew = (name, target) => this.setState({ dlg: 'goal', form: blank(typeof name === 'string' ? name : '', target), err: '' });
+
+  submitGoal = e => {
+    if (e) e.preventDefault();
+    const f = this.state.form, t = num(f.target), st = num(f.start) || 0;
+    if (!f.name.trim()) return this.setState({ err: 'Name your goal' });
+    if (!(t > 0)) return this.setState({ err: 'Enter a target amount' });
+    const goals = [...this.goals(), { id: 'g' + (uid++), name: f.name.trim(), owner: f.owner, target: t, saved: st, by: f.by.trim() || 'No date' }];
+    this.setState({ goals, contribs: this.contribs(), dlg: null, tab: 'All' });
+  };
+  submitMoney = e => {
+    if (e) e.preventDefault();
+    const a = num(this.state.moneyAmt);
+    if (!(a > 0)) return this.setState({ err: 'Enter an amount' });
+    const g = this.goals().find(x => x.id === this.state.moneyId);
+    const goals = this.goals().map(x => x.id === this.state.moneyId ? { ...x, saved: x.saved + a } : x);
+    this.setState({ goals, contribs: [{ goal: g.name, amt: a, date: '20 Ashwin' }, ...this.contribs()], dlg: null });
+  };
+
+  renderVals() {
+    const s = this.state;
+    const narrow = (s.w || 1120) < 780;
+    const goals = this.goals(), contribs = this.contribs();
+    const saved = goals.reduce((t, g) => t + g.saved, 0), target = goals.reduce((t, g) => t + g.target, 0);
+    const month = contribs.reduce((t, c) => t + c.amt, 0);
+    const avg = goals.length ? goals.reduce((t, g) => t + Math.min(1, g.saved / g.target), 0) / goals.length : 0;
+    const list = goals.filter(g => s.tab === 'All' || g.owner === s.tab);
+    const f = s.form;
+    const mg = goals.find(x => x.id === s.moneyId);
+    return {
+      mainRef: this.mainRef, nameRef: this.nameRef, moneyRef: this.moneyRef,
+      ledCols: narrow ? 'repeat(3,minmax(0,1fr))' : 'minmax(0,1.55fr) repeat(3,minmax(0,1fr))',
+      allSpan: narrow ? '1 / -1' : 'auto',
+      allPad: narrow ? '18px 0 20px' : '18px 28px 20px 0',
+      allBorder: narrow ? '1px solid var(--color-neutral-300)' : '0',
+      mePadL: narrow ? '0' : '20px',
+      meBorder: narrow ? '0' : '1px solid var(--color-neutral-300)',
+      led: {
+        saved: fmt(saved), savedColor: saved ? 'var(--color-text)' : 'var(--color-neutral-500)',
+        savedSub: goals.length ? `of Rs ${fmt(target).int} across ${goals.length} ${goals.length === 1 ? 'goal' : 'goals'}` : 'No goals yet',
+        savedW: target ? Math.min(100, saved / target * 100) + '%' : '0%',
+        month: fmt(month), monthSub: contribs.length ? `${contribs.length} ${contribs.length === 1 ? 'contribution' : 'contributions'}` : 'Nothing added yet',
+        count: String(goals.length), countSub: goals.length ? 'All active' : 'Create your first below',
+        avg: goals.length ? Math.round(avg * 100) + '%' : '—', avgSub: goals.length ? 'Toward each target' : 'Shows once a goal exists'
+      },
+      noGoals: goals.length === 0, hasGoals: goals.length > 0,
+      emptyCols: narrow ? 'minmax(0,1fr)' : 'minmax(0,1fr) minmax(0,1fr)',
+      starters: STARTERS.map(st => ({ name: st.name, hint: st.hint, target: st.target ? 'Rs ' + fmt(st.target).int : '', onClick: () => this.openNew(st.name === 'Something else' ? '' : st.name, st.target) })),
+      openNew: () => this.openNew(),
+      tabs: ['All', 'Me', 'Karuna', 'Shared'].map(t => ({ label: t, count: t === 'All' ? goals.length : goals.filter(g => g.owner === t).length, on: s.tab === t, fw: s.tab === t ? 600 : 400, color: s.tab === t ? 'var(--color-text)' : 'var(--color-neutral-700)', onClick: () => this.setState({ tab: t }) })),
+      cols: narrow ? 'minmax(110px,1.4fr) minmax(0,0.8fr) minmax(0,1fr) minmax(80px,1.1fr) minmax(0,0.9fr) 92px' : 'minmax(160px,1.6fr) minmax(0,0.8fr) minmax(0,1fr) minmax(120px,1.3fr) minmax(0,0.9fr) 100px',
+      rows: list.map(g => ({
+        name: g.name, owner: g.owner, monos: MONO[g.owner].map((m, i) => ({ ...m, ml: i ? '-4px' : '0', ring: i ? '0 0 0 2px var(--color-bg)' : 'none' })),
+        saved: fmt(g.saved), target: fmt(g.target).int, w: Math.min(100, g.saved / g.target * 100) + '%', pct: Math.round(g.saved / g.target * 100) + '%', by: g.by,
+        onAdd: () => this.setState({ dlg: 'money', moneyId: g.id, moneyAmt: '', err: '' })
+      })),
+      tabEmpty: goals.length > 0 && list.length === 0, tabEmptyText: `No goals for ${s.tab} yet.`,
+      hasContrib: contribs.length > 0,
+      contribs: contribs.slice(0, 6).map(c => ({ ...c, ...fmt(c.amt) })),
+      goalDlg: s.dlg === 'goal', moneyDlg: s.dlg === 'money',
+      closeDlg: () => this.setState({ dlg: null }), stop: e => e.stopPropagation(),
+      form: f, err: s.err, submitGoal: this.submitGoal, submitMoney: this.submitMoney,
+      onName: e => this.setF('name', e.target.value),
+      onTarget: e => this.setF('target', clean(e.target.value)),
+      onBy: e => this.setF('by', e.target.value),
+      onStart: e => this.setF('start', clean(e.target.value)),
+      forOpts: ['Me', 'Karuna', 'Shared'].map(x => ({ label: x, checked: f.owner === x, onChange: () => this.setF('owner', x) })),
+      moneyGoal: mg ? mg.name : '', moneyAmt: s.moneyAmt, onMoney: e => this.setState({ moneyAmt: clean(e.target.value), err: '' })
+    };
+  }
+}
+</script>
+</body>
+</html>

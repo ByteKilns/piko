@@ -15,7 +15,7 @@ Settings, Login).
 | --- | --- |
 | Scope | **Match the designs fully** — new behaviours shown in mockups are built (incl. schema changes); panels the mockups omit are removed. |
 | Tokens | The mockups' design-system stylesheet is not available — **values are inferred** from the mockups (below). Font stays **Host Grotesk**. |
-| Theme | **Keep light/dark/system and the accent picker**; red becomes the new default accent. |
+| Theme | **Keep light/dark/system.** The **accent-colour picker is removed for now** (one red accent, as in the mockups); a configurable accent may return later and is out of scope here. |
 | Forms | **Design fields first**; fields the design omits but the app needs/stores live in a collapsed **More details** section with sensible defaults. |
 | Delivery | **Phased on `redesign/modernist`**, one commit per phase, user review between phases. |
 | Build approach | Re-theme shadcn primitives in place + a small set of shared composites (approach A). |
@@ -33,29 +33,29 @@ Light (`:root`):
 | `--ink` | `#201e1d` | text, primary button fill, 2px section rules |
 | `--rule` | `#3d3936` | 2px column-header / sidebar rules, 1px group rows |
 | `--n-200 … --n-800` | `#e6e2db` `#d8d3cb` `#b5afa6` `#8f8981` `#6e6862` `#56514c` `#3d3936` | warm neutral scale (200 meter track, 300 row rules, 400 disabled, 500 decimals/placeholder, 600 labels, 700 secondary text, 800 body copy) |
-| `--signal` / `--signal-ink` | `#d23a24` / `#a82a18` | **accent** (picker-driven): active-nav bar, tab underline, selected-ledger bar, filter dot, today marker, caret, payout cell, unread badge |
-| `--negative` / `--negative-ink` | `#d23a24` / `#a82a18` | **always red**: over budget, over income, overdue, negative amounts, Delete |
+| `--signal` / `--signal-ink` | `#d23a24` / `#a82a18` | the single red accent. `--signal` for marks: active-nav bar, tab underline, selected-ledger bar, filter dot, today marker, caret, payout cell, unread badge, overspend meter segment. `--signal-ink` for red **text**: over budget, over income, overdue, negative amounts, errors, Delete |
 | `--shadow-md` / `--shadow-lg` | `0 4px 16px rgb(32 30 29 / .12)` / `0 16px 48px rgb(32 30 29 / .22)` | menus / dialogs only |
 
 Dark (`.dark`): `--paper #161413`, `--surface #22201e`, `--ink #f3efe8`, `--rule #d3cec6`,
 neutrals inverted (`--n-200 #2a2725` … `--n-800 #d3cec6`), `--signal #ef5a42`,
-`--signal-ink #ff8a73`, `--negative #ef5a42`, `--negative-ink #ff8a73`, shadows at higher alpha.
+`--signal-ink #ff8a73`, shadows at higher alpha.
 
-**Accent vs negative split.** The mockups use one red for two jobs. Because the accent picker
-stays, they are split: the picker changes only `--signal`/`--signal-ink`; `--negative` stays red
-so "over budget" never turns green. With the default (red) accent the result is identical to
-the mockups.
+In this spec, **"negative"** (as a tone) means text rendered in `--signal-ink`.
 
-Accent presets (`[data-accent]`, light + dark variants): **red (new default)**, purple, blue,
-green, pink, orange. `ACCENT_COLOR` type and cookie default change from `purple` to `red`;
-an existing cookie is respected.
+**Accent picker removal.** The mockups use one red for both highlights and warnings, so a
+user-chosen accent would recolour "over budget" too. Until that is designed, the picker goes:
+remove the `[data-accent]` presets from `globals.css`, `data-accent` from `app/layout.tsx`,
+`src/lib/accent-color-cookie.ts`, `setAccentColorAction`, and the accent half of
+`ThemeSection`. An `accent-color` cookie already in a browser is simply ignored. (If the
+picker returns, the first step is splitting `--signal` into a picker-driven accent and a fixed
+warning red.)
 
 shadcn token mapping: `--background → paper`, `--foreground → ink`, `--card/--popover → paper`,
 `--primary → ink`, `--primary-foreground → paper`, `--secondary/--muted → surface`,
 `--muted-foreground → n-600`, `--accent → color-mix(ink 6%)` (hover tint),
-`--destructive → negative`, `--border → n-300`, `--input → n-400`, `--ring → signal`,
+`--destructive → signal-ink`, `--border → n-300`, `--input → n-400`, `--ring → signal`,
 `--radius: 0`. Tailwind `@theme inline` exposes `paper, surface, ink, rule, n-200…n-800,
-signal, signal-ink, negative, negative-ink`. The old `surface-secondary/featured/positive`
+signal, signal-ink`. The old `surface-secondary/featured/positive`
 and `chart-*` tokens are removed in phase 6.
 
 ### 1.2 Type & shape
@@ -73,7 +73,7 @@ and `chart-*` tokens are removed in phase 6.
 `button` (variants: `primary` ink fill, `secondary` 1px ink outline, `ghost` text-only,
 `icon`; heights 38/40px), `input`/`select` (square, 1px `n-400`, 38px, focus ring = signal),
 `dialog` (layout in §2.4), `dropdown-menu` (square, 1px rule border, `shadow-md`, 8×14px items,
-destructive items `negative-ink`), `tabs` (superseded by `LineTabs`), `sheet`, `popover`,
+destructive items `signal-ink`), `tabs` (superseded by `LineTabs`), `sheet`, `popover`,
 `sonner` (square, 1px rule border), `avatar` (square). Radix behaviour (focus trap, keyboard,
 ARIA) is kept.
 
@@ -85,11 +85,11 @@ ARIA) is kept.
 | `Ledger` / `LedgerCell` | Grid with one **lead** cell (40px figure, bar slot) + up to 3 cells (24px). 2px ink top, 1px rule bottom, 1px n-300 separators. Cells can be buttons (`selected` → 4px signal bar on top). Container-query layout: ≥780px `1.55fr 1fr 1fr 1fr`; <780px lead spans full row, others 3-up. |
 | `Money` | `value`, `size` (`lead 40` / `hero 76` / `cell 24` / `row 15`), `currency` (show "Rs"), `tone` (`default`/`muted`/`negative`). Renders `Rs` + grouped integer (`en-US`, minus sign `−`) + smaller lighter `.dd`. Pure `splitAmount(value)` helper. |
 | `Monogram` | `members: {name}[]` → 20/22px squares with initial; first member ink, partner `n-600`; overlap −4/−5px with 2px paper ring. Shared = both. |
-| `Meter` | 4px bar on an `n-200` track; `ratio`; when `ratio > 1` the ink part is `1/ratio` of the width and the overspend remainder is `negative`; optional `segments` for stacked bars (owner split). |
+| `Meter` | 4px bar on an `n-200` track; `ratio`; when `ratio > 1` the ink part is `1/ratio` of the width and the overspend remainder is `signal`; optional `segments` for stacked bars (owner split). |
 | `SectionHeading` | 20px h2 + 2px rule + optional right slot (link with ↗ / note). |
 | `LineTabs` | Text tabs, optional count, 2px signal underline on active; `role="tablist"`. |
 | `FilterMenu` | Text trigger (label or selected value, signal dot when active) + square menu with ✓ items and optional counts. |
-| `AmountInput` | Big numeric input (40–44px, weight 800) with "Rs" prefix and 2px ink underline, error line in `negative-ink`. Accepts digits/`.`/`,`. |
+| `AmountInput` | Big numeric input (40–44px, weight 800) with "Rs" prefix and 2px ink underline, error line in `signal-ink`. Accepts digits/`.`/`,`. |
 | `Segmented` | Radio group rendered as joined square buttons. |
 | `GroupedRows` | Grid table: header row (micro-labels, 2px rule), group head rows (label, sub, total), body rows (1px n-300), optional row click + `RowMenu` (⋯). Container-query column sets; <560px rows stack (primary left, amount right, secondary columns hidden). |
 | `MoreDetails` | Disclosure ("More details ▾") inside dialogs for extra fields. |
@@ -321,13 +321,12 @@ Clear (URL params as today). Rows by day: time · monogram · summary · "mobile
 
 ### 4.5 Settings
 720px column; sections with `SectionHeading`, rows = label + description left, control right.
-Appearance (Light/Dark/System `Segmented`; square accent swatches, red first "default") · Dates
-(BS/AD) · Profile (square photo, Change/Remove) · Password · App releases (admins) · Account
-(Sign out, negative).
+Appearance (Light/Dark/System `Segmented`; no accent swatches) · Dates (BS/AD) · Profile
+(square photo, Change/Remove) · Password · App releases (admins) · Account (Sign out, in `signal-ink`).
 
 ### 4.6 Login
 ≥lg split: left brand (ink "P" square, 42px **Piko**, tagline, 2px rule); right "Sign in" 42px,
-Email, Password, error in `negative-ink`, full-width primary **Sign in**. Mobile single column.
+Email, Password, error in `signal-ink`, full-width primary **Sign in**. Mobile single column.
 
 ## 5. Data changes
 
@@ -349,7 +348,7 @@ Mobile app: unaffected (does not read recurring; categories change is additive).
 
 | # | Phase | Exit criteria |
 | --- | --- | --- |
-| 1 | Foundation & shell: tokens, accent presets (red default), primitive restyle, shared composites, sidebar, bottom nav, frame, loading/error, N shortcut, Login | User reviews shell + one page in light/dark, desktop/mobile |
+| 1 | Foundation & shell: tokens, accent-picker removal, primitive restyle, shared composites, sidebar, bottom nav, frame, loading/error, N shortcut, Login | User reviews shell + one page in light/dark, desktop/mobile |
 | 2 | Data & logic: 3 migrations, pacing carry-over, quarterly, dhuku completion, activity/revert, icon guess | Unit tests green; no visual change |
 | 3 | Home, Expenses, Budget | User reviews pages |
 | 4 | Recurring, Savings, Dhuku, Reports | User reviews pages |
@@ -376,5 +375,6 @@ pre-commit hook (`tsc --noEmit`, `next build`) must pass — never `--no-verify`
 ## 8. Out of scope
 
 - Flutter mobile app visuals.
+- A configurable accent colour (removed in phase 1; to be designed separately).
 - Changing how money is stored or calculated beyond the pacing carry-over.
 - Formatting of already-written activity-log summaries (`formatNPR` strings stay as stored).

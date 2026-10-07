@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/styles.css">
+<script src="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/_ds_bundle.js"></script>
+</helmet>
+<aside style="position:sticky;top:0;align-self:flex-start;width:244px;height:100vh;box-sizing:border-box;display:flex;flex-direction:column;gap:22px;padding:20px 14px 18px;border-right:2px solid var(--color-divider);overflow-y:auto;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+  <div style="display:flex;align-items:center;gap:10px;padding:0 4px">
+    <div style="width:32px;height:32px;flex:none;display:grid;place-items:center;background:var(--color-text);color:var(--color-bg);font-weight:800;font-size:16px">P</div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+      <span style="font-weight:800;font-size:17px;line-height:1.15">Piko</span>
+      <span style="font-size:12px;line-height:1.3;color:var(--color-neutral-600)">Plan together, grow together</span>
+    </div>
+    <button aria-label="Collapse sidebar" style="width:28px;height:28px;flex:none;display:grid;place-items:center;border:0;background:transparent;color:var(--color-neutral-600);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent);color:var(--color-text)"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><rect width="18" height="18" x="3" y="3"></rect><path d="M9 3v18"></path></svg></button>
+  </div>
+
+  <div style="display:flex;gap:6px">
+    <button class="btn btn-primary" onClick="{{ onAdd }}" title="Add expense (N)" style="flex:1;min-width:0;height:40px;justify-content:flex-start;gap:8px">
+      <svg width="16" height="16" viewBox="0 0 24 24" style="flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+      <span style="white-space:nowrap">Add expense</span>
+    </button>
+    <button class="btn btn-secondary btn-icon" aria-label="Add by voice" title="Add by voice" style="width:40px;height:40px"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><path d="M12 19v3"></path></svg></button>
+  </div>
+
+  <nav style="display:flex;flex-direction:column;gap:18px;flex:1">
+    <div style="display:flex;flex-direction:column;gap:1px">
+      <span style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600);padding:0 10px 6px">Everyday</span>
+      <a href="Home.dc.html" aria-current="{{ n.home.cur }}" style="position:relative;display:flex;align-items:center;gap:12px;height:36px;padding:0 10px;font-size:14px;font-weight:{{ n.home.fw }};color:{{ n.home.color }};background:{{ n.home.bg }};text-decoration:none" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent);color:var(--color-text)"><sc-if value="{{ n.home.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--color-accent)"></span></sc-if><svg width="16" height="16" viewBox="0 0 24 24" style="flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Home</a>
+      <a href="Expenses.dc.html" aria-current="{{ n.expenses.cur }}" style="position:relative;display:flex;align-items:center;gap:12px;height:36px;padding:0 10px;font-size:14px;font-weight:{{ n.expenses.fw }};color:{{ n.expenses.color }};background:{{ n.expenses.bg }};text-decoration:none" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent);color:var(--color-text)"><sc-if value="{{ n.expenses.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--color-accent)"></span></sc-if><svg width="16" height="16" viewBox="0 0 24 24" style="flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 17.5v-11"></path></svg>Expenses</a>
+      <a href="Budget.dc.html" aria-current="{{ n.budget.cur }}" style="position:relative;display:flex;align-items:center;gap:12px;height:36px;padding:0 10px;font-size:14px;font-weight:{{ n.budget.fw }};color:{{ n.budget.color }};background:{{ n.budget.bg }};text-decoration:none" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent);color:var(--color-text)"><sc-if value="{{ n.budget.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--color-accent)"></span></sc-if><svg width="16" height="16" viewBox="0 0 24 24" style="flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"></path><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path></svg>Budget</a>
+      <a href="Recurring.dc.html" aria-current="{{ n.recurring.cur }}" style="position:relative;display:flex;align-items:center;gap:12px;height:36px;padding:0 10px;font-size:14px;font-weight:{{ n.recurring.fw }};color:{{ n.recurring.color }};background:{{ n.recurring.bg }};text-decoration:none" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent);color:var(--color-text)"><sc-if value="{{ n.recurring.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--color-accent)"></span></sc-if><svg width="16" height="16" viewBox="0 0 24 24" style="flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="m17 2 4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="m7 22-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>Recurring</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:1px">
+      <span style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600);padding:0 10px 6px">Saving &amp; lending</span>
+      <a href="Savings.dc.html" aria-current="{{ n.savings.cur }}" style="position:relative;display:flex;align-items:center;gap:12px;height:36px;padding:0 10px;font-size:14px;font-weight:{{ n.savings.fw }};color:{{ n.savings.color }};background:{{ n.savings.bg }};text-decoration:none" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent);color:var(--color-text)"><sc-if value="{{ n.savings.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--color-accent)"></span></sc-if><svg width="16" height="16" viewBox="0 0 24 24" style="flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z"></path><path d="M2 9v1c0 1.1.9 2 2 2h1"></path><path d="M16 11h.01"></path></svg>Savings Goals</a>
+      <a href="#" aria-current="{{ n.loans.cur }}" style="position:relative;display:flex;align-items:center;gap:12px;height:36px;padding:0 10px;font-size:14px;font-weight:{{ n.loans.fw }};color:{{ n.loans.color }};background:{{ n.loans.bg }};text-decoration:none" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent);color:var(--color-text)"><svg width="16" height="16" viewBox="0 0 24 24" style="flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"></path><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"></path><path d="m2 16 6 6"></path><circle cx="16" cy="9" r="2.9"></circle><circle cx="6" cy="5" r="3"></circle></svg>Loans</a>
+      <a href="Dhuku.dc.html" aria-current="{{ n.dhuku.cur }}" style="position:relative;display:flex;align-items:center;gap:12px;height:36px;padding:0 10px;font-size:14px;font-weight:{{ n.dhuku.fw }};color:{{ n.dhuku.color }};background:{{ n.dhuku.bg }};text-decoration:none" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent);color:var(--color-text)"><sc-if value="{{ n.dhuku.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--color-accent)"></span></sc-if><svg width="16" height="16" viewBox="0 0 24 24" style="flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Dhuku</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:1px">
+      <span style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600);padding:0 10px 6px">Insight</span>
+      <a href="Reports.dc.html" aria-current="{{ n.reports.cur }}" style="position:relative;display:flex;align-items:center;gap:12px;height:36px;padding:0 10px;font-size:14px;font-weight:{{ n.reports.fw }};color:{{ n.reports.color }};background:{{ n.reports.bg }};text-decoration:none" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent);color:var(--color-text)"><sc-if value="{{ n.reports.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--color-accent)"></span></sc-if><svg width="16" height="16" viewBox="0 0 24 24" style="flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg>Reports</a>
+      <a href="#" style="position:relative;display:flex;align-items:center;gap:12px;height:36px;padding:0 10px;font-size:14px;color:var(--color-neutral-800);text-decoration:none" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent);color:var(--color-text)"><svg width="16" height="16" viewBox="0 0 24 24" style="flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M3 12h.01"></path><path d="M3 18h.01"></path><path d="M3 6h.01"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M8 6h13"></path></svg>Categories</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:1px;margin-top:auto;padding-top:14px;border-top:1px solid var(--color-neutral-300)">
+      <a href="#" style="display:flex;align-items:center;gap:12px;height:36px;padding:0 10px;font-size:14px;color:var(--color-neutral-800);text-decoration:none" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent);color:var(--color-text)"><svg width="16" height="16" viewBox="0 0 24 24" style="flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg><span style="flex:1">Notifications</span><span style="min-width:18px;height:18px;display:grid;place-items:center;padding:0 4px;background:var(--color-accent);color:var(--color-bg);font-size:11px;font-weight:600">2</span></a>
+      <a href="#" style="display:flex;align-items:center;gap:12px;height:36px;padding:0 10px;font-size:14px;color:var(--color-neutral-800);text-decoration:none" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent);color:var(--color-text)"><svg width="16" height="16" viewBox="0 0 24 24" style="flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>Activity</a>
+    </div>
+  </nav>
+</aside>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;244px&quot;,&quot;height&quot;:&quot;760px&quot;},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;expenses&quot;,&quot;budget&quot;,&quot;recurring&quot;,&quot;savings&quot;,&quot;dhuku&quot;,&quot;reports&quot;],&quot;default&quot;:&quot;expenses&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onAdd&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+const KEYS = ['home', 'expenses', 'budget', 'recurring', 'savings', 'loans', 'dhuku', 'reports'];
+class Component extends DCLogic {
+  renderVals() {
+    const a = this.props.active || 'expenses';
+    const n = {};
+    KEYS.forEach(k => {
+      const on = k === a;
+      n[k] = { on, cur: on ? 'page' : undefined, fw: on ? 600 : 400, color: on ? 'var(--color-text)' : 'var(--color-neutral-800)', bg: on ? 'var(--color-surface)' : 'transparent' };
+    });
+    return {
+      n,
+      onAdd: () => { if (this.props.onAdd) this.props.onAdd(); else window.location.href = 'Expenses.dc.html#add'; }
+    };
+  }
+}
+</script>
+</body>
+</html>

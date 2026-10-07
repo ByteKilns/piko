@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/styles.css">
+<script src="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:var(--color-bg);}
+button,input,select{font-family:inherit;}
+a{color:var(--color-accent-700);}
+a:hover{color:var(--color-accent);}
+input::placeholder{color:var(--color-neutral-500);}
+</style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+<dc-import name="Sidebar" active="recurring" hint-size="244px,100vh" style="flex:none;width:244px"></dc-import>
+<main style="flex:1;min-width:0;padding:36px 48px 64px;box-sizing:border-box">
+<div ref="{{ mainRef }}" style="max-width:1120px">
+
+  <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:26px">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <h1 style="margin:0;font-size:42px;line-height:1;letter-spacing:-0.02em">Recurring</h1>
+      <div style="display:flex;align-items:center;gap:2px;margin-left:-6px">
+        <button aria-label="Previous month" style="width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m15 18-6-6 6-6"></path></svg></button>
+        <button style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px;border:0;background:transparent;font-size:15px;font-weight:600;color:var(--color-text);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)">Ashwin 2083<svg width="14" height="14" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"></path></svg></button>
+        <button aria-label="Next month" disabled="{{ true }}" style="width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-neutral-400);cursor:default;padding:0"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m9 18 6-6-6-6"></path></svg></button>
+        <span style="font-size:13px;color:var(--color-neutral-600);margin-left:10px">12 days left in the month</span>
+      </div>
+    </div>
+    <button class="btn btn-secondary" onClick="{{ openAdd }}" style="height:38px"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add recurring</button>
+  </header>
+
+  <div style="display:grid;grid-template-columns:{{ ledCols }};border-top:2px solid var(--color-text);border-bottom:1px solid var(--color-divider)">
+    <div style="display:flex;flex-direction:column;gap:8px;grid-column:{{ allSpan }};padding:{{ allPad }};border-bottom:{{ allBorder }};min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Monthly commitments</span>
+      <span style="display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums;white-space:nowrap"><span style="font-size:16px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:40px;font-weight:800;line-height:1;letter-spacing:-0.025em">{{ led.monthly.int }}</span><span style="font-size:20px;font-weight:600;color:var(--color-neutral-500);margin-left:-5px">{{ led.monthly.dec }}</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.monthlySub }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px {{ mePadL }};border-left:{{ meBorder }};min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Paid this month</span>
+      <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">{{ led.paid.int }}</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">{{ led.paid.dec }}</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.paidSub }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px;border-left:1px solid var(--color-neutral-300);min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Still due</span>
+      <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">{{ led.due.int }}</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">{{ led.due.dec }}</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.dueSub }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px;border-left:1px solid var(--color-neutral-300);min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Next due</span>
+      <span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em;margin-top:12px;white-space:nowrap">{{ led.next }}</span>
+      <span style="font-size:13px;color:var(--color-neutral-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ led.nextSub }}</span>
+    </div>
+  </div>
+
+  <sc-if value="{{ showTimeline }}" hint-placeholder-val="{{ true }}">
+    <section style="margin-top:32px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:10px">
+        <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Ashwin, day by day</span>
+        <span style="display:flex;align-items:center;gap:16px;font-size:12px;color:var(--color-neutral-700)">
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:9px;height:9px;background:var(--color-text)"></span>Due</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:9px;height:9px;box-shadow:inset 0 0 0 1.5px var(--color-text)"></span>Paid</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:9px;height:9px;box-shadow:inset 0 0 0 2px var(--color-accent)"></span>Today</span>
+        </span>
+      </div>
+      <div style="position:relative;padding-top:26px">
+        <sc-for list="{{ marks }}" as="m" hint-placeholder-count="1">
+          <div style="position:absolute;top:0;left:{{ m.left }};transform:{{ m.tx }};height:26px;box-sizing:border-box;padding:0 7px;border-left:{{ m.bl }};border-right:{{ m.br }};font-size:12px;line-height:1.3;white-space:nowrap;color:var(--color-text)"><span style="font-weight:600">{{ m.name }}</span><span style="color:var(--color-neutral-600)"> · {{ m.amt }}</span></div>
+        </sc-for>
+        <div style="display:grid;grid-template-columns:repeat(31,minmax(0,1fr));height:34px;border-top:1px solid var(--color-divider);border-bottom:1px solid var(--color-divider)">
+          <sc-for list="{{ days }}" as="d" hint-placeholder-count="31">
+            <div style="position:relative;display:grid;place-items:center;border-left:{{ d.bl }};background:{{ d.bg }}">
+              <sc-if value="{{ d.today }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:-1px;bottom:-1px;left:0;right:0;box-shadow:inset 0 0 0 2px var(--color-accent)"></span></sc-if>
+              <sc-if value="{{ d.due }}" hint-placeholder-val="{{ false }}"><span style="width:10px;height:10px;background:{{ d.dueBg }};box-shadow:{{ d.dueRing }}"></span></sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(31,minmax(0,1fr));padding-top:6px">
+          <sc-for list="{{ days }}" as="d" hint-placeholder-count="31"><span style="text-align:center;font-size:11px;font-variant-numeric:tabular-nums;color:{{ d.numColor }};font-weight:{{ d.numW }}">{{ d.num }}</span></sc-for>
+        </div>
+      </div>
+    </section>
+  </sc-if>
+
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:36px 0 22px;border-bottom:1px solid var(--color-neutral-300)">
+    <div style="display:flex;gap:24px;flex-wrap:wrap">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+        <button onClick="{{ t.onClick }}" style="position:relative;display:inline-flex;align-items:baseline;gap:6px;padding:8px 0 11px;border:0;background:transparent;font-size:14px;font-weight:{{ t.fw }};color:{{ t.color }};cursor:pointer" style-hover="color:var(--color-text)">{{ t.label }}<span style="font-size:12px;font-weight:400;color:var(--color-neutral-600);font-variant-numeric:tabular-nums">{{ t.count }}</span><sc-if value="{{ t.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--color-accent)"></span></sc-if></button>
+      </sc-for>
+    </div>
+    <div style="position:relative;flex:0 1 240px;min-width:180px;margin-bottom:8px">
+      <svg width="15" height="15" viewBox="0 0 24 24" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--color-neutral-600);fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;pointer-events:none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <input class="input" placeholder="Search recurring" value="{{ q }}" onChange="{{ onQ }}" style="padding-left:34px;height:36px">
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:{{ cols }};column-gap:16px;padding:0 8px 10px;border-bottom:2px solid var(--color-divider);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">
+    <span style="grid-column:1 / 3">Item</span><span>For</span><span>Schedule</span><span style="text-align:right">NPR</span><span></span>
+  </div>
+
+  <sc-for list="{{ rows }}" as="r" hint-placeholder-count="1">
+    <div style="display:grid;grid-template-columns:{{ cols }};column-gap:16px;align-items:center;padding:13px 8px;border-bottom:1px solid var(--color-neutral-300)" style-hover="background:color-mix(in srgb, var(--color-text) 4%, transparent)">
+      <span style="width:28px;height:28px;background-color:{{ r.tileBg }};background-image:{{ r.icon }};background-repeat:no-repeat;background-position:center;background-size:15px 15px;box-shadow:{{ r.tileRing }}"></span>
+      <div style="min-width:0;display:flex;flex-direction:column;gap:2px">
+        <span style="font-size:15px;color:{{ r.nameColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span>
+        <span style="font-size:13px;color:var(--color-neutral-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.sub }}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="display:flex;flex:none"><sc-for list="{{ r.monos }}" as="m" hint-placeholder-count="1"><span style="width:20px;height:20px;display:grid;place-items:center;font-size:11px;font-weight:600;background:{{ m.bg }};color:var(--color-bg);margin-left:{{ m.ml }};box-shadow:{{ m.ring }}">{{ m.ch }}</span></sc-for></span><span style="font-size:14px;white-space:nowrap">{{ r.owner }}</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0">
+        <div style="min-width:0;display:flex;flex-direction:column;gap:2px">
+          <span style="display:inline-flex;align-items:center;gap:6px;font-size:14px"><svg width="13" height="13" viewBox="0 0 24 24" style="flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m17 2 4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="m7 22-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>{{ r.freq }}</span>
+          <span style="font-size:12px;color:{{ r.nextColor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.next }}</span>
+        </div>
+        <sc-if value="{{ r.canPay }}" hint-placeholder-val="{{ true }}"><button class="btn btn-ghost" onClick="{{ r.onPaid }}" style="flex:none;font-size:13px;padding:3px 6px">Mark paid</button></sc-if>
+      </div>
+      <div style="text-align:right;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap"><span style="font-weight:600;color:{{ r.amtColor }}">{{ r.int }}</span><span style="color:var(--color-neutral-500)">{{ r.dec }}</span></div>
+      <div style="position:relative;display:flex;justify-content:flex-end">
+        <button onClick="{{ r.onMenu }}" aria-label="More actions" style="width:28px;height:28px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-neutral-500);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 8%, transparent);color:var(--color-text)"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg></button>
+        <sc-if value="{{ r.menuOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;top:calc(100% + 4px);right:0;z-index:40;min-width:180px;padding:6px 0;background:var(--color-bg);border:1px solid var(--color-divider);box-shadow:var(--shadow-md)">
+            <button onClick="{{ r.onPause }}" style="display:flex;width:100%;padding:8px 14px;border:0;background:transparent;font-size:14px;color:var(--color-text);text-align:left;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent)">{{ r.pauseLabel }}</button>
+            <button onClick="{{ r.onDone }}" style="display:flex;width:100%;padding:8px 14px;border:0;background:transparent;font-size:14px;color:var(--color-text);text-align:left;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent)">Mark completed</button>
+            <div style="height:1px;margin:6px 0;background:var(--color-neutral-300)"></div>
+            <button onClick="{{ r.onDel }}" style="display:flex;width:100%;padding:8px 14px;border:0;background:transparent;font-size:14px;color:var(--color-accent-700);text-align:left;cursor:pointer" style-hover="background:var(--color-accent-100)">Delete</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-for>
+
+  <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:40px 8px;border-bottom:1px solid var(--color-neutral-300);font-size:14px;color:var(--color-neutral-700)">{{ emptyText }}</div>
+  </sc-if>
+
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:center;margin-top:44px;padding-top:18px;border-top:2px solid var(--color-divider)">
+    <p style="margin:0;max-width:62ch;font-size:14px;line-height:1.55;color:var(--color-neutral-700);text-wrap:pretty">Rent, subscriptions, insurance, EMIs — add anything that repeats. Each one appears in Expenses as <span style="color:var(--color-text);font-weight:600">Upcoming</span> until you mark it paid, so nothing slips.</p>
+    <button class="btn btn-ghost" onClick="{{ openAdd }}"><svg width="15" height="15" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add recurring</button>
+  </div>
+
+</div>
+</main>
+</div>
+
+<sc-if value="{{ anyMenu }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeMenu }}" style="position:fixed;inset:0;z-index:30"></div></sc-if>
+
+<sc-if value="{{ dlg }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeDlg }}" style="position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:color-mix(in srgb, var(--color-neutral-900) 45%, transparent)">
+    <form onClick="{{ stop }}" onSubmit="{{ submit }}" style="width:min(480px,100%);max-height:calc(100vh - 48px);overflow-y:auto;display:flex;flex-direction:column;background:var(--color-bg);box-shadow:var(--shadow-lg);color:var(--color-text)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;border-bottom:2px solid var(--color-divider)">
+        <span style="font-size:20px;font-weight:800;letter-spacing:-0.01em">Add recurring</span>
+        <button type="button" onClick="{{ closeDlg }}" aria-label="Close" style="width:32px;height:32px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)"><svg width="18" height="18" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:22px;padding:24px">
+        <div class="field"><label>Name</label><input ref="{{ nameRef }}" class="input" placeholder="e.g. Internet bill" value="{{ form.name }}" onChange="{{ onName }}"></div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;color:var(--color-neutral-700)">Amount each time</span>
+          <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--color-text)">
+            <span style="font-size:18px;font-weight:600;color:var(--color-neutral-600)">Rs</span>
+            <input placeholder="0.00" value="{{ form.amount }}" onChange="{{ onAmt }}" style="flex:1;min-width:0;border:0;background:transparent;padding:0;font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;color:var(--color-text);caret-color:var(--color-accent);outline:none;font-variant-numeric:tabular-nums">
+          </div>
+          <sc-if value="{{ err }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--color-accent-700)">{{ err }}</span></sc-if>
+        </div>
+        <div class="field"><label>Repeats</label><div class="seg" style="display:flex"><sc-for list="{{ freqOpts }}" as="o" hint-placeholder-count="3"><label class="seg-opt" style="flex:1"><input type="radio" name="piko-r-freq" checked="{{ o.checked }}" onChange="{{ o.onChange }}">{{ o.label }}</label></sc-for></div></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px">
+          <div class="field"><label>For</label><div class="seg" style="display:flex"><sc-for list="{{ forOpts }}" as="o" hint-placeholder-count="3"><label class="seg-opt" style="flex:1"><input type="radio" name="piko-r-for" checked="{{ o.checked }}" onChange="{{ o.onChange }}">{{ o.label }}</label></sc-for></div></div>
+          <div class="field"><label>Due on day</label><input class="input" value="{{ form.due }}" onChange="{{ onDue }}" placeholder="1–31"></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:16px 24px;border-top:1px solid var(--color-neutral-300)">
+        <button type="submit" class="btn btn-primary" style="height:40px;min-width:140px;justify-content:flex-start">Save</button>
+        <button type="button" class="btn btn-secondary" onClick="{{ closeDlg }}" style="height:40px">Cancel</button>
+      </div>
+    </form>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showTimeline&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;}}">
+const TODAY = 20, DAYS = 31, INCOME = 155600;
+const ICONS = {
+  Obligations: '<path d="M3 22h18"/><path d="M6 18v-7"/><path d="M10 18v-7"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M12 2 20 7H4z"/>',
+  Other: '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>'
+};
+const svgUrl = p => `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#201e1d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>')}")`;
+const MONO = {
+  Me: [{ ch: 'N', bg: 'var(--color-text)' }],
+  Karuna: [{ ch: 'K', bg: 'var(--color-neutral-600)' }],
+  Shared: [{ ch: 'N', bg: 'var(--color-text)' }, { ch: 'K', bg: 'var(--color-neutral-600)' }]
+};
+const PER_MONTH = { Monthly: 1, Quarterly: 1 / 3, Yearly: 1 / 12 };
+const fmt = n => { const [i, d] = Math.abs(n).toFixed(2).split('.'); return { int: (n < -0.004 ? '−' : '') + Number(i).toLocaleString('en-US'), dec: '.' + d }; };
+const money = n => { const f = fmt(n); return f.int + f.dec; };
+let uid = 10;
+const blank = () => ({ name: '', amount: '', freq: 'Monthly', owner: 'Me', due: '' });
+
+class Component extends DCLogic {
+  state = {
+    items: [{ id: 's1', name: 'Smart Phone Payment', payee: 'Jagadamba Hire Purchase', type: 'EMI', cat: 'Obligations', owner: 'Me', freq: 'Monthly', amt: 2974.2, due: 28, status: 'active', paid: false }],
+    tab: 'all', q: '', menu: null, dlg: false, form: blank(), err: '', w: 0
+  };
+  mainRef = React.createRef();
+  nameRef = React.createRef();
+
+  componentDidMount() {
+    this._m = () => {
+      const el = document.querySelector('main > div') || this.mainRef.current;
+      if (!el) return;
+      if (window.ResizeObserver && this._obs !== el) {
+        if (!this._ro) this._ro = new ResizeObserver(() => this._m());
+        if (this._obs) this._ro.unobserve(this._obs);
+        this._ro.observe(el); this._obs = el;
+      }
+      const w = Math.round(el.getBoundingClientRect().width);
+      if (w && Math.abs(w - (this.state.w || 0)) > 4) this.setState({ w });
+    };
+    this._m();
+    let ticks = 0;
+    this._iv = setInterval(() => { this._m(); if (++ticks > 25) clearInterval(this._iv); }, 200);
+    window.addEventListener('resize', this._m);
+    this._key = e => { if (e.key === 'Escape') this.setState({ dlg: false, menu: null }); };
+    window.addEventListener('keydown', this._key);
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this._m); window.removeEventListener('keydown', this._key); if (this._ro) this._ro.disconnect(); clearInterval(this._iv); }
+  componentDidUpdate(_, p) { if (this.state.dlg && !p.dlg) setTimeout(() => this.nameRef.current && this.nameRef.current.focus(), 40); }
+
+  upd = (id, patch) => this.setState(s => ({ items: s.items.map(i => i.id === id ? { ...i, ...patch } : i), menu: null }));
+  setF = (k, v) => this.setState(s => ({ form: { ...s.form, [k]: v }, err: '' }));
+  submit = e => {
+    if (e) e.preventDefault();
+    const f = this.state.form;
+    const amt = parseFloat(String(f.amount).replace(/,/g, ''));
+    const due = parseInt(f.due, 10);
+    if (!f.name.trim()) return this.setState({ err: 'Give it a name' });
+    if (!(amt > 0)) return this.setState({ err: 'Enter an amount' });
+    this.setState(s => ({ dlg: false, items: [...s.items, { id: 'r' + (uid++), name: f.name.trim(), payee: '', type: f.freq, cat: 'Other', owner: f.owner, freq: f.freq, amt, due: due >= 1 && due <= DAYS ? due : TODAY, status: 'active', paid: false }] }));
+  };
+
+  renderVals() {
+    const s = this.state;
+    const narrow = (s.w || 1120) < 780;
+    const active = s.items.filter(i => i.status === 'active');
+    const monthly = active.reduce((t, i) => t + i.amt * PER_MONTH[i.freq], 0);
+    const paidItems = active.filter(i => i.paid), dueItems = active.filter(i => !i.paid);
+    const paid = paidItems.reduce((t, i) => t + i.amt, 0), due = dueItems.reduce((t, i) => t + i.amt, 0);
+    const next = [...dueItems].sort((a, b) => a.due - b.due)[0];
+    const inDays = d => d === TODAY ? 'today' : d > TODAY ? `in ${d - TODAY} ${d - TODAY === 1 ? 'day' : 'days'}` : `${TODAY - d} days late`;
+
+    const filt = {
+      all: () => true, upcoming: i => i.status === 'active' && !i.paid, active: i => i.status === 'active',
+      paused: i => i.status === 'paused', completed: i => i.status === 'completed'
+    };
+    const q = s.q.trim().toLowerCase();
+    const list = s.items.filter(filt[s.tab]).filter(i => !q || (i.name + ' ' + i.payee + ' ' + i.cat).toLowerCase().includes(q));
+
+    const rows = list.map(i => {
+      const a = fmt(i.amt);
+      let nextTxt = '', nextColor = 'var(--color-neutral-600)';
+      if (i.status === 'paused') nextTxt = 'Paused';
+      else if (i.status === 'completed') nextTxt = 'Completed';
+      else if (i.paid) nextTxt = `Paid ${TODAY} Ashwin · next ${i.due} Kartik`;
+      else if (i.due < TODAY) { nextTxt = `Overdue since ${i.due} Ashwin`; nextColor = 'var(--color-accent-700)'; }
+      else { nextTxt = `Due ${i.due} Ashwin · ${inDays(i.due)}`; nextColor = 'var(--color-neutral-700)'; }
+      const muted = i.status !== 'active';
+      return {
+        id: i.id, name: i.name, sub: [i.payee, i.type].filter(Boolean).join(' · '),
+        icon: svgUrl(ICONS[i.cat] || ICONS.Other),
+        tileBg: i.paid || muted ? 'transparent' : 'var(--color-surface)',
+        tileRing: i.paid || muted ? 'inset 0 0 0 1px var(--color-neutral-400)' : 'none',
+        nameColor: muted ? 'var(--color-neutral-600)' : 'var(--color-text)',
+        owner: i.owner, monos: MONO[i.owner].map((m, k) => ({ ...m, ml: k ? '-4px' : '0', ring: k ? '0 0 0 2px var(--color-bg)' : 'none' })),
+        freq: i.freq, next: nextTxt, nextColor,
+        canPay: i.status === 'active' && !i.paid,
+        int: a.int, dec: a.dec, amtColor: i.paid || muted ? 'var(--color-neutral-600)' : 'var(--color-text)',
+        menuOpen: s.menu === i.id,
+        pauseLabel: i.status === 'paused' ? 'Resume' : 'Pause',
+        onPaid: () => this.upd(i.id, { paid: true }),
+        onMenu: () => this.setState({ menu: s.menu === i.id ? null : i.id }),
+        onPause: () => this.upd(i.id, { status: i.status === 'paused' ? 'active' : 'paused' }),
+        onDone: () => this.upd(i.id, { status: 'completed' }),
+        onDel: () => this.setState(st => ({ items: st.items.filter(x => x.id !== i.id), menu: null }))
+      };
+    });
+
+    const NUMS = [1, 5, 10, 15, 25, 31];
+    const dueDays = {};
+    active.forEach(i => { (dueDays[i.due] = dueDays[i.due] || []).push(i); });
+    const days = Array.from({ length: DAYS }, (_, k) => {
+      const d = k + 1, items = dueDays[d] || [], allPaid = items.length && items.every(i => i.paid);
+      return {
+        bl: k ? '1px solid var(--color-neutral-300)' : '0',
+        bg: d < TODAY ? 'color-mix(in srgb, var(--color-text) 6%, transparent)' : 'transparent',
+        today: d === TODAY, due: items.length > 0,
+        dueBg: allPaid ? 'transparent' : 'var(--color-text)',
+        dueRing: allPaid ? 'inset 0 0 0 1.5px var(--color-text)' : 'none',
+        num: NUMS.includes(d) || d === TODAY || items.length ? String(d) : '',
+        numColor: d === TODAY ? 'var(--color-accent-700)' : items.length ? 'var(--color-text)' : 'var(--color-neutral-500)',
+        numW: d === TODAY || items.length ? 600 : 400
+      };
+    });
+    const marks = Object.keys(dueDays).map(Number).map(d => {
+      const right = d > 15, items = dueDays[d];
+      return {
+        left: ((d - 0.5) / DAYS * 100) + '%', tx: right ? 'translateX(-100%)' : 'none',
+        bl: right ? '0' : '1px solid var(--color-text)', br: right ? '1px solid var(--color-text)' : '0',
+        name: items.length > 1 ? `${items.length} payments` : items[0].name,
+        amt: money(items.reduce((t, i) => t + i.amt, 0))
+      };
+    });
+
+    const counts = Object.fromEntries(Object.keys(filt).map(k => [k, s.items.filter(filt[k]).length]));
+    const LABELS = { all: 'All', upcoming: 'Upcoming', active: 'Active', paused: 'Paused', completed: 'Completed' };
+    const EMPTY = { all: 'No recurring items yet.', upcoming: 'Nothing left to pay this month.', active: 'No active recurring items.', paused: 'Nothing is paused.', completed: 'Nothing completed yet.' };
+    const f = s.form;
+
+    return {
+      mainRef: this.mainRef, nameRef: this.nameRef,
+      ledCols: narrow ? 'repeat(3,minmax(0,1fr))' : 'minmax(0,1.55fr) repeat(3,minmax(0,1fr))',
+      allSpan: narrow ? '1 / -1' : 'auto',
+      allPad: narrow ? '18px 0 20px' : '18px 28px 20px 0',
+      allBorder: narrow ? '1px solid var(--color-neutral-300)' : '0',
+      mePadL: narrow ? '0' : '20px',
+      meBorder: narrow ? '0' : '1px solid var(--color-neutral-300)',
+      led: {
+        monthly: fmt(monthly), monthlySub: `${active.length} active · ${Math.round(monthly / INCOME * 100)}% of income`,
+        paid: fmt(paid), paidSub: `${paidItems.length} of ${active.length} ${active.length === 1 ? 'payment' : 'payments'}`,
+        due: fmt(due), dueSub: dueItems.length ? `${dueItems.length} ${dueItems.length === 1 ? 'payment' : 'payments'} left this month` : 'All paid for Ashwin',
+        next: next ? `${next.due} Ashwin` : '—', nextSub: next ? `${next.name} · ${inDays(next.due)}` : 'Nothing else due this month'
+      },
+      showTimeline: this.props.showTimeline ?? true,
+      days, marks,
+      tabs: Object.keys(LABELS).map(k => ({ label: LABELS[k], count: counts[k], on: s.tab === k, fw: s.tab === k ? 600 : 400, color: s.tab === k ? 'var(--color-text)' : 'var(--color-neutral-700)', onClick: () => this.setState({ tab: k, menu: null }) })),
+      q: s.q, onQ: e => this.setState({ q: e.target.value }),
+      cols: narrow ? '28px minmax(130px,1.5fr) minmax(0,0.7fr) minmax(0,1.3fr) 96px 28px' : '28px minmax(160px,1.6fr) minmax(0,0.7fr) minmax(0,1.3fr) 104px 28px',
+      rows, isEmpty: rows.length === 0, emptyText: q ? `Nothing matches “${s.q}”.` : EMPTY[s.tab],
+      anyMenu: !!s.menu, closeMenu: () => this.setState({ menu: null }),
+      openAdd: () => this.setState({ dlg: true, form: blank(), err: '' }),
+      dlg: s.dlg, closeDlg: () => this.setState({ dlg: false }), stop: e => e.stopPropagation(),
+      form: f, err: s.err, submit: this.submit,
+      onName: e => this.setF('name', e.target.value),
+      onAmt: e => this.setF('amount', e.target.value.replace(/[^\d.,]/g, '')),
+      onDue: e => this.setF('due', e.target.value.replace(/\D/g, '').slice(0, 2)),
+      freqOpts: ['Monthly', 'Quarterly', 'Yearly'].map(x => ({ label: x, checked: f.freq === x, onChange: () => this.setF('freq', x) })),
+      forOpts: ['Me', 'Karuna', 'Shared'].map(x => ({ label: x, checked: f.owner === x, onChange: () => this.setF('owner', x) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/styles.css">
+<script src="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:var(--color-bg);}
+button,input,select{font-family:inherit;}
+a{color:var(--color-accent-700);}
+a:hover{color:var(--color-accent);}
+input::placeholder{color:var(--color-neutral-500);}
+</style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+<dc-import name="Sidebar" active="budget" hint-size="244px,100vh" style="flex:none;width:244px"></dc-import>
+<main style="flex:1;min-width:0;padding:36px 48px 64px;box-sizing:border-box">
+<div ref="{{ mainRef }}" style="max-width:1120px">
+
+  <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:22px">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <h1 style="margin:0;font-size:42px;line-height:1;letter-spacing:-0.02em">Budget</h1>
+      <div style="display:flex;align-items:center;gap:2px;margin-left:-6px">
+        <button aria-label="Previous month" style="width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m15 18-6-6 6-6"></path></svg></button>
+        <button style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px;border:0;background:transparent;font-size:15px;font-weight:600;color:var(--color-text);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)">Ashwin 2083<svg width="14" height="14" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"></path></svg></button>
+        <button aria-label="Next month" disabled="{{ true }}" style="width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-neutral-400);cursor:default;padding:0"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m9 18 6-6-6-6"></path></svg></button>
+        <span style="font-size:13px;color:var(--color-neutral-600);margin-left:10px">12 days left in the month</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost"><svg width="15" height="15" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><rect width="14" height="14" x="8" y="8"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>Copy Bhadra's budget</button>
+      <button class="btn btn-secondary" onClick="{{ openNew }}" style="height:38px"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add budget</button>
+    </div>
+  </header>
+
+  <p style="margin:0 0 26px;max-width:60ch;font-size:20px;line-height:1.45;letter-spacing:-0.005em;color:var(--color-neutral-800);text-wrap:pretty">You've planned <strong style="color:var(--color-text)">{{ lead.planned }} of this month's income</strong>, yet <strong style="color:var(--color-text)">{{ lead.outside }} of spending</strong> happened outside a budget. <strong style="color:var(--color-text)">{{ lead.strong }}</strong>{{ lead.rest }}</p>
+
+  <div style="display:grid;grid-template-columns:{{ ledCols }};border-top:2px solid var(--color-text);border-bottom:1px solid var(--color-divider)">
+    <div style="display:flex;flex-direction:column;gap:8px;grid-column:{{ allSpan }};padding:{{ allPad }};border-bottom:{{ allBorder }};min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Budgeted</span>
+      <span style="display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums;white-space:nowrap"><span style="font-size:16px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:40px;font-weight:800;line-height:1;letter-spacing:-0.025em">{{ led.budgeted.int }}</span><span style="font-size:20px;font-weight:600;color:var(--color-neutral-500);margin-left:-5px">{{ led.budgeted.dec }}</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.budgetedSub }}</span>
+      <span style="display:flex;height:4px;margin-top:4px;background:var(--color-neutral-200)"><span style="width:{{ led.budgetedW }};background:var(--color-text)"></span></span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px {{ mePadL }};border-left:{{ meBorder }};min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Spent in budgets</span>
+      <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">{{ led.spentIn.int }}</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">{{ led.spentIn.dec }}</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.spentInSub }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px;border-left:1px solid var(--color-neutral-300);min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Spent outside</span>
+      <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">{{ led.outside.int }}</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">{{ led.outside.dec }}</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.outsideSub }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px;border-left:1px solid var(--color-neutral-300);min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Left to plan</span>
+      <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">{{ led.unplanned.int }}</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">{{ led.unplanned.dec }}</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.unplannedSub }}</span>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:22px 0 26px;border-bottom:1px solid var(--color-neutral-300)">
+    <div style="display:flex;gap:26px">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+        <button onClick="{{ t.onClick }}" style="position:relative;padding:8px 0 11px;border:0;background:transparent;font-size:14px;font-weight:{{ t.fw }};color:{{ t.color }};cursor:pointer" style-hover="color:var(--color-text)">{{ t.label }}<sc-if value="{{ t.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--color-accent)"></span></sc-if></button>
+      </sc-for>
+    </div>
+    <span style="padding-bottom:11px;font-size:13px;color:var(--color-neutral-600)">Click a row to change its budget</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:{{ cols }};column-gap:16px;padding:0 8px 10px;border-bottom:2px solid var(--color-divider);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">
+    <span>Category</span><span style="text-align:right">Budget</span><span style="text-align:right">Spent</span><span style="text-align:right">Left</span><span>Used</span>
+  </div>
+
+  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+    <div style="display:grid;grid-template-columns:{{ cols }};column-gap:16px;align-items:center;padding:{{ g.pad }};border-bottom:1px solid var(--color-divider)">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <span style="display:flex;flex:none"><sc-for list="{{ g.monos }}" as="m" hint-placeholder-count="1"><span style="width:20px;height:20px;display:grid;place-items:center;font-size:11px;font-weight:600;background:{{ m.bg }};color:var(--color-bg);margin-left:{{ m.ml }};box-shadow:{{ m.ring }}">{{ m.ch }}</span></sc-for></span>
+        <span style="font-size:15px;font-weight:600;white-space:nowrap">{{ g.name }}</span>
+        <span style="min-width:0;font-size:13px;color:var(--color-neutral-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.sub }}</span>
+      </div>
+      <sc-if value="{{ g.has }}" hint-placeholder-val="{{ true }}">
+        <div style="text-align:right;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap">{{ g.budget.int }}<span style="font-weight:400;color:var(--color-neutral-500)">{{ g.budget.dec }}</span></div>
+        <div style="text-align:right;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap">{{ g.spent.int }}<span style="font-weight:400;color:var(--color-neutral-500)">{{ g.spent.dec }}</span></div>
+        <div style="text-align:right;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:{{ g.leftColor }}">{{ g.left.int }}<span style="font-weight:400;color:var(--color-neutral-500)">{{ g.left.dec }}</span></div>
+        <div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="flex:1;min-width:0;display:flex;height:4px;background:var(--color-neutral-200)"><span style="width:{{ g.inkW }};background:var(--color-text)"></span><span style="width:{{ g.overW }};background:var(--color-accent)"></span></span><span style="width:42px;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:{{ g.pctColor }}">{{ g.pct }}</span></div>
+      </sc-if>
+      <sc-if value="{{ g.none }}" hint-placeholder-val="{{ false }}">
+        <div style="grid-column:2 / -1;display:flex;justify-content:flex-end"><button class="btn btn-ghost" onClick="{{ g.onSet }}" style="font-size:13px;padding:3px 6px"><svg width="14" height="14" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Set a budget</button></div>
+      </sc-if>
+    </div>
+    <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+      <div onClick="{{ r.onEdit }}" style="display:grid;grid-template-columns:{{ cols }};column-gap:16px;align-items:center;padding:{{ rowPad }};border-bottom:1px solid var(--color-neutral-300);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 4%, transparent)">
+        <div style="min-width:0;display:flex;align-items:baseline;gap:10px"><span style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.cat }}</span><span style="flex:none;font-size:12px;color:var(--color-neutral-600)">{{ r.type }}</span></div>
+        <div style="text-align:right;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap">{{ r.budget.int }}<span style="color:var(--color-neutral-500)">{{ r.budget.dec }}</span></div>
+        <div style="text-align:right;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap">{{ r.spent.int }}<span style="color:var(--color-neutral-500)">{{ r.spent.dec }}</span></div>
+        <div style="text-align:right;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:{{ r.leftColor }}">{{ r.left.int }}<span style="font-weight:400;color:var(--color-neutral-500)">{{ r.left.dec }}</span></div>
+        <div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="flex:1;min-width:0;display:flex;height:4px;background:var(--color-neutral-200)"><span style="width:{{ r.inkW }};background:var(--color-text)"></span><span style="width:{{ r.overW }};background:var(--color-accent)"></span></span><span style="width:42px;text-align:right;font-size:13px;font-variant-numeric:tabular-nums;color:{{ r.pctColor }}">{{ r.pct }}</span></div>
+      </div>
+    </sc-for>
+    <sc-if value="{{ g.showUnb }}" hint-placeholder-val="{{ true }}">
+      <div onClick="{{ g.toggle }}" style="display:grid;grid-template-columns:{{ cols }};column-gap:16px;align-items:center;padding:{{ rowPad }};border-bottom:1px solid var(--color-neutral-300);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 4%, transparent)">
+        <div style="grid-column:1 / 3;display:flex;align-items:center;gap:8px;min-width:0">
+          <svg width="14" height="14" viewBox="0 0 24 24" style="flex:none;transform:{{ g.chev }};color:var(--color-neutral-600);fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m9 18 6-6-6-6"></path></svg>
+          <span style="flex:none;font-size:14px;color:var(--color-neutral-800)">Without a budget</span>
+          <span style="min-width:0;font-size:13px;color:var(--color-neutral-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.unbPreview }}</span>
+        </div>
+        <div style="text-align:right;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap">{{ g.unbTotal.int }}<span style="color:var(--color-neutral-500)">{{ g.unbTotal.dec }}</span></div>
+        <div></div>
+        <div style="font-size:13px;color:var(--color-neutral-600)">{{ g.unbCount }}</div>
+      </div>
+      <sc-if value="{{ g.open }}" hint-placeholder-val="{{ false }}">
+        <sc-for list="{{ g.unbRows }}" as="u" hint-placeholder-count="4">
+          <div style="display:grid;grid-template-columns:{{ cols }};column-gap:16px;align-items:center;padding:{{ rowPad }};border-bottom:1px solid var(--color-neutral-200);background:color-mix(in srgb, var(--color-text) 2.5%, transparent)">
+            <div style="grid-column:1 / 3;padding-left:22px;font-size:14px;color:var(--color-neutral-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ u.cat }}</div>
+            <div style="text-align:right;font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap">{{ u.spent.int }}<span style="color:var(--color-neutral-500)">{{ u.spent.dec }}</span></div>
+            <div></div>
+            <div style="display:flex">
+              <sc-if value="{{ u.settable }}" hint-placeholder-val="{{ true }}"><button class="btn btn-ghost" onClick="{{ u.onSet }}" style="font-size:13px;padding:2px 6px;margin-left:-6px">Set budget</button></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </sc-if>
+    </sc-if>
+  </sc-for>
+
+  <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:48px 8px;border-bottom:1px solid var(--color-neutral-300);font-size:14px;color:var(--color-neutral-700)">No budgets match this view.</div>
+  </sc-if>
+
+</div>
+</main>
+</div>
+
+<datalist id="piko-budget-cats"><sc-for list="{{ catList }}" as="c" hint-placeholder-count="0"><option value="{{ c }}"></option></sc-for></datalist>
+
+<sc-if value="{{ dlg }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeDlg }}" style="position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:color-mix(in srgb, var(--color-neutral-900) 45%, transparent)">
+    <form onClick="{{ stop }}" onSubmit="{{ submit }}" style="width:min(480px,100%);max-height:calc(100vh - 48px);overflow-y:auto;display:flex;flex-direction:column;background:var(--color-bg);box-shadow:var(--shadow-lg);color:var(--color-text)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;border-bottom:2px solid var(--color-divider)">
+        <span style="font-size:20px;font-weight:800;letter-spacing:-0.01em">{{ dlgTitle }}</span>
+        <button type="button" onClick="{{ closeDlg }}" aria-label="Close" style="width:32px;height:32px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)"><svg width="18" height="18" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:22px;padding:24px">
+        <div class="field">
+          <label>Category</label>
+          <input class="input" list="piko-budget-cats" placeholder="e.g. Groceries" value="{{ form.cat }}" onChange="{{ onCat }}">
+          <sc-if value="{{ spentHint }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--color-neutral-600);margin-top:6px">{{ spentHint }}</span></sc-if>
+        </div>
+        <div class="field">
+          <label>For</label>
+          <div class="seg" style="display:flex"><sc-for list="{{ forOpts }}" as="o" hint-placeholder-count="3"><label class="seg-opt" style="flex:1"><input type="radio" name="piko-b-for" checked="{{ o.checked }}" onChange="{{ o.onChange }}">{{ o.label }}</label></sc-for></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;color:var(--color-neutral-700)">Monthly budget</span>
+          <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--color-text)">
+            <span style="font-size:18px;font-weight:600;color:var(--color-neutral-600)">Rs</span>
+            <input ref="{{ amtRef }}" placeholder="0.00" value="{{ form.amount }}" onChange="{{ onAmt }}" style="flex:1;min-width:0;border:0;background:transparent;padding:0;font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;color:var(--color-text);caret-color:var(--color-accent);outline:none;font-variant-numeric:tabular-nums">
+          </div>
+          <sc-if value="{{ err }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--color-accent-700)">{{ err }}</span></sc-if>
+        </div>
+        <div class="field">
+          <label>Type</label>
+          <div class="seg" style="display:flex"><sc-for list="{{ typeOpts }}" as="o" hint-placeholder-count="2"><label class="seg-opt" style="flex:1"><input type="radio" name="piko-b-type" checked="{{ o.checked }}" onChange="{{ o.onChange }}">{{ o.label }}</label></sc-for></div>
+          <span style="font-size:12px;line-height:1.5;color:var(--color-neutral-600);margin-top:6px">Fixed is the same every month, like a loan payment. Flexible changes, like groceries.</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:16px 24px;border-top:1px solid var(--color-neutral-300)">
+        <button type="submit" class="btn btn-primary" style="height:40px;min-width:140px;justify-content:flex-start">Save budget</button>
+        <button type="button" class="btn btn-secondary" onClick="{{ closeDlg }}" style="height:40px">Cancel</button>
+      </div>
+    </form>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;comfortable&quot;,&quot;tsType&quot;:&quot;'comfortable' | 'compact'&quot;,&quot;section&quot;:&quot;Table&quot;},&quot;showUnbudgeted&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Table&quot;}}">
+const INCOME = 155600;
+const MONO = {
+  Me: [{ ch: 'N', bg: 'var(--color-text)' }],
+  Karuna: [{ ch: 'K', bg: 'var(--color-neutral-600)' }],
+  Shared: [{ ch: 'N', bg: 'var(--color-text)' }, { ch: 'K', bg: 'var(--color-neutral-600)' }]
+};
+const INIT = {
+  Me: { total: 71115.28, budgets: [], unb: [['Groceries', 3430], ['Petrol', 3000], ['Lunch', 2180], ['Mobile/Telephone', 100]], more: 12 },
+  Karuna: { total: 82169.6, budgets: [
+    { cat: 'Family Support', type: 'Fixed', budget: 40000, spent: 54765 },
+    { cat: 'Personal Loan', type: 'Fixed', budget: 9420, spent: 7495 },
+    { cat: 'Savings', type: 'Fixed', budget: 20000, spent: 0 },
+    { cat: 'Skin care', type: 'Flexible', budget: 2000, spent: 0 }
+  ], unb: [['Shopping', 6900], ['Transportation', 905], ['Lunch', 420], ['Medicine', 300]], more: 6 },
+  Shared: { total: 5607, budgets: [], unb: [['Dates', 3550], ['Medicine', 75], ['Parking', 65], ['Miscellaneous', 10]], more: 5 }
+};
+const ORDER = ['Me', 'Karuna', 'Shared'];
+const CATS = ['Lunch', 'Groceries', 'Petrol', 'Shopping', 'Mobile/Telephone', 'Internet', 'Medicine', 'Cosmetics', 'Skin care', 'Transportation', 'Family Support', 'Personal Loan', 'Savings', 'Parking', 'Dates', 'Miscellaneous'];
+const fmt = n => { const [i, d] = Math.abs(n).toFixed(2).split('.'); return { int: (n < -0.004 ? '−' : '') + Number(i).toLocaleString('en-US'), dec: '.' + d }; };
+const money = n => { const f = fmt(n); return f.int + f.dec; };
+const pct = x => Math.round(x * 100) + '%';
+const clone = o => JSON.parse(JSON.stringify(o));
+const sum = (a, f) => a.reduce((t, x) => t + f(x), 0);
+const bar = r => r > 1 ? { inkW: (100 / r) + '%', overW: (100 - 100 / r) + '%' } : { inkW: (Math.max(r, 0) * 100) + '%', overW: '0%' };
+const blank = (cat, owner) => ({ cat: cat || '', owner: owner || 'Me', amount: '', type: 'Flexible' });
+
+class Component extends DCLogic {
+  state = { data: clone(INIT), tab: 'All', open: {}, dlg: false, editing: false, form: blank(), err: '', w: 0 };
+  mainRef = React.createRef();
+  amtRef = React.createRef();
+
+  componentDidMount() {
+    this._m = () => {
+      const el = document.querySelector('main > div') || this.mainRef.current;
+      if (!el) return;
+      if (window.ResizeObserver && this._obs !== el) {
+        if (!this._ro) this._ro = new ResizeObserver(() => this._m());
+        if (this._obs) this._ro.unobserve(this._obs);
+        this._ro.observe(el); this._obs = el;
+      }
+      const w = Math.round(el.getBoundingClientRect().width);
+      if (w && Math.abs(w - (this.state.w || 0)) > 4) this.setState({ w });
+    };
+    this._m();
+    let ticks = 0;
+    this._iv = setInterval(() => { this._m(); if (++ticks > 25) clearInterval(this._iv); }, 200);
+    window.addEventListener('resize', this._m);
+    this._key = e => { if (e.key === 'Escape' && this.state.dlg) this.setState({ dlg: false }); };
+    window.addEventListener('keydown', this._key);
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this._m); window.removeEventListener('keydown', this._key); if (this._ro) this._ro.disconnect(); clearInterval(this._iv); }
+  componentDidUpdate(_, p) { if (this.state.dlg && !p.dlg) setTimeout(() => this.amtRef.current && this.amtRef.current.focus(), 40); }
+
+  openSet = (cat, owner) => this.setState({ dlg: true, editing: false, form: blank(cat, owner), err: '' });
+  setF = (k, v) => this.setState(s => ({ form: { ...s.form, [k]: v }, err: '' }));
+  submit = e => {
+    if (e) e.preventDefault();
+    const f = this.state.form;
+    const amt = parseFloat(String(f.amount).replace(/,/g, ''));
+    const cat = f.cat.trim();
+    if (!cat) return this.setState({ err: 'Choose a category' });
+    if (!(amt > 0)) return this.setState({ err: 'Enter a monthly amount' });
+    this.setState(s => {
+      const data = clone(s.data);
+      const o = data[f.owner];
+      const ex = o.budgets.find(b => b.cat.toLowerCase() === cat.toLowerCase());
+      if (ex) { ex.budget = amt; ex.type = f.type; }
+      else {
+        const i = o.unb.findIndex(u => u[0].toLowerCase() === cat.toLowerCase());
+        let spent = 0;
+        if (i >= 0) { spent = o.unb[i][1]; o.unb.splice(i, 1); }
+        o.budgets.push({ cat, type: f.type, budget: amt, spent });
+      }
+      return { data, dlg: false, tab: s.tab === 'All' || s.tab === f.owner ? s.tab : f.owner };
+    });
+  };
+
+  renderVals() {
+    const s = this.state, p = this.props;
+    const narrow = (s.w || 1120) < 780;
+    const compact = (p.density ?? 'comfortable') === 'compact';
+    const showUnb = p.showUnbudgeted ?? true;
+    const cols = narrow ? 'minmax(120px,1.4fr) repeat(3,minmax(0,0.9fr)) minmax(90px,1fr)' : 'minmax(170px,1.6fr) repeat(3,minmax(0,0.85fr)) minmax(140px,1.2fr)';
+
+    let budgeted = 0, spentIn = 0, outside = 0;
+    const overList = [];
+    ORDER.forEach(k => {
+      const o = s.data[k];
+      budgeted += sum(o.budgets, b => b.budget);
+      const sIn = sum(o.budgets, b => b.spent);
+      spentIn += sIn; outside += o.total - sIn;
+      o.budgets.forEach(b => { if (b.spent > b.budget) overList.push(b); });
+    });
+    const allSpent = spentIn + outside;
+
+    const groups = ORDER.filter(k => s.tab === 'All' || s.tab === k).map((k, gi) => {
+      const o = s.data[k];
+      const bSum = sum(o.budgets, b => b.budget), sSum = sum(o.budgets, b => b.spent);
+      const unbTotal = o.total - sSum;
+      const moreAmt = unbTotal - sum(o.unb, u => u[1]);
+      const has = o.budgets.length > 0;
+      const unbCount = o.unb.length + o.more;
+      const gr = bSum ? sSum / bSum : 0;
+      const open = !!s.open[k];
+      const rows = [...o.budgets].sort((a, b) => b.spent / b.budget - a.spent / a.budget).map(b => {
+        const r = b.spent / b.budget, left = b.budget - b.spent;
+        return {
+          cat: b.cat, type: b.type, budget: fmt(b.budget), spent: fmt(b.spent), left: fmt(left),
+          leftColor: left < 0 ? 'var(--color-accent-700)' : 'var(--color-text)',
+          ...bar(r), pct: pct(r), pctColor: r > 1 ? 'var(--color-accent-700)' : 'var(--color-neutral-700)',
+          onEdit: () => this.setState({ dlg: true, editing: true, form: { cat: b.cat, owner: k, amount: String(b.budget), type: b.type }, err: '' })
+        };
+      });
+      const unbRows = o.unb.map(u => ({ cat: u[0], spent: fmt(u[1]), settable: true, onSet: e => { e.stopPropagation(); this.openSet(u[0], k); } }));
+      if (o.more > 0) unbRows.push({ cat: `${o.more} more ${o.more === 1 ? 'category' : 'categories'}`, spent: fmt(moreAmt), settable: false, onSet: null });
+      const gb = bar(gr);
+      return {
+        key: k, name: k, monos: MONO[k].map((m, i) => ({ ...m, ml: i ? '-4px' : '0', ring: i ? '0 0 0 2px var(--color-bg)' : 'none' })),
+        sub: has ? `${o.budgets.length} ${o.budgets.length === 1 ? 'budget' : 'budgets'} · Rs ${money(o.total)} spent in all` : `No budgets yet · Rs ${money(o.total)} spent`,
+        pad: gi === 0 ? '18px 8px 10px' : '36px 8px 10px',
+        has, none: !has,
+        budget: fmt(bSum), spent: fmt(sSum), left: fmt(bSum - sSum),
+        leftColor: bSum - sSum < 0 ? 'var(--color-accent-700)' : 'var(--color-text)',
+        inkW: gb.inkW, overW: gb.overW, pct: pct(gr), pctColor: gr > 1 ? 'var(--color-accent-700)' : 'var(--color-text)',
+        onSet: () => this.openSet('', k),
+        rows,
+        showUnb: showUnb && unbCount > 0,
+        unbPreview: o.unb.map(u => u[0]).join(', ') + (o.more ? ` and ${o.more} more` : ''),
+        unbTotal: fmt(unbTotal),
+        unbCount: `${unbCount} ${unbCount === 1 ? 'category' : 'categories'}`,
+        open, chev: open ? 'rotate(90deg)' : 'none',
+        toggle: () => this.setState(st => ({ open: { ...st.open, [k]: !st.open[k] } })),
+        unbRows
+      };
+    });
+
+    let strong = '', rest = '';
+    if (overList.length === 1) { strong = overList[0].cat; rest = ` is Rs ${money(overList[0].spent - overList[0].budget)} over.`; }
+    else if (overList.length > 1) { strong = `${overList.length} categories`; rest = ' are over budget.'; }
+    else { rest = 'Every budget is within plan.'; }
+
+    const f = s.form;
+    const o = s.data[f.owner];
+    const hit = o && o.unb.find(u => u[0].toLowerCase() === f.cat.trim().toLowerCase());
+
+    return {
+      mainRef: this.mainRef, amtRef: this.amtRef,
+      ledCols: narrow ? 'repeat(3,minmax(0,1fr))' : 'minmax(0,1.55fr) repeat(3,minmax(0,1fr))',
+      allSpan: narrow ? '1 / -1' : 'auto',
+      allPad: narrow ? '18px 0 20px' : '18px 28px 20px 0',
+      allBorder: narrow ? '1px solid var(--color-neutral-300)' : '0',
+      mePadL: narrow ? '0' : '20px',
+      meBorder: narrow ? '0' : '1px solid var(--color-neutral-300)',
+      lead: { planned: pct(budgeted / INCOME), outside: pct(outside / allSpent), strong, rest },
+      led: {
+        budgeted: fmt(budgeted), budgetedSub: `${pct(budgeted / INCOME)} of Rs ${money(INCOME)} income`, budgetedW: Math.min(100, budgeted / INCOME * 100) + '%',
+        spentIn: fmt(spentIn), spentInSub: budgeted ? `${pct(spentIn / budgeted)} of what's budgeted` : 'Nothing budgeted yet',
+        outside: fmt(outside), outsideSub: `${pct(outside / allSpent)} of all spending`,
+        unplanned: fmt(INCOME - budgeted), unplannedSub: `${pct((INCOME - budgeted) / INCOME)} of income`
+      },
+      tabs: ['All', 'Me', 'Karuna', 'Shared'].map(t => ({ label: t, on: s.tab === t, fw: s.tab === t ? 600 : 400, color: s.tab === t ? 'var(--color-text)' : 'var(--color-neutral-700)', onClick: () => this.setState({ tab: t }) })),
+      cols, rowPad: compact ? '7px 8px' : '12px 8px',
+      groups, isEmpty: groups.length === 0,
+      openNew: () => this.openSet('', s.tab === 'All' ? 'Me' : s.tab),
+      catList: CATS,
+      dlg: s.dlg, dlgTitle: s.editing ? 'Change budget' : 'Set a budget',
+      closeDlg: () => this.setState({ dlg: false }), stop: e => e.stopPropagation(),
+      form: f, err: s.err, submit: this.submit,
+      spentHint: hit ? `Rs ${money(hit[1])} already spent on ${hit[0]} this month` : '',
+      onCat: e => this.setF('cat', e.target.value),
+      onAmt: e => this.setF('amount', e.target.value.replace(/[^\d.,]/g, '')),
+      forOpts: ORDER.map(x => ({ label: x, checked: f.owner === x, onChange: () => this.setF('owner', x) })),
+      typeOpts: ['Fixed', 'Flexible'].map(x => ({ label: x, checked: f.type === x, onChange: () => this.setF('type', x) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

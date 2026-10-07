@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/styles.css">
+<script src="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:var(--color-bg);}
+button,input,select{font-family:inherit;}
+a{color:var(--color-accent-700);}
+a:hover{color:var(--color-accent);}
+input::placeholder{color:var(--color-neutral-500);}
+</style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+<dc-import name="Sidebar" active="dhuku" hint-size="244px,100vh" style="flex:none;width:244px"></dc-import>
+<main style="flex:1;min-width:0;padding:36px 48px 64px;box-sizing:border-box">
+<div ref="{{ mainRef }}" style="max-width:1120px">
+
+  <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:26px">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <h1 style="margin:0;font-size:42px;line-height:1;letter-spacing:-0.02em">Dhuku</h1>
+      <span style="font-size:15px;line-height:30px;color:var(--color-neutral-700)">Rotating savings groups you're part of</span>
+    </div>
+    <button class="btn btn-secondary" onClick="{{ openNew }}" style="height:38px"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add dhuku</button>
+  </header>
+
+  <div style="display:grid;grid-template-columns:{{ ledCols }};border-top:2px solid var(--color-text);border-bottom:1px solid var(--color-divider)">
+    <div style="display:flex;flex-direction:column;gap:8px;grid-column:{{ allSpan }};padding:{{ allPad }};border-bottom:{{ allBorder }};min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Due this month</span>
+      <span style="display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums;white-space:nowrap"><span style="font-size:16px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:40px;font-weight:800;line-height:1;letter-spacing:-0.025em">{{ led.due.int }}</span><span style="font-size:20px;font-weight:600;color:var(--color-neutral-500);margin-left:-5px">{{ led.due.dec }}</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.dueSub }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px {{ mePadL }};border-left:{{ meBorder }};min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Contributed</span>
+      <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">{{ led.paid.int }}</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">{{ led.paid.dec }}</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">All-time</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px;border-left:1px solid var(--color-neutral-300);min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Received</span>
+      <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">{{ led.recv.int }}</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">{{ led.recv.dec }}</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.recvSub }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;padding:18px 20px 20px;border-left:1px solid var(--color-neutral-300);min-width:0">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">Active groups</span>
+      <span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em;margin-top:12px;font-variant-numeric:tabular-nums">{{ led.active }}</span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.activeSub }}</span>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:22px 0 26px;border-bottom:1px solid var(--color-neutral-300)">
+    <div style="display:flex;gap:26px">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+        <button onClick="{{ t.onClick }}" style="position:relative;display:inline-flex;align-items:baseline;gap:6px;padding:8px 0 11px;border:0;background:transparent;font-size:14px;font-weight:{{ t.fw }};color:{{ t.color }};cursor:pointer" style-hover="color:var(--color-text)">{{ t.label }}<span style="font-size:12px;font-weight:400;color:var(--color-neutral-600)">{{ t.count }}</span><sc-if value="{{ t.on }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--color-accent)"></span></sc-if></button>
+      </sc-for>
+    </div>
+    <span style="display:flex;align-items:center;gap:16px;padding-bottom:11px;font-size:12px;color:var(--color-neutral-700)">
+      <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:9px;height:9px;background:var(--color-text)"></span>Paid</span>
+      <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:9px;height:9px;background:var(--color-accent)"></span>Payout received</span>
+      <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:9px;height:9px;box-shadow:inset 0 0 0 1px var(--color-neutral-500)"></span>To come</span>
+    </span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:{{ cols }};column-gap:20px;padding:0 8px 10px;border-bottom:2px solid var(--color-divider);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">
+    <span>Group</span><span>Months</span><span style="text-align:right">Contributed</span><span>Next payment</span><span></span>
+  </div>
+
+  <sc-for list="{{ rows }}" as="r" hint-placeholder-count="1">
+    <div style="display:grid;grid-template-columns:{{ cols }};column-gap:20px;align-items:center;padding:16px 8px;border-bottom:1px solid var(--color-neutral-300)" style-hover="background:color-mix(in srgb, var(--color-text) 4%, transparent)">
+      <div style="min-width:0;display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ r.nameColor }}">{{ r.name }}</span>
+        <span style="display:flex;align-items:center;gap:8px;min-width:0"><span style="display:flex;flex:none"><sc-for list="{{ r.monos }}" as="m" hint-placeholder-count="1"><span style="width:18px;height:18px;display:grid;place-items:center;font-size:10px;font-weight:600;background:{{ m.bg }};color:var(--color-bg);margin-left:{{ m.ml }};box-shadow:{{ m.ring }}">{{ m.ch }}</span></sc-for></span><span style="font-size:13px;color:var(--color-neutral-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.sub }}</span></span>
+      </div>
+      <div style="min-width:0;display:flex;flex-direction:column;gap:6px">
+        <span style="display:flex;gap:3px"><sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="12"><span title="{{ c.title }}" style="flex:1;max-width:16px;height:12px;background:{{ c.bg }};box-shadow:{{ c.ring }}"></span></sc-for></span>
+        <span style="font-size:12px;color:var(--color-neutral-700);font-variant-numeric:tabular-nums">{{ r.monthText }}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-variant-numeric:tabular-nums"><span style="font-size:15px;font-weight:600;white-space:nowrap">{{ r.paid.int }}<span style="font-weight:400;color:var(--color-neutral-500)">{{ r.paid.dec }}</span></span><span style="font-size:12px;color:var(--color-neutral-600);white-space:nowrap">of {{ r.pot }} · {{ r.pct }}</span></div>
+      <div style="min-width:0;display:flex;flex-direction:column;gap:2px">
+        <span style="font-size:14px;white-space:nowrap">{{ r.next }}</span>
+        <span style="font-size:12px;color:{{ r.nextColor }};white-space:nowrap">{{ r.nextSub }}</span>
+      </div>
+      <div style="position:relative;display:flex;align-items:center;justify-content:flex-end;gap:4px">
+        <sc-if value="{{ r.canLog }}" hint-placeholder-val="{{ true }}"><button class="btn btn-secondary" onClick="{{ r.onLog }}" style="font-size:13px;padding:5px 10px">Log entry</button></sc-if>
+        <button onClick="{{ r.onMenu }}" aria-label="More actions" style="width:28px;height:28px;flex:none;display:grid;place-items:center;border:0;background:transparent;color:var(--color-neutral-500);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 8%, transparent);color:var(--color-text)"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg></button>
+        <sc-if value="{{ r.menuOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;top:calc(100% + 4px);right:0;z-index:40;min-width:180px;padding:6px 0;background:var(--color-bg);border:1px solid var(--color-divider);box-shadow:var(--shadow-md)">
+            <button onClick="{{ r.onDone }}" style="display:flex;width:100%;padding:8px 14px;border:0;background:transparent;font-size:14px;color:var(--color-text);text-align:left;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent)">{{ r.doneLabel }}</button>
+            <div style="height:1px;margin:6px 0;background:var(--color-neutral-300)"></div>
+            <button onClick="{{ r.onDel }}" style="display:flex;width:100%;padding:8px 14px;border:0;background:transparent;font-size:14px;color:var(--color-accent-700);text-align:left;cursor:pointer" style-hover="background:var(--color-accent-100)">Delete</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-for>
+
+  <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:36px 8px;border-bottom:1px solid var(--color-neutral-300);font-size:14px;color:var(--color-neutral-700)">{{ emptyText }}</div>
+  </sc-if>
+
+  <button onClick="{{ openNew }}" style="display:flex;align-items:center;gap:8px;width:100%;padding:14px 8px;border:0;border-bottom:1px solid var(--color-neutral-300);background:transparent;font-size:14px;color:var(--color-neutral-700);text-align:left;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 4%, transparent);color:var(--color-text)"><svg width="15" height="15" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add a dhuku</button>
+
+</div>
+</main>
+</div>
+
+<sc-if value="{{ anyMenu }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeMenu }}" style="position:fixed;inset:0;z-index:30"></div></sc-if>
+
+<sc-if value="{{ logDlg }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeDlg }}" style="position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:color-mix(in srgb, var(--color-neutral-900) 45%, transparent)">
+    <form onClick="{{ stop }}" onSubmit="{{ submitLog }}" style="width:min(460px,100%);display:flex;flex-direction:column;background:var(--color-bg);box-shadow:var(--shadow-lg);color:var(--color-text)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;border-bottom:2px solid var(--color-divider)">
+        <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:20px;font-weight:800;letter-spacing:-0.01em">Log entry</span><span style="font-size:13px;color:var(--color-neutral-600)">{{ logName }}</span></span>
+        <button type="button" onClick="{{ closeDlg }}" aria-label="Close" style="width:32px;height:32px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)"><svg width="18" height="18" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:22px;padding:24px">
+        <div class="seg" style="display:flex"><sc-for list="{{ kindOpts }}" as="o" hint-placeholder-count="2"><label class="seg-opt" style="flex:1"><input type="radio" name="piko-d-kind" checked="{{ o.checked }}" onChange="{{ o.onChange }}">{{ o.label }}</label></sc-for></div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;color:var(--color-neutral-700)">{{ logAmtLabel }}</span>
+          <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--color-text)">
+            <span style="font-size:18px;font-weight:600;color:var(--color-neutral-600)">Rs</span>
+            <input ref="{{ amtRef }}" placeholder="0.00" value="{{ log.amount }}" onChange="{{ onLogAmt }}" style="flex:1;min-width:0;border:0;background:transparent;padding:0;font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;color:var(--color-text);caret-color:var(--color-accent);outline:none;font-variant-numeric:tabular-nums">
+          </div>
+          <sc-if value="{{ err }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--color-accent-700)">{{ err }}</span></sc-if>
+        </div>
+        <div class="field"><label>Date</label><input class="input" value="{{ log.date }}" onChange="{{ onLogDate }}"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:16px 24px;border-top:1px solid var(--color-neutral-300)">
+        <button type="submit" class="btn btn-primary" style="height:40px;min-width:120px;justify-content:flex-start">Save entry</button>
+        <button type="button" class="btn btn-secondary" onClick="{{ closeDlg }}" style="height:40px">Cancel</button>
+      </div>
+    </form>
+  </div>
+</sc-if>
+
+<sc-if value="{{ newDlg }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeDlg }}" style="position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:color-mix(in srgb, var(--color-neutral-900) 45%, transparent)">
+    <form onClick="{{ stop }}" onSubmit="{{ submitNew }}" style="width:min(480px,100%);max-height:calc(100vh - 48px);overflow-y:auto;display:flex;flex-direction:column;background:var(--color-bg);box-shadow:var(--shadow-lg);color:var(--color-text)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;border-bottom:2px solid var(--color-divider)">
+        <span style="font-size:20px;font-weight:800;letter-spacing:-0.01em">Add a dhuku</span>
+        <button type="button" onClick="{{ closeDlg }}" aria-label="Close" style="width:32px;height:32px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)"><svg width="18" height="18" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:22px;padding:24px">
+        <div class="field"><label>Group name</label><input ref="{{ nameRef }}" class="input" placeholder="e.g. Office Dhuku" value="{{ nf.name }}" onChange="{{ onNName }}"></div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;color:var(--color-neutral-700)">Monthly contribution</span>
+          <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--color-text)">
+            <span style="font-size:18px;font-weight:600;color:var(--color-neutral-600)">Rs</span>
+            <input placeholder="0.00" value="{{ nf.monthly }}" onChange="{{ onNMonthly }}" style="flex:1;min-width:0;border:0;background:transparent;padding:0;font-size:40px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;color:var(--color-text);caret-color:var(--color-accent);outline:none;font-variant-numeric:tabular-nums">
+          </div>
+          <sc-if value="{{ err }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--color-accent-700)">{{ err }}</span></sc-if>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:16px">
+          <div class="field"><label>Months</label><input class="input" value="{{ nf.months }}" onChange="{{ onNMonths }}"></div>
+          <div class="field"><label>For</label><div class="seg" style="display:flex"><sc-for list="{{ forOpts }}" as="o" hint-placeholder-count="3"><label class="seg-opt" style="flex:1"><input type="radio" name="piko-d-for" checked="{{ o.checked }}" onChange="{{ o.onChange }}">{{ o.label }}</label></sc-for></div></div>
+        </div>
+        <span style="font-size:13px;color:var(--color-neutral-700)">{{ potPreview }}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:16px 24px;border-top:1px solid var(--color-neutral-300)">
+        <button type="submit" class="btn btn-primary" style="height:40px;min-width:140px;justify-content:flex-start">Add dhuku</button>
+        <button type="button" class="btn btn-secondary" onClick="{{ closeDlg }}" style="height:40px">Cancel</button>
+      </div>
+    </form>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const MONTHS = ['Baisakh', 'Jestha', 'Asar', 'Shrawan', 'Bhadra', 'Ashwin', 'Kartik', 'Mangsir', 'Poush', 'Magh', 'Falgun', 'Chaitra'];
+const CUR = 5;
+const LAST_DAY = [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30];
+const MONO = {
+  Me: [{ ch: 'N', bg: 'var(--color-text)' }],
+  Karuna: [{ ch: 'K', bg: 'var(--color-neutral-600)' }],
+  Shared: [{ ch: 'N', bg: 'var(--color-text)' }, { ch: 'K', bg: 'var(--color-neutral-600)' }]
+};
+const fmt = n => { const [i, d] = Math.abs(n).toFixed(2).split('.'); return { int: (n < -0.004 ? '−' : '') + Number(i).toLocaleString('en-US'), dec: '.' + d }; };
+const num = v => parseFloat(String(v).replace(/,/g, ''));
+const clean = v => v.replace(/[^\d.,]/g, '');
+const monthName = idx => `${LAST_DAY[idx % 12]} ${MONTHS[idx % 12]} ${2083 + Math.floor(idx / 12)}`;
+let uid = 10;
+
+class Component extends DCLogic {
+  state = {
+    groups: [{ id: 'd1', name: 'Pottery Dhuku', owner: 'Me', monthly: 3000, months: 12, paid: 2, received: 0, payoutAt: null, nextIdx: 1, status: 'active' }],
+    tab: 'all', menu: null, dlg: null, logId: null, log: { kind: 'Contribution', amount: '', date: '20 Ashwin 2083' },
+    nf: { name: '', monthly: '', months: '12', owner: 'Me' }, err: '', w: 0
+  };
+  mainRef = React.createRef(); amtRef = React.createRef(); nameRef = React.createRef();
+
+  componentDidMount() {
+    this._m = () => {
+      const el = document.querySelector('main > div') || this.mainRef.current;
+      if (!el) return;
+      if (window.ResizeObserver && this._obs !== el) {
+        if (!this._ro) this._ro = new ResizeObserver(() => this._m());
+        if (this._obs) this._ro.unobserve(this._obs);
+        this._ro.observe(el); this._obs = el;
+      }
+      const w = Math.round(el.getBoundingClientRect().width);
+      if (w && Math.abs(w - (this.state.w || 0)) > 4) this.setState({ w });
+    };
+    this._m();
+    let ticks = 0;
+    this._iv = setInterval(() => { this._m(); if (++ticks > 25) clearInterval(this._iv); }, 200);
+    window.addEventListener('resize', this._m);
+    this._key = e => { if (e.key === 'Escape') this.setState({ dlg: null, menu: null }); };
+    window.addEventListener('keydown', this._key);
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this._m); window.removeEventListener('keydown', this._key); if (this._ro) this._ro.disconnect(); clearInterval(this._iv); }
+  componentDidUpdate(_, p) {
+    if (this.state.dlg && this.state.dlg !== p.dlg) setTimeout(() => { const r = this.state.dlg === 'log' ? this.amtRef : this.nameRef; r.current && r.current.focus(); }, 40);
+  }
+
+  openLog = g => this.setState({ dlg: 'log', logId: g.id, log: { kind: 'Contribution', amount: String(g.monthly), date: '20 Ashwin 2083' }, err: '', menu: null });
+  setLog = (k, v) => this.setState(s => {
+    const log = { ...s.log, [k]: v };
+    if (k === 'kind') { const g = s.groups.find(x => x.id === s.logId); log.amount = String(v === 'Contribution' ? g.monthly : g.monthly * g.months); }
+    return { log, err: '' };
+  });
+  submitLog = e => {
+    if (e) e.preventDefault();
+    const a = num(this.state.log.amount);
+    if (!(a > 0)) return this.setState({ err: 'Enter an amount' });
+    const kind = this.state.log.kind;
+    this.setState(s => ({
+      dlg: null,
+      groups: s.groups.map(g => {
+        if (g.id !== s.logId) return g;
+        if (kind === 'Contribution') { const paid = Math.min(g.months, g.paid + 1); return { ...g, paid, nextIdx: g.nextIdx + 1, status: paid >= g.months ? 'completed' : g.status }; }
+        return { ...g, received: g.received + a, payoutAt: Math.min(g.paid, g.months - 1) };
+      })
+    }));
+  };
+  setN = (k, v) => this.setState(s => ({ nf: { ...s.nf, [k]: v }, err: '' }));
+  submitNew = e => {
+    if (e) e.preventDefault();
+    const f = this.state.nf, m = num(f.monthly), n = parseInt(f.months, 10);
+    if (!f.name.trim()) return this.setState({ err: 'Name the group' });
+    if (!(m > 0)) return this.setState({ err: 'Enter the monthly contribution' });
+    this.setState(s => ({ dlg: null, tab: 'all', groups: [...s.groups, { id: 'd' + (uid++), name: f.name.trim(), owner: f.owner, monthly: m, months: n > 0 ? n : 12, paid: 0, received: 0, payoutAt: null, nextIdx: CUR, status: 'active' }] }));
+  };
+
+  renderVals() {
+    const s = this.state;
+    const narrow = (s.w || 1120) < 780;
+    const active = s.groups.filter(g => g.status === 'active');
+    const dueGroups = active.filter(g => g.nextIdx <= CUR);
+    const due = dueGroups.reduce((t, g) => t + g.monthly, 0);
+    const paid = s.groups.reduce((t, g) => t + g.paid * g.monthly, 0);
+    const recv = s.groups.reduce((t, g) => t + g.received, 0);
+    const list = s.groups.filter(g => s.tab === 'all' || g.status === s.tab);
+    const lg = s.groups.find(g => g.id === s.logId);
+    const nf = s.nf, nm = num(nf.monthly), nn = parseInt(nf.months, 10);
+    const counts = { all: s.groups.length, active: active.length, completed: s.groups.filter(g => g.status === 'completed').length };
+
+    return {
+      mainRef: this.mainRef, amtRef: this.amtRef, nameRef: this.nameRef,
+      ledCols: narrow ? 'repeat(3,minmax(0,1fr))' : 'minmax(0,1.55fr) repeat(3,minmax(0,1fr))',
+      allSpan: narrow ? '1 / -1' : 'auto',
+      allPad: narrow ? '18px 0 20px' : '18px 28px 20px 0',
+      allBorder: narrow ? '1px solid var(--color-neutral-300)' : '0',
+      mePadL: narrow ? '0' : '20px',
+      meBorder: narrow ? '0' : '1px solid var(--color-neutral-300)',
+      led: {
+        due: fmt(due), dueSub: dueGroups.length ? dueGroups.map(g => g.name).join(', ') : 'Nothing due in Ashwin',
+        paid: fmt(paid), recv: fmt(recv), recvSub: recv ? 'Payouts taken' : 'No payout taken yet',
+        active: String(active.length), activeSub: `${counts.completed} completed`
+      },
+      tabs: [['all', 'All'], ['active', 'Active'], ['completed', 'Completed']].map(([k, l]) => ({ label: l, count: counts[k], on: s.tab === k, fw: s.tab === k ? 600 : 400, color: s.tab === k ? 'var(--color-text)' : 'var(--color-neutral-700)', onClick: () => this.setState({ tab: k, menu: null }) })),
+      cols: narrow ? 'minmax(120px,1.2fr) minmax(100px,1fr) minmax(0,0.9fr) minmax(0,1fr) 116px' : 'minmax(170px,1.3fr) minmax(170px,1.3fr) minmax(0,0.9fr) minmax(0,1fr) 128px',
+      rows: list.map(g => {
+        const done = g.status === 'completed';
+        const overdue = !done && g.nextIdx < CUR, thisMonth = !done && g.nextIdx === CUR;
+        return {
+          name: g.name, nameColor: done ? 'var(--color-neutral-600)' : 'var(--color-text)',
+          monos: MONO[g.owner].map((m, i) => ({ ...m, ml: i ? '-4px' : '0', ring: i ? '0 0 0 2px var(--color-bg)' : 'none' })),
+          sub: `${g.owner} · Rs ${fmt(g.monthly).int} a month`,
+          cells: Array.from({ length: g.months }, (_, i) => {
+            const isPay = g.payoutAt === i, isPaid = i < g.paid, isNext = !done && i === g.paid;
+            return {
+              title: `Month ${i + 1}${isPaid ? ' · paid' : ''}${isPay ? ' · payout received' : ''}`,
+              bg: isPay ? 'var(--color-accent)' : isPaid ? 'var(--color-text)' : 'transparent',
+              ring: isPay || isPaid ? 'none' : isNext ? 'inset 0 0 0 1.5px var(--color-text)' : 'inset 0 0 0 1px var(--color-neutral-400)'
+            };
+          }),
+          monthText: done ? `All ${g.months} months paid` : `Month ${g.paid + 1} of ${g.months}`,
+          paid: fmt(g.paid * g.monthly), pot: fmt(g.monthly * g.months).int, pct: Math.round(g.paid / g.months * 100) + '%',
+          next: done ? 'Completed' : monthName(g.nextIdx),
+          nextSub: done ? '—' : overdue ? 'Overdue — log it if already paid' : thisMonth ? `Rs ${fmt(g.monthly).int} due this month` : `Rs ${fmt(g.monthly).int} upcoming`,
+          nextColor: overdue ? 'var(--color-accent-700)' : 'var(--color-neutral-600)',
+          canLog: !done, onLog: () => this.openLog(g),
+          menuOpen: s.menu === g.id, onMenu: () => this.setState({ menu: s.menu === g.id ? null : g.id }),
+          doneLabel: done ? 'Reopen' : 'Mark completed',
+          onDone: () => this.setState(st => ({ menu: null, groups: st.groups.map(x => x.id === g.id ? { ...x, status: done ? 'active' : 'completed' } : x) })),
+          onDel: () => this.setState(st => ({ menu: null, groups: st.groups.filter(x => x.id !== g.id) }))
+        };
+      }),
+      isEmpty: list.length === 0, emptyText: s.tab === 'completed' ? 'No completed dhukus yet.' : 'No dhukus here yet.',
+      anyMenu: !!s.menu, closeMenu: () => this.setState({ menu: null }),
+      openNew: () => this.setState({ dlg: 'new', nf: { name: '', monthly: '', months: '12', owner: 'Me' }, err: '', menu: null }),
+      logDlg: s.dlg === 'log', newDlg: s.dlg === 'new',
+      closeDlg: () => this.setState({ dlg: null }), stop: e => e.stopPropagation(),
+      err: s.err, log: s.log, logName: lg ? lg.name : '',
+      logAmtLabel: s.log.kind === 'Contribution' ? 'Amount paid in' : 'Amount received',
+      kindOpts: ['Contribution', 'Payout received'].map(x => ({ label: x, checked: s.log.kind === x, onChange: () => this.setLog('kind', x) })),
+      onLogAmt: e => this.setState({ log: { ...s.log, amount: clean(e.target.value) }, err: '' }),
+      onLogDate: e => this.setState({ log: { ...s.log, date: e.target.value } }),
+      submitLog: this.submitLog, submitNew: this.submitNew,
+      nf, onNName: e => this.setN('name', e.target.value), onNMonthly: e => this.setN('monthly', clean(e.target.value)), onNMonths: e => this.setN('months', e.target.value.replace(/\D/g, '').slice(0, 2)),
+      forOpts: ['Me', 'Karuna', 'Shared'].map(x => ({ label: x, checked: nf.owner === x, onChange: () => this.setN('owner', x) })),
+      potPreview: nm > 0 && nn > 0 ? `Pot when it's your turn: Rs ${fmt(nm * nn).int}` : 'The pot is the monthly amount × number of months.'
+    };
+  }
+}
+</script>
+</body>
+</html>

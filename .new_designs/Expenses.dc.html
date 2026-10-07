@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/styles.css">
+<script src="_ds/modernist-afaa2610-6027-429d-a34d-08f20d0c3f79/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:var(--color-bg);}
+button,input,select{font-family:inherit;}
+a{color:var(--color-accent-700);}
+a:hover{color:var(--color-accent);}
+input::placeholder{color:var(--color-neutral-500);}
+</style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+
+<dc-import name="Sidebar" active="expenses" on-add="{{ openAdd }}" hint-size="244px,100vh" style="flex:none;width:244px"></dc-import>
+
+<main style="flex:1;min-width:0;padding:36px 48px 64px;box-sizing:border-box">
+<div ref="{{ mainRef }}" style="max-width:1120px">
+
+  <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:26px">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <h1 style="margin:0;font-size:42px;line-height:1;letter-spacing:-0.02em">Expenses</h1>
+      <div style="display:flex;align-items:center;gap:2px;margin-left:-6px">
+        <button aria-label="Previous month" style="width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m15 18-6-6 6-6"></path></svg></button>
+        <button style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 6px;border:0;background:transparent;font-size:15px;font-weight:600;color:var(--color-text);cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)">Ashwin 2083<svg width="14" height="14" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"></path></svg></button>
+        <button aria-label="Next month" disabled="{{ true }}" title="This is the current month" style="width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-neutral-400);cursor:default;padding:0"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m9 18 6-6-6-6"></path></svg></button>
+        <span style="font-size:13px;color:var(--color-neutral-600);margin-left:10px">12 days left in the month</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost">Full report<svg width="14" height="14" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></button>
+      <button class="btn btn-secondary" onClick="{{ openBulk }}" style="height:38px"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>Bulk add</button>
+      <button class="btn btn-secondary" style="height:38px"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><path d="M12 15V3"></path></svg>Export</button>
+    </div>
+  </header>
+
+  <div style="display:grid;grid-template-columns:{{ ledCols }};border-top:2px solid var(--color-text);border-bottom:1px solid var(--color-divider)">
+    <button onClick="{{ led.all.onClick }}" style="position:relative;display:flex;flex-direction:column;align-items:stretch;gap:8px;grid-column:{{ allSpan }};padding:{{ allPad }};border:0;border-bottom:{{ allBorder }};background:transparent;text-align:left;color:var(--color-text);cursor:pointer;min-width:0">
+      <sc-if value="{{ led.all.sel }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;left:0;right:0;top:-2px;height:4px;background:var(--color-accent)"></span></sc-if>
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:{{ led.all.labelColor }}">All expenses</span>
+      <span style="display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums;white-space:nowrap"><span style="font-size:16px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:40px;font-weight:800;line-height:1;letter-spacing:-0.025em">{{ led.all.int }}</span><span style="font-size:20px;font-weight:600;color:var(--color-neutral-500);margin-left:-5px">{{ led.all.dec }}</span></span>
+      <span style="display:flex;gap:12px;flex-wrap:wrap;font-size:13px"><span style="color:var(--color-neutral-700)">{{ led.all.countText }}</span><span style="color:var(--color-accent-700)">{{ led.all.incText }}</span></span>
+      <span style="display:flex;gap:2px;height:4px;margin-top:4px"><span style="flex:{{ led.me.g }} 1 0;background:var(--color-text)"></span><span style="flex:{{ led.karuna.g }} 1 0;background:var(--color-neutral-600)"></span><span style="flex:{{ led.shared.g }} 1 0;background:var(--color-neutral-300)"></span></span>
+    </button>
+    <button onClick="{{ led.me.onClick }}" style="position:relative;display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:18px 20px 20px {{ mePadL }};border:0;border-left:{{ meBorder }};background:transparent;text-align:left;color:var(--color-text);cursor:pointer;min-width:0">
+      <sc-if value="{{ led.me.sel }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:-1px;right:0;top:-2px;height:4px;background:var(--color-accent)"></span></sc-if>
+      <span style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:{{ led.me.labelColor }}"><span style="width:8px;height:8px;background:var(--color-text)"></span>Me</span>
+      <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">{{ led.me.int }}</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">{{ led.me.dec }}</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.me.share }}</span>
+    </button>
+    <button onClick="{{ led.karuna.onClick }}" style="position:relative;display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:18px 20px 20px;border:0;border-left:1px solid var(--color-neutral-300);background:transparent;text-align:left;color:var(--color-text);cursor:pointer;min-width:0">
+      <sc-if value="{{ led.karuna.sel }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:-1px;right:0;top:-2px;height:4px;background:var(--color-accent)"></span></sc-if>
+      <span style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:{{ led.karuna.labelColor }}"><span style="width:8px;height:8px;background:var(--color-neutral-600)"></span>Karuna</span>
+      <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">{{ led.karuna.int }}</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">{{ led.karuna.dec }}</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.karuna.share }}</span>
+    </button>
+    <button onClick="{{ led.shared.onClick }}" style="position:relative;display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:18px 20px 20px;border:0;border-left:1px solid var(--color-neutral-300);background:transparent;text-align:left;color:var(--color-text);cursor:pointer;min-width:0">
+      <sc-if value="{{ led.shared.sel }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:-1px;right:0;top:-2px;height:4px;background:var(--color-accent)"></span></sc-if>
+      <span style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:{{ led.shared.labelColor }}"><span style="width:8px;height:8px;background:var(--color-neutral-300)"></span>Shared</span>
+      <span style="display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:12px"><span style="font-size:13px;font-weight:600;color:var(--color-neutral-600)">Rs</span><span style="font-size:24px;font-weight:600;line-height:1;letter-spacing:-0.015em">{{ led.shared.int }}</span><span style="font-size:15px;color:var(--color-neutral-500);margin-left:-4px">{{ led.shared.dec }}</span></span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ led.shared.share }}</span>
+    </button>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:16px 0 30px">
+    <div style="position:relative;flex:0 1 290px;min-width:200px;margin-right:10px">
+      <svg width="16" height="16" viewBox="0 0 24 24" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--color-neutral-600);fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;pointer-events:none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <input class="input" placeholder="Search notes or categories" value="{{ q }}" onChange="{{ onQ }}" style="padding-left:36px;height:38px">
+    </div>
+    <div style="position:relative">
+      <button onClick="{{ f.cat.onClick }}" style="display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 10px;border:0;background:transparent;font-size:14px;color:{{ f.cat.color }};font-weight:{{ f.cat.weight }};cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent)"><sc-if value="{{ f.cat.active }}" hint-placeholder-val="{{ false }}"><span style="width:6px;height:6px;background:var(--color-accent)"></span></sc-if>{{ f.cat.label }}<svg width="14" height="14" viewBox="0 0 24 24" style="color:var(--color-neutral-600);fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"></path></svg></button>
+      <sc-if value="{{ f.cat.open }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;top:calc(100% + 4px);left:0;z-index:40;min-width:230px;padding:6px 0;background:var(--color-bg);border:1px solid var(--color-divider);box-shadow:var(--shadow-md)">
+          <sc-for list="{{ catItems }}" as="it" hint-placeholder-count="5">
+            <button onClick="{{ it.onClick }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 14px;border:0;background:transparent;font-size:14px;color:var(--color-text);text-align:left;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent)"><span style="width:14px;display:grid;place-items:center;color:var(--color-accent)"><sc-if value="{{ it.sel }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if></span><span style="flex:1">{{ it.label }}</span><span style="font-size:13px;color:var(--color-neutral-600);font-variant-numeric:tabular-nums">{{ it.count }}</span></button>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+    <div style="position:relative">
+      <button onClick="{{ f.payer.onClick }}" style="display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 10px;border:0;background:transparent;font-size:14px;color:{{ f.payer.color }};font-weight:{{ f.payer.weight }};cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent)"><sc-if value="{{ f.payer.active }}" hint-placeholder-val="{{ false }}"><span style="width:6px;height:6px;background:var(--color-accent)"></span></sc-if>{{ f.payer.label }}<svg width="14" height="14" viewBox="0 0 24 24" style="color:var(--color-neutral-600);fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"></path></svg></button>
+      <sc-if value="{{ f.payer.open }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;top:calc(100% + 4px);left:0;z-index:40;min-width:180px;padding:6px 0;background:var(--color-bg);border:1px solid var(--color-divider);box-shadow:var(--shadow-md)">
+          <sc-for list="{{ payerItems }}" as="it" hint-placeholder-count="2">
+            <button onClick="{{ it.onClick }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 14px;border:0;background:transparent;font-size:14px;color:var(--color-text);text-align:left;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent)"><span style="width:14px;display:grid;place-items:center;color:var(--color-accent)"><sc-if value="{{ it.sel }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if></span><span style="flex:1">{{ it.label }}</span></button>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+    <div style="position:relative">
+      <button onClick="{{ f.range.onClick }}" style="display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 10px;border:0;background:transparent;font-size:14px;color:{{ f.range.color }};font-weight:{{ f.range.weight }};cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent)"><sc-if value="{{ f.range.active }}" hint-placeholder-val="{{ false }}"><span style="width:6px;height:6px;background:var(--color-accent)"></span></sc-if>{{ f.range.label }}<svg width="14" height="14" viewBox="0 0 24 24" style="color:var(--color-neutral-600);fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"></path></svg></button>
+      <sc-if value="{{ f.range.open }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;top:calc(100% + 4px);left:0;z-index:40;min-width:190px;padding:6px 0;background:var(--color-bg);border:1px solid var(--color-divider);box-shadow:var(--shadow-md)">
+          <sc-for list="{{ rangeItems }}" as="it" hint-placeholder-count="3">
+            <button onClick="{{ it.onClick }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 14px;border:0;background:transparent;font-size:14px;color:var(--color-text);text-align:left;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent)"><span style="width:14px;display:grid;place-items:center;color:var(--color-accent)"><sc-if value="{{ it.sel }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if></span><span style="flex:1">{{ it.label }}</span></button>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+    <sc-if value="{{ anyFilter }}" hint-placeholder-val="{{ false }}">
+      <button class="btn btn-ghost" onClick="{{ clearFilters }}" style="font-size:13px;margin-left:4px">Clear</button>
+    </sc-if>
+    <span style="margin-left:auto;font-size:13px;color:var(--color-neutral-600)">{{ shownText }}</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:{{ cols }};column-gap:16px;padding:0 8px 10px;border-bottom:2px solid var(--color-divider);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">
+    <span style="grid-column:1 / 3">Expense</span>
+    <sc-if value="{{ combined }}" hint-placeholder-val="{{ true }}"><span>For · paid by</span></sc-if>
+    <sc-if value="{{ split }}" hint-placeholder-val="{{ false }}"><span>Owner</span><span>Paid by</span></sc-if>
+    <span style="text-align:right">NPR</span>
+    <span></span>
+  </div>
+
+  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+    <div style="display:grid;grid-template-columns:{{ cols }};column-gap:16px;align-items:baseline;padding:{{ g.pad }};border-bottom:1px solid var(--color-divider)">
+      <div style="grid-column:1 / -3;display:flex;align-items:baseline;gap:10px;min-width:0">
+        <span style="font-size:15px;font-weight:600">{{ g.label }}</span>
+        <span style="font-size:13px;color:var(--color-neutral-600)">{{ g.sub }}</span>
+      </div>
+      <div style="text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:15px;font-weight:600;color:{{ g.totColor }}">{{ g.int }}<span style="font-weight:400;color:var(--color-neutral-500)">{{ g.dec }}</span></div>
+      <span></span>
+    </div>
+    <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="4">
+      <div onClick="{{ r.onRow }}" style="position:relative;display:grid;grid-template-columns:{{ cols }};column-gap:16px;align-items:center;padding:{{ rowPad }};border-bottom:1px solid var(--color-neutral-300);cursor:{{ r.cursor }}" style-hover="background:color-mix(in srgb, var(--color-text) 4%, transparent)">
+        <div style="width:28px;height:28px;background-color:{{ r.tileBg }};background-image:{{ r.iconBg }};background-repeat:no-repeat;background-position:center;background-size:15px 15px;box-shadow:{{ r.tileRing }}"></div>
+        <div style="min-width:0;overflow:hidden;display:flex;flex-direction:column;gap:2px">
+          <div style="min-width:0;overflow:hidden;display:flex;align-items:baseline;gap:10px">
+            <span style="flex-shrink:0;font-size:15px;white-space:nowrap">{{ r.cat }}</span>
+            <span style="min-width:0;font-size:13px;color:var(--color-neutral-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.note }}</span>
+          </div>
+          <sc-if value="{{ r.recurring }}" hint-placeholder-val="{{ false }}">
+            <div style="min-width:0;display:flex;align-items:center;flex-wrap:wrap;column-gap:10px;row-gap:2px">
+              <span style="min-width:0;display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--color-neutral-700)"><svg width="12" height="12" viewBox="0 0 24 24" style="flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m17 2 4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="m7 22-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>{{ r.recurText }}</span>
+              <sc-if value="{{ r.isUpcoming }}" hint-placeholder-val="{{ false }}">
+                <button class="btn btn-ghost" onClick="{{ r.onPaid }}" style="font-size:12px;padding:1px 4px">Mark paid</button>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+        <sc-if value="{{ combined }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0;overflow:hidden">
+            <span style="display:flex;flex:none"><sc-for list="{{ r.monos }}" as="m" hint-placeholder-count="1"><span style="width:20px;height:20px;display:grid;place-items:center;font-size:11px;font-weight:600;background:{{ m.bg }};color:{{ m.fg }};margin-left:{{ m.ml }};box-shadow:{{ m.ring }}">{{ m.ch }}</span></sc-for></span>
+            <span style="flex-shrink:0;font-size:14px;white-space:nowrap">{{ r.owner }}</span>
+            <span style="min-width:0;font-size:13px;color:var(--color-neutral-600);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.paidNote }}</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ split }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0">
+            <span style="display:flex;flex:none"><sc-for list="{{ r.monos }}" as="m" hint-placeholder-count="1"><span style="width:20px;height:20px;display:grid;place-items:center;font-size:11px;font-weight:600;background:{{ m.bg }};color:{{ m.fg }};margin-left:{{ m.ml }};box-shadow:{{ m.ring }}">{{ m.ch }}</span></sc-for></span>
+            <span style="font-size:14px;white-space:nowrap">{{ r.owner }}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;min-width:0">
+            <span style="width:20px;height:20px;flex:none;display:grid;place-items:center;font-size:11px;font-weight:600;background:{{ r.payerMono.bg }};color:{{ r.payerMono.fg }}">{{ r.payerMono.ch }}</span>
+            <span style="font-size:14px;white-space:nowrap">{{ r.payerLabel }}</span>
+          </div>
+        </sc-if>
+        <div style="text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:15px"><span style="font-weight:600;color:{{ r.amtColor }}">{{ r.int }}</span><span style="color:var(--color-neutral-500)">{{ r.dec }}</span></div>
+        <div style="position:relative;display:flex;justify-content:flex-end">
+          <sc-if value="{{ r.menuable }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ r.onMenu }}" aria-label="More actions" style="width:28px;height:28px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-neutral-500);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 8%, transparent);color:var(--color-text)"><svg width="16" height="16" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg></button>
+          </sc-if>
+          <sc-if value="{{ r.menuOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:calc(100% + 4px);right:0;z-index:40;min-width:190px;padding:6px 0;background:var(--color-bg);border:1px solid var(--color-divider);box-shadow:var(--shadow-md)">
+              <button onClick="{{ r.onEdit }}" style="display:flex;width:100%;padding:8px 14px;border:0;background:transparent;font-size:14px;color:var(--color-text);text-align:left;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent)">Edit</button>
+              <button onClick="{{ r.onDup }}" style="display:flex;width:100%;padding:8px 14px;border:0;background:transparent;font-size:14px;color:var(--color-text);text-align:left;cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent)">Repeat today</button>
+              <div style="height:1px;margin:6px 0;background:var(--color-neutral-300)"></div>
+              <button onClick="{{ r.onDel }}" style="display:flex;width:100%;padding:8px 14px;border:0;background:transparent;font-size:14px;color:var(--color-accent-700);text-align:left;cursor:pointer" style-hover="background:var(--color-accent-100)">Delete</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-for>
+  </sc-for>
+
+  <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:56px 8px 48px;border-bottom:1px solid var(--color-neutral-300)">
+      <h4 style="margin:0">{{ emptyTitle }}</h4>
+      <p style="margin:0 0 10px;font-size:14px;color:var(--color-neutral-700)">{{ emptyBody }}</p>
+      <button class="btn btn-secondary" onClick="{{ clearFilters }}">Clear filters</button>
+    </div>
+  </sc-if>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:28px;padding-top:16px;border-top:2px solid var(--color-divider)">
+    <span style="font-size:13px;color:var(--color-neutral-600)">{{ footText }}</span>
+    <button class="btn btn-secondary" style="height:38px">Show earlier days<svg width="14" height="14" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"></path></svg></button>
+  </div>
+
+</div>
+</main>
+</div>
+
+<sc-if value="{{ anyMenu }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeMenus }}" style="position:fixed;inset:0;z-index:30"></div>
+</sc-if>
+
+<datalist id="piko-cats"><sc-for list="{{ catList }}" as="c" hint-placeholder-count="0"><option value="{{ c }}"></option></sc-for></datalist>
+
+<sc-if value="{{ addOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeDialog }}" style="position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:color-mix(in srgb, var(--color-neutral-900) 45%, transparent)">
+    <form onClick="{{ stop }}" onSubmit="{{ submitForm }}" style="width:min(500px,100%);max-height:calc(100vh - 48px);overflow-y:auto;display:flex;flex-direction:column;background:var(--color-bg);box-shadow:var(--shadow-lg);color:var(--color-text)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;border-bottom:2px solid var(--color-divider)">
+        <span style="font-size:20px;font-weight:800;letter-spacing:-0.01em">{{ dialogTitle }}</span>
+        <button type="button" onClick="{{ closeDialog }}" aria-label="Close" style="width:32px;height:32px;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)"><svg width="18" height="18" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:22px;padding:24px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;color:var(--color-neutral-700)">Amount</span>
+          <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--color-text)">
+            <span style="font-size:18px;font-weight:600;color:var(--color-neutral-600)">Rs</span>
+            <input ref="{{ amountRef }}" placeholder="0.00" value="{{ form.amount }}" onChange="{{ onAmount }}" style="flex:1;min-width:0;border:0;background:transparent;padding:0;font-size:44px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;color:var(--color-text);caret-color:var(--color-accent);outline:none;font-variant-numeric:tabular-nums">
+          </div>
+          <sc-if value="{{ formError }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--color-accent-700)">{{ formError }}</span></sc-if>
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <input class="input" list="piko-cats" placeholder="Start typing — Lunch, Groceries…" value="{{ form.cat }}" onChange="{{ onCat }}">
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+            <sc-for list="{{ quick }}" as="qp" hint-placeholder-count="5">
+              <button type="button" onClick="{{ qp.onClick }}" style="padding:3px 9px;border:1px solid {{ qp.border }};background:transparent;font-size:12px;color:{{ qp.color }};cursor:pointer" style-hover="background:color-mix(in srgb, var(--color-text) 6%, transparent)">{{ qp.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px">
+          <div class="field">
+            <label>For</label>
+            <div class="seg" style="display:flex">
+              <sc-for list="{{ forOpts }}" as="o" hint-placeholder-count="3"><label class="seg-opt" style="flex:1"><input type="radio" name="piko-for" checked="{{ o.checked }}" onChange="{{ o.onChange }}">{{ o.label }}</label></sc-for>
+            </div>
+          </div>
+          <div class="field">
+            <label>Paid by</label>
+            <div class="seg" style="display:flex">
+              <sc-for list="{{ payOpts }}" as="o" hint-placeholder-count="2"><label class="seg-opt" style="flex:1"><input type="radio" name="piko-payer" checked="{{ o.checked }}" onChange="{{ o.onChange }}">{{ o.label }}</label></sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:16px">
+          <div class="field">
+            <label>Date</label>
+            <div style="position:relative">
+              <input class="input" value="{{ form.date }}" onChange="{{ onDate }}" style="padding-right:34px">
+              <svg width="16" height="16" viewBox="0 0 24 24" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--color-neutral-600);fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;pointer-events:none"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4"></rect><path d="M3 10h18"></path></svg>
+            </div>
+          </div>
+          <div class="field">
+            <label>Note</label>
+            <input class="input" placeholder="Optional — e.g. tea with Ram" value="{{ form.note }}" onChange="{{ onNote }}">
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:16px 24px;border-top:1px solid var(--color-neutral-300)">
+        <button type="submit" class="btn btn-primary" style="height:40px;min-width:150px;justify-content:flex-start">{{ submitLabel }}</button>
+        <button type="button" class="btn btn-secondary" onClick="{{ closeDialog }}" style="height:40px">Cancel</button>
+        <span style="margin-left:auto;font-size:12px;color:var(--color-neutral-600)">Enter to save · Esc to close</span>
+      </div>
+    </form>
+  </div>
+</sc-if>
+
+<sc-if value="{{ bulkOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeDialog }}" style="position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;background:color-mix(in srgb, var(--color-neutral-900) 45%, transparent)">
+    <form onClick="{{ stop }}" onSubmit="{{ saveBulk }}" style="width:min(1080px,100%);max-height:calc(100vh - 48px);overflow-y:auto;display:flex;flex-direction:column;background:var(--color-bg);box-shadow:var(--shadow-lg);color:var(--color-text)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 24px 16px">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span style="font-size:20px;font-weight:800;letter-spacing:-0.01em">Add in bulk</span>
+          <span style="font-size:13px;color:var(--color-neutral-600)">Tab across like a spreadsheet. Rows without an amount are skipped.</span>
+        </div>
+        <button type="button" onClick="{{ closeDialog }}" aria-label="Close" style="width:32px;height:32px;flex:none;display:grid;place-items:center;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0" style-hover="background:color-mix(in srgb, var(--color-text) 7%, transparent)"><svg width="18" height="18" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+      </div>
+      <div style="padding:0 24px">
+        <div style="display:grid;grid-template-columns:140px minmax(0,1.3fr) 120px 118px 118px minmax(0,1fr) 40px;border-top:2px solid var(--color-text);border-bottom:2px solid var(--color-divider);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-600)">
+          <span style="padding:10px 12px">Date</span><span style="padding:10px 12px">Category</span><span style="padding:10px 12px;text-align:right">Amount</span><span style="padding:10px 12px">For</span><span style="padding:10px 12px">Paid by</span><span style="padding:10px 12px">Note</span><span></span>
+        </div>
+        <sc-for list="{{ bulk }}" as="b" hint-placeholder-count="3">
+          <div style="display:grid;grid-template-columns:140px minmax(0,1.3fr) 120px 118px 118px minmax(0,1fr) 40px;border-bottom:1px solid var(--color-neutral-300)">
+            <input value="{{ b.date }}" onChange="{{ b.onDate }}" style="width:100%;min-width:0;height:44px;box-sizing:border-box;border:0;border-right:1px solid var(--color-neutral-300);background:transparent;padding:0 12px;font-size:14px;color:var(--color-text);outline:none" style-focus="background:var(--color-surface);box-shadow:inset 0 -2px 0 var(--color-accent)">
+            <input list="piko-cats" placeholder="Category" value="{{ b.cat }}" onChange="{{ b.onCat }}" style="width:100%;min-width:0;height:44px;box-sizing:border-box;border:0;border-right:1px solid var(--color-neutral-300);background:transparent;padding:0 12px;font-size:14px;color:var(--color-text);outline:none" style-focus="background:var(--color-surface);box-shadow:inset 0 -2px 0 var(--color-accent)">
+            <input placeholder="0.00" value="{{ b.amount }}" onChange="{{ b.onAmt }}" style="width:100%;min-width:0;height:44px;box-sizing:border-box;border:0;border-right:1px solid var(--color-neutral-300);background:transparent;padding:0 12px;font-size:14px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text);outline:none" style-focus="background:var(--color-surface);box-shadow:inset 0 -2px 0 var(--color-accent)">
+            <div style="position:relative;border-right:1px solid var(--color-neutral-300)">
+              <select value="{{ b.forWho }}" onChange="{{ b.onFor }}" style="appearance:none;width:100%;height:44px;border:0;background:transparent;padding:0 28px 0 12px;font-size:14px;color:var(--color-text);outline:none;cursor:pointer" style-focus="background:var(--color-surface);box-shadow:inset 0 -2px 0 var(--color-accent)"><option value="Me">Me</option><option value="Karuna">Karuna</option><option value="Shared">Shared</option></select>
+              <svg width="14" height="14" viewBox="0 0 24 24" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--color-neutral-600);fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none"><path d="m6 9 6 6 6-6"></path></svg>
+            </div>
+            <div style="position:relative;border-right:1px solid var(--color-neutral-300)">
+              <select value="{{ b.payer }}" onChange="{{ b.onPayer }}" style="appearance:none;width:100%;height:44px;border:0;background:transparent;padding:0 28px 0 12px;font-size:14px;color:var(--color-text);outline:none;cursor:pointer" style-focus="background:var(--color-surface);box-shadow:inset 0 -2px 0 var(--color-accent)"><option value="Me">Me</option><option value="Karuna">Karuna</option></select>
+              <svg width="14" height="14" viewBox="0 0 24 24" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--color-neutral-600);fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none"><path d="m6 9 6 6 6-6"></path></svg>
+            </div>
+            <input placeholder="Optional" value="{{ b.note }}" onChange="{{ b.onNote }}" style="width:100%;min-width:0;height:44px;box-sizing:border-box;border:0;border-right:1px solid var(--color-neutral-300);background:transparent;padding:0 12px;font-size:14px;color:var(--color-text);outline:none" style-focus="background:var(--color-surface);box-shadow:inset 0 -2px 0 var(--color-accent)">
+            <button type="button" onClick="{{ b.onRemove }}" aria-label="Remove row" style="display:grid;place-items:center;border:0;background:transparent;color:var(--color-neutral-500);cursor:pointer;padding:0" style-hover="color:var(--color-accent-700);background:var(--color-accent-100)"><svg width="15" height="15" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
+          </div>
+        </sc-for>
+        <button type="button" class="btn btn-ghost" onClick="{{ addBulkRow }}" style="margin-top:10px"><svg width="15" height="15" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add row</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:18px;padding:16px 24px;border-top:1px solid var(--color-neutral-300)">
+        <span style="font-size:14px;color:var(--color-neutral-700);font-variant-numeric:tabular-nums">{{ bulkSummary }}</span>
+        <div style="display:flex;gap:8px;margin-left:auto">
+          <button type="button" class="btn btn-secondary" onClick="{{ closeDialog }}" style="height:40px">Cancel</button>
+          <button type="submit" class="btn btn-primary" disabled="{{ bulkDisabled }}" style="height:40px;min-width:160px;justify-content:flex-start">{{ bulkSaveLabel }}</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;comfortable&quot;,&quot;tsType&quot;:&quot;'comfortable' | 'compact'&quot;,&quot;section&quot;:&quot;Transaction list&quot;},&quot;splitPayer&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Transaction list&quot;},&quot;showUpcoming&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Transaction list&quot;}}">
+const ICON_PATHS = {
+  utensils: '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
+  bag: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  phone: '<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>',
+  wifi: '<path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/>',
+  basket: '<path d="m15 11-1 9"/><path d="m19 11-4-7"/><path d="M2 11h20"/><path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.7-7.4"/><path d="M4.5 15.5h15"/><path d="m5 11 4-7"/><path d="m9 11 1 9"/>',
+  fuel: '<path d="M3 22h12"/><path d="M4 9h10"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 4 0V9.83a2 2 0 0 0-.59-1.42L18 5"/>',
+  landmark: '<path d="M3 22h18"/><path d="M6 18v-7"/><path d="M10 18v-7"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M12 2 20 7H4z"/>',
+  pill: '<path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/>',
+  tag: '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r="1"/>'
+};
+const CAT_ICON = { 'Lunch': 'utensils', 'Shopping': 'bag', 'Mobile/Telephone': 'phone', 'Internet': 'wifi', 'Groceries': 'basket', 'Petrol': 'fuel', 'Obligations': 'landmark', 'Medicine': 'pill' };
+const iconCache = {};
+const iconSrc = (cat) => {
+  if (iconCache[cat]) return iconCache[cat];
+  const p = ICON_PATHS[CAT_ICON[cat]] || ICON_PATHS.tag;
+  return (iconCache[cat] = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#201e1d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>'));
+};
+const WD = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const TODAY = 20;
+const wd = d => WD[(((2 + d - TODAY) % 7) + 7) % 7];
+const dayLabel = d => d === TODAY ? 'Today' : d === TODAY - 1 ? 'Yesterday' : wd(d);
+const daySub = d => (d >= TODAY - 1 && d <= TODAY) ? `${d} Ashwin, ${wd(d)}` : `${d} Ashwin`;
+const fmt = n => { const [i, dec] = Math.abs(n).toFixed(2).split('.'); return { int: (n < 0 ? '−' : '') + Number(i).toLocaleString('en-US'), dec: '.' + dec }; };
+const MONO = {
+  Me: { ch: 'N', bg: 'var(--color-text)', fg: 'var(--color-bg)' },
+  Karuna: { ch: 'K', bg: 'var(--color-neutral-600)', fg: 'var(--color-bg)' }
+};
+const BASE = { Me: 91515.28, Karuna: 82169.6, Shared: 5607 };
+const BASE_COUNT = 103;
+const INCOME = 155600;
+const CAT_LIST = ['Lunch', 'Groceries', 'Petrol', 'Shopping', 'Mobile/Telephone', 'Internet', 'Medicine', 'Cosmetics', 'Skin care', 'Transportation', 'Family Support', 'Parking', 'Miscellaneous', 'Obligations'];
+let uid = 100;
+const R = (day, cat, note, owner, payer, amt, recurring) => ({ id: 'r' + (uid++), day, cat, note, owner, payer, amt, recurring: recurring || null });
+const INITIAL = [
+  R(20, 'Lunch', 'tea', 'Me', 'Me', 80), R(20, 'Lunch', 'Tea', 'Me', 'Me', 70), R(20, 'Lunch', 'Tea', 'Me', 'Me', 25), R(20, 'Lunch', 'Bara', 'Me', 'Me', 35), R(20, 'Lunch', 'Chau chau', 'Me', 'Me', 60),
+  R(19, 'Shopping', 'Shopping', 'Karuna', 'Karuna', 6900), R(19, 'Lunch', 'momo', 'Karuna', 'Karuna', 420), R(19, 'Mobile/Telephone', 'Ncell Topup', 'Me', 'Me', 100), R(19, 'Lunch', 'Chana Alu', 'Me', 'Me', 85), R(19, 'Lunch', 'Tea', 'Me', 'Me', 45),
+  R(18, 'Groceries', 'Bhatbhateni', 'Shared', 'Karuna', 2340), R(18, 'Internet', 'Wlink fibre', 'Shared', 'Me', 1500, 'Monthly'), R(18, 'Petrol', 'Bike', 'Me', 'Me', 500), R(18, 'Lunch', 'Thakali set', 'Me', 'Me', 250)
+];
+const UPCOMING = [{ id: 'u1', day: 28, cat: 'Obligations', note: 'Smart Phone Payment', owner: 'Me', payer: 'Me', amt: 2974.2, recurring: 'Monthly' }];
+const blankForm = () => ({ amount: '', cat: '', forWho: 'Me', payer: 'Me', date: '20 Ashwin 2083', note: '' });
+const blankBulk = (date) => ({ id: 'b' + (uid++), date: date || '20 Ashwin', cat: '', amount: '', forWho: 'Me', payer: 'Me', note: '' });
+const parseDay = s => { const m = String(s).match(/\d+/); const d = m ? parseInt(m[0], 10) : TODAY; return d >= 1 && d <= 32 ? d : TODAY; };
+const num = v => parseFloat(String(v).replace(/,/g, ''));
+
+class Component extends DCLogic {
+  state = {
+    rows: INITIAL, upcoming: UPCOMING, delta: { Me: 0, Karuna: 0, Shared: 0 }, countDelta: 0,
+    tab: 'All', q: '', cat: null, payer: null, range: 'month', menu: null,
+    dialog: null, form: blankForm(), editingId: null, formError: '',
+    bulk: [blankBulk(), blankBulk(), blankBulk()]
+  };
+  amountRef = React.createRef();
+  mainRef = React.createRef();
+
+  componentDidMount() {
+    if (window.location.hash === '#add') setTimeout(() => this.openAdd(), 150);
+    this._measure = () => {
+      const el = document.querySelector('main > div') || this.mainRef.current;
+      if (!el) return;
+      if (window.ResizeObserver && this._obs !== el) {
+        if (!this._ro) this._ro = new ResizeObserver(() => this._measure());
+        if (this._obs) this._ro.unobserve(this._obs);
+        this._ro.observe(el); this._obs = el;
+      }
+      const w = Math.round(el.getBoundingClientRect().width);
+      if (w && Math.abs(w - (this.state.w || 0)) > 4) this.setState({ w });
+    };
+    this._measure();
+    let ticks = 0;
+    this._iv = setInterval(() => { this._measure(); if (++ticks > 25) clearInterval(this._iv); }, 200);
+    window.addEventListener('resize', this._measure);
+    this._key = e => {
+      if (e.key === 'Escape') {
+        if (this.state.dialog) this.closeDialog(); else if (this.state.menu) this.setState({ menu: null });
+        return;
+      }
+      const t = e.target;
+      const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+      if (!typing && !this.state.dialog && (e.key === 'n' || e.key === 'N') && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); this.openAdd(); }
+    };
+    window.addEventListener('keydown', this._key);
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this._key); if (this._ro) this._ro.disconnect(); clearInterval(this._iv); window.removeEventListener('resize', this._measure); }
+  componentDidUpdate(_, prev) {
+    if (this.state.dialog === 'add' && prev.dialog !== 'add') setTimeout(() => this.amountRef.current && this.amountRef.current.focus(), 40);
+  }
+
+  openAdd = () => this.setState({ dialog: 'add', form: blankForm(), editingId: null, formError: '', menu: null });
+  openEdit = (r) => this.setState({ dialog: 'add', editingId: r.id, formError: '', menu: null, form: { amount: String(r.amt), cat: r.cat, forWho: r.owner, payer: r.payer, date: `${r.day} Ashwin 2083`, note: r.note || '' } });
+  openBulk = () => this.setState({ dialog: 'bulk', bulk: [blankBulk(), blankBulk(), blankBulk()], menu: null });
+  closeDialog = () => this.setState({ dialog: null });
+  setForm = (k, v) => this.setState(s => ({ form: { ...s.form, [k]: v }, formError: '' }));
+
+  submitForm = (e) => {
+    if (e) e.preventDefault();
+    const f = this.state.form;
+    const amt = num(f.amount);
+    if (!(amt > 0)) return this.setState({ formError: 'Enter an amount to continue' });
+    if (!f.cat.trim()) return this.setState({ formError: 'Choose a category' });
+    const day = parseDay(f.date);
+    const payer = f.forWho === 'Karuna' && f.payer === 'Me' ? 'Me' : f.payer;
+    this.setState(s => {
+      const delta = { ...s.delta };
+      if (s.editingId) {
+        const old = s.rows.find(r => r.id === s.editingId);
+        delta[old.owner] -= old.amt; delta[f.forWho] += amt;
+        return { delta, dialog: null, rows: s.rows.map(r => r.id === s.editingId ? { ...r, amt, day, cat: f.cat.trim(), note: f.note.trim(), owner: f.forWho, payer } : r) };
+      }
+      delta[f.forWho] += amt;
+      return { delta, countDelta: s.countDelta + 1, dialog: null, rows: [R(day, f.cat.trim(), f.note.trim(), f.forWho, payer, amt), ...s.rows] };
+    });
+  };
+
+  setBulk = (id, k, v) => this.setState(s => ({ bulk: s.bulk.map(b => b.id === id ? { ...b, [k]: v } : b) }));
+  addBulkRow = () => this.setState(s => ({ bulk: [...s.bulk, blankBulk(s.bulk.length ? s.bulk[s.bulk.length - 1].date : null)] }));
+  removeBulk = id => this.setState(s => ({ bulk: s.bulk.length > 1 ? s.bulk.filter(b => b.id !== id) : [blankBulk()] }));
+  saveBulk = (e) => {
+    if (e) e.preventDefault();
+    const valid = this.state.bulk.filter(b => num(b.amount) > 0);
+    if (!valid.length) return;
+    this.setState(s => {
+      const delta = { ...s.delta };
+      const added = valid.map(b => { const amt = num(b.amount); delta[b.forWho] += amt; return R(parseDay(b.date), b.cat.trim() || 'Miscellaneous', b.note.trim(), b.forWho, b.payer, amt); });
+      return { delta, countDelta: s.countDelta + valid.length, rows: [...added, ...s.rows], dialog: null };
+    });
+  };
+
+  delRow = id => this.setState(s => { const r = s.rows.find(x => x.id === id); return { rows: s.rows.filter(x => x.id !== id), delta: { ...s.delta, [r.owner]: s.delta[r.owner] - r.amt }, countDelta: s.countDelta - 1, menu: null }; });
+  dupRow = id => this.setState(s => { const r = s.rows.find(x => x.id === id); return { rows: [R(TODAY, r.cat, r.note, r.owner, r.payer, r.amt, r.recurring), ...s.rows], delta: { ...s.delta, [r.owner]: s.delta[r.owner] + r.amt }, countDelta: s.countDelta + 1, menu: null }; });
+  markPaid = id => this.setState(s => { const u = s.upcoming.find(x => x.id === id); return { upcoming: s.upcoming.filter(x => x.id !== id), rows: [{ ...u, id: 'r' + (uid++), day: TODAY }, ...s.rows], delta: { ...s.delta, [u.owner]: s.delta[u.owner] + u.amt }, countDelta: s.countDelta + 1 }; });
+  clearFilters = () => this.setState({ q: '', cat: null, payer: null, range: 'month', tab: 'All', menu: null });
+
+  matches(r, withRange) {
+    const s = this.state;
+    if (s.tab !== 'All' && r.owner !== s.tab) return false;
+    if (s.cat && r.cat !== s.cat) return false;
+    if (s.payer && r.payer !== s.payer) return false;
+    if (s.q) { const q = s.q.toLowerCase(); if (!(r.cat.toLowerCase().includes(q) || (r.note || '').toLowerCase().includes(q))) return false; }
+    if (withRange) { if (s.range === 'today' && r.day !== TODAY) return false; if (s.range === 'week' && r.day < TODAY - 6) return false; }
+    return true;
+  }
+
+  renderVals() {
+    const s = this.state, p = this.props;
+    const compact = (p.density ?? 'comfortable') === 'compact';
+    const split = !!(p.splitPayer ?? false);
+    const showUp = p.showUpcoming ?? true;
+    const w = s.w || 1120;
+    const narrow = w < 780;
+    const cols = split ? '28px minmax(170px,1fr) minmax(0,130px) minmax(0,130px) 104px 28px' : `28px minmax(170px,1fr) minmax(0,${narrow ? 180 : 230}px) 104px 28px`;
+
+    const viewRow = (r, upcoming) => {
+      const monos = (r.owner === 'Shared' ? [MONO.Me, MONO.Karuna] : [MONO[r.owner]]).map((m, i) => ({ ...m, ml: i ? '-4px' : '0', ring: i ? '0 0 0 2px var(--color-bg)' : 'none' }));
+      const differs = r.owner === 'Shared' || r.owner !== r.payer;
+      const a = fmt(r.amt);
+      const note = r.note && r.note.toLowerCase() !== r.cat.toLowerCase() ? r.note : '';
+      return {
+        id: r.id, iconBg: `url("${iconSrc(r.cat)}")`, cat: r.cat, note,
+        recurring: !!r.recurring,
+        recurText: upcoming ? `${r.recurring} · due ${r.day} Ashwin` : r.recurring,
+        owner: r.owner, paidNote: differs ? `paid by ${r.payer}` : '', payerLabel: r.payer, payerMono: MONO[r.payer], monos,
+        int: a.int, dec: a.dec,
+        amtColor: upcoming ? 'var(--color-neutral-600)' : 'var(--color-text)',
+        tileBg: upcoming ? 'transparent' : 'var(--color-surface)',
+        tileRing: upcoming ? 'inset 0 0 0 1px var(--color-neutral-400)' : 'none',
+        isUpcoming: upcoming, menuable: !upcoming, menuOpen: s.menu === r.id,
+        cursor: upcoming ? 'default' : 'pointer',
+        onRow: upcoming ? undefined : () => this.openEdit(r),
+        onMenu: e => { e.stopPropagation(); this.setState({ menu: s.menu === r.id ? null : r.id }); },
+        onEdit: e => { e.stopPropagation(); this.openEdit(r); },
+        onDup: e => { e.stopPropagation(); this.dupRow(r.id); },
+        onDel: e => { e.stopPropagation(); this.delRow(r.id); },
+        onPaid: e => { e.stopPropagation(); this.markPaid(r.id); }
+      };
+    };
+
+    const visible = s.rows.filter(r => this.matches(r, true));
+    const days = [...new Set(visible.map(r => r.day))].sort((a, b) => b - a);
+    const groups = [];
+    const up = showUp && s.range !== 'today' ? s.upcoming.filter(r => this.matches(r, false)) : [];
+    if (up.length) {
+      const t = fmt(up.reduce((acc, r) => acc + r.amt, 0));
+      groups.push({ key: 'up', label: 'Upcoming', sub: 'Scheduled from Recurring', int: t.int, dec: t.dec, totColor: 'var(--color-neutral-600)', rows: up.map(r => viewRow(r, true)) });
+    }
+    days.forEach(d => {
+      const rs = visible.filter(r => r.day === d);
+      const t = fmt(rs.reduce((acc, r) => acc + r.amt, 0));
+      groups.push({ key: 'd' + d, label: dayLabel(d), sub: daySub(d), int: t.int, dec: t.dec, totColor: 'var(--color-text)', rows: rs.map(r => viewRow(r, false)) });
+    });
+    groups.forEach((g, i) => { g.pad = i === 0 ? '18px 8px 10px' : '36px 8px 10px'; });
+
+    const tot = { Me: BASE.Me + s.delta.Me, Karuna: BASE.Karuna + s.delta.Karuna, Shared: BASE.Shared + s.delta.Shared };
+    const all = tot.Me + tot.Karuna + tot.Shared;
+    const count = BASE_COUNT + s.countDelta;
+    const cell = k => {
+      const f = fmt(tot[k]); const sel = s.tab === k;
+      return { int: f.int, dec: f.dec, sel, labelColor: sel ? 'var(--color-text)' : 'var(--color-neutral-600)', share: `${all ? Math.round(tot[k] / all * 100) : 0}% of total`, g: Math.max(tot[k], 0), onClick: () => this.setState({ tab: k, menu: null }) };
+    };
+    const fa = fmt(all);
+    const led = {
+      all: { int: fa.int, dec: fa.dec, sel: s.tab === 'All', labelColor: s.tab === 'All' ? 'var(--color-text)' : 'var(--color-neutral-600)', countText: `${count} expenses`, incText: `${Math.round(all / INCOME * 100)}% of income`, onClick: () => this.setState({ tab: 'All', menu: null }) },
+      me: cell('Me'), karuna: cell('Karuna'), shared: cell('Shared')
+    };
+
+    const catCounts = {};
+    s.rows.forEach(r => { catCounts[r.cat] = (catCounts[r.cat] || 0) + 1; });
+    const catItems = Object.keys(catCounts).sort().map(c => ({ label: c, count: catCounts[c], sel: s.cat === c, onClick: () => this.setState({ cat: s.cat === c ? null : c, menu: null }) }));
+    const payerItems = ['Me', 'Karuna'].map(x => ({ label: x, sel: s.payer === x, onClick: () => this.setState({ payer: s.payer === x ? null : x, menu: null }) }));
+    const rangeItems = [['month', 'Whole month'], ['week', 'Last 7 days'], ['today', 'Today']].map(([k, l]) => ({ label: l, sel: s.range === k, onClick: () => this.setState({ range: k, menu: null }) }));
+    const fb = (key, active, label, def) => ({ label: active ? label : def, active, open: s.menu === key, color: active ? 'var(--color-text)' : 'var(--color-neutral-800)', weight: active ? 600 : 400, onClick: () => this.setState({ menu: s.menu === key ? null : key }) });
+    const f = {
+      cat: fb('cat', !!s.cat, s.cat, 'Category'),
+      payer: fb('payer', !!s.payer, s.payer ? `Paid by ${s.payer}` : '', 'Paid by'),
+      range: fb('range', s.range !== 'month', s.range === 'week' ? 'Last 7 days' : 'Today', 'Dates')
+    };
+    const anyFilter = !!(s.q || s.cat || s.payer || s.range !== 'month');
+    const anyMenu = !!s.menu;
+
+    const fm = s.form;
+    const forOpts = ['Me', 'Karuna', 'Shared'].map(o => ({ label: o, checked: fm.forWho === o, onChange: () => this.setForm('forWho', o) }));
+    const payOpts = ['Me', 'Karuna'].map(o => ({ label: o, checked: fm.payer === o, onChange: () => this.setForm('payer', o) }));
+    const quick = ['Lunch', 'Groceries', 'Petrol', 'Shopping', 'Mobile/Telephone'].map(c => ({ label: c, color: fm.cat === c ? 'var(--color-accent-700)' : 'var(--color-neutral-800)', border: fm.cat === c ? 'var(--color-accent)' : 'var(--color-neutral-300)', onClick: () => this.setForm('cat', c) }));
+
+    const bulk = s.bulk.map(b => ({
+      ...b,
+      onDate: e => this.setBulk(b.id, 'date', e.target.value),
+      onCat: e => this.setBulk(b.id, 'cat', e.target.value),
+      onAmt: e => this.setBulk(b.id, 'amount', e.target.value.replace(/[^\d.,]/g, '')),
+      onFor: e => this.setBulk(b.id, 'forWho', e.target.value),
+      onPayer: e => this.setBulk(b.id, 'payer', e.target.value),
+      onNote: e => this.setBulk(b.id, 'note', e.target.value),
+      onRemove: () => this.removeBulk(b.id)
+    }));
+    const validB = s.bulk.filter(b => num(b.amount) > 0);
+    const bt = fmt(validB.reduce((acc, b) => acc + num(b.amount), 0));
+    const noun = n => n === 1 ? 'expense' : 'expenses';
+
+    const shownRows = visible.length;
+    const emptyTitle = anyFilter ? 'Nothing matches these filters' : `No ${s.tab === 'All' ? '' : s.tab + ' '}expenses on these days`;
+    const emptyBody = anyFilter ? (s.q ? `No expense in Ashwin 2083 mentions “${s.q}”. Try a broader word, or clear filters.` : 'Try a different combination, or clear filters to see the whole month.') : 'Earlier days may still have entries — load them below.';
+
+    return {
+      openAdd: this.openAdd, openBulk: this.openBulk, closeDialog: this.closeDialog, clearFilters: this.clearFilters,
+      closeMenus: () => this.setState({ menu: null }), stop: e => e.stopPropagation(),
+      led, groups, cols,
+      ledCols: narrow ? 'repeat(3,minmax(0,1fr))' : 'minmax(0,1.55fr) repeat(3,minmax(0,1fr))',
+      allSpan: narrow ? '1 / -1' : 'auto',
+      allPad: narrow ? '18px 0 20px' : '18px 28px 20px 0',
+      allBorder: narrow ? '1px solid var(--color-neutral-300)' : '0',
+      mePadL: narrow ? '0' : '20px',
+      meBorder: narrow ? '0' : '1px solid var(--color-neutral-300)', rowPad: compact ? '6px 8px' : '12px 8px', combined: !split, split,
+      q: s.q, onQ: e => this.setState({ q: e.target.value }),
+      f, catItems, payerItems, rangeItems, anyFilter, anyMenu,
+      shownText: anyFilter || s.tab !== 'All' ? `${shownRows} ${noun(shownRows)} shown` : '',
+      footText: `Showing ${shownRows} of ${count} expenses`,
+      isEmpty: groups.length === 0, emptyTitle, emptyBody,
+      catList: CAT_LIST,
+      addOpen: s.dialog === 'add', bulkOpen: s.dialog === 'bulk',
+      dialogTitle: s.editingId ? 'Edit expense' : 'Add expense',
+      submitLabel: s.editingId ? 'Save changes' : 'Add expense',
+      form: fm, formError: s.formError, amountRef: this.amountRef,
+      onAmount: e => this.setForm('amount', e.target.value.replace(/[^\d.,]/g, '')),
+      onCat: e => this.setForm('cat', e.target.value),
+      onDate: e => this.setForm('date', e.target.value),
+      onNote: e => this.setForm('note', e.target.value),
+      submitForm: this.submitForm, forOpts, payOpts, quick,
+      bulk, addBulkRow: this.addBulkRow, saveBulk: this.saveBulk,
+      bulkSummary: validB.length ? `${validB.length} ${noun(validB.length)} · Rs ${bt.int}${bt.dec}` : 'Nothing to save yet',
+      bulkSaveLabel: validB.length ? `Save ${validB.length} ${noun(validB.length)}` : 'Save',
+      bulkDisabled: !validB.length
+    };
+  }
+}
+</script>
+</body>
+</html>
