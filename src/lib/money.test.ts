@@ -56,6 +56,18 @@ describe("sanitizeAmountInput", () => {
     expect(sanitizeAmountInput(".5")).toBe(".5");
   });
 
+  it("doesn't mistake the dot in 'Rs.' or 'रु.' for the decimal point", () => {
+    expect(sanitizeAmountInput("Rs. 1,500.50")).toBe("1500.50");
+    expect(sanitizeAmountInput("Rs.1500")).toBe("1500");
+    expect(sanitizeAmountInput("रु. 1,500")).toBe("1500");
+    expect(sanitizeAmountInput("NPR. 2,000")).toBe("2000");
+  });
+
+  it("keeps a point typed on its own or at the end, so typing '.5' or '12.' isn't blocked", () => {
+    expect(sanitizeAmountInput(".")).toBe(".");
+    expect(sanitizeAmountInput("12.")).toBe("12.");
+  });
+
   it("returns an empty string when nothing numeric is left", () => {
     expect(sanitizeAmountInput("abc")).toBe("");
   });

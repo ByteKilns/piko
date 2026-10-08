@@ -28,6 +28,13 @@ describe("isAddExpenseShortcut", () => {
     expect(isAddExpenseShortcut(press({ target: { isContentEditable: true, tagName: "DIV" } }), false)).toBe(false);
   });
 
+  it("never fires on a dropdown, where n is type-ahead for an option", () => {
+    for (const role of ["combobox", "listbox", "option"]) {
+      expect(isAddExpenseShortcut(press({ target: { role, tagName: "BUTTON" } }), false)).toBe(false);
+    }
+    expect(isAddExpenseShortcut(press({ target: { role: null, tagName: "BUTTON" } }), false)).toBe(true);
+  });
+
   it("leaves browser and OS shortcuts alone", () => {
     expect(isAddExpenseShortcut(press({ ctrlKey: true }), false)).toBe(false);
     expect(isAddExpenseShortcut(press({ metaKey: true }), false)).toBe(false);

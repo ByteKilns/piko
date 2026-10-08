@@ -18,10 +18,19 @@ export function formatMoney(value: number, { currency = true }: { currency?: boo
   return `${currency ? "Rs " : ""}${negative ? MINUS : ""}${integer}${decimals}`;
 }
 
+// "Rs", "NPR", "रु"/"रू" with an optional abbreviation dot — removed before
+// cleaning so that dot is never read as the decimal point ("Rs.1500").
+const CURRENCY_TOKEN = /(?:rs|npr|रु|रू)\.?/giu;
+
 // Keeps what someone types or pastes into an amount field to digits and one
-// decimal point with at most two places; everything else is dropped.
+// decimal point with at most two places; everything else is dropped. The
+// amount starts at the first digit, or at a point followed by a digit (or
+// typed last, so ".5" and "12." can be typed).
 export function sanitizeAmountInput(raw: string): string {
-  const cleaned = raw.replace(/[^\d.]/g, "");
+  const withoutCurrency = raw.replace(CURRENCY_TOKEN, "");
+  const start = withoutCurrency.search(/\d|\.(?=\d|$)/);
+  if (start === -1) return "";
+  const cleaned = withoutCurrency.slice(start).replace(/[^\d.]/g, "");
   const dot = cleaned.indexOf(".");
   if (dot === -1) return cleaned;
   const fraction = cleaned.slice(dot + 1).replace(/\./g, "").slice(0, 2);
