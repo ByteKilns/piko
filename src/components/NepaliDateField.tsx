@@ -70,7 +70,7 @@ export function NepaliDateField({ containerClassName, error, inputClassName, lab
           <button
             aria-invalid={Boolean(error)}
             className={cn(
-              "flex h-8 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-2.5 py-1 text-left text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm",
+              "flex h-9.5 w-full min-w-0 items-center justify-between gap-2 border border-n-400 bg-transparent px-3 text-left text-base text-ink outline-none hover:border-ink focus-visible:border-ink focus-visible:shadow-[inset_0_-2px_0_var(--signal)] md:text-[15px]",
               error && "border-destructive",
               !value && "text-muted-foreground",
               inputClassName,

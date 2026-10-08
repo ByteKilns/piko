@@ -52,6 +52,7 @@ export function Row({ children, className, columns, onClick }: RowProps) {
   return (
     <div
       className={cn(GRID, "relative items-center border-b border-n-300 px-2 py-3", onClick && "cursor-pointer hover:bg-ink/3", className)}
+      data-slot="row"
       onClick={onClick}
       style={columnStyle(columns)}
     >

@@ -1,6 +1,6 @@
 export type ExpenseExportRow = { amount: number; category: string; date: string; name: string; owner: string };
 
-// Shared by ReportsHeader and ExpenseHeader — both export the same
+// Shared by ReportsHeader and the Expenses page — both export the same
 // date/description/category/owner/amount shape, so the CSV serialization and
 // download-trigger logic lives here once.
 export function downloadExpensesCsv(rows: ExpenseExportRow[], filenameLabel: string) {

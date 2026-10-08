@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { formatShortDate } from "../src/lib/date-format";
 import { bsToAd, NEPALI_MONTHS } from "../src/lib/nepali-date";
+import { expenseRow, openRowMenu, pickFirstCategory, searchExpenses } from "./support/expenses";
 import { expectNoErrorBoundary, gotoRoute } from "./support/nav";
 
 test.describe("expenses", () => {
@@ -9,18 +10,36 @@ test.describe("expenses", () => {
     await gotoRoute(page, "/expenses");
   });
 
-  test("shows the list with search, filters and tabs", async ({ page }) => {
+  test("shows the headline figures, search and filters", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "Expenses", exact: true })).toBeVisible();
-    await expect(page.getByText("Track where your money goes")).toBeVisible();
-    await expect(page.getByPlaceholder("Search expenses...")).toBeVisible();
-    await expect(page.getByRole("tab", { name: "All" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Shared" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^All expenses/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: /^Shared/ })).toBeVisible();
+    await expect(page.getByPlaceholder("Search notes or categories")).toBeVisible();
+    for (const filter of ["Category", "Paid by", "Dates"]) {
+      await expect(page.getByRole("button", { exact: true, name: filter })).toBeVisible();
+    }
+  });
+
+  test("filters the list by person from the headline figures", async ({ page }) => {
+    await page.getByRole("button", { name: /^Shared/ }).click();
+    await expect(page.getByRole("button", { name: /^Shared/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: /^All expenses/ })).toHaveAttribute("aria-pressed", "false");
+    await expect(page.getByRole("button", { exact: true, name: "Clear" })).toBeVisible();
   });
 
   test("opens the add-expense dialog from the sidebar", async ({ page }) => {
     await page.getByRole("complementary").getByRole("button", { name: "Add expense", exact: true }).click();
 
-    await expect(page.getByRole("dialog").getByRole("heading", { name: "Add Expense" })).toBeVisible();
+    await expect(page.getByRole("dialog").getByRole("heading", { name: "Add expense" })).toBeVisible();
+  });
+
+  test("asks for an amount and a category before saving", async ({ page }) => {
+    await page.getByRole("complementary").getByRole("button", { name: "Add expense", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Add expense" });
+    await dialog.getByRole("button", { name: "Add expense" }).click();
+
+    await expect(dialog.getByText("Enter an amount to continue")).toBeVisible();
+    await expect(dialog.getByText("Choose a category")).toBeVisible();
   });
 
   // The BS picker must save exactly the AD day the clicked BS day maps to, and
@@ -29,9 +48,10 @@ test.describe("expenses", () => {
     const note = `bs-date-e2e-${Date.now()}`;
 
     await page.getByRole("complementary").getByRole("button", { name: "Add expense", exact: true }).click();
-    const addDialog = page.getByRole("dialog", { name: "Add Expense" });
+    const addDialog = page.getByRole("dialog", { name: "Add expense" });
     await addDialog.getByLabel("Amount").fill("250");
-    await addDialog.getByLabel("Note (optional)").fill(note);
+    await pickFirstCategory(page, addDialog);
+    await addDialog.getByLabel("Note").fill(note);
 
     await addDialog.getByLabel("Date").click();
     const picker = page.locator('[data-slot="popover-content"]');
@@ -42,25 +62,44 @@ test.describe("expenses", () => {
     await picker.getByRole("button", { exact: true, name: picked }).click();
     await expect(addDialog.getByLabel("Date")).toHaveText(picked);
 
-    await addDialog.getByRole("button", { name: "Add Expense" }).click();
+    await addDialog.getByRole("button", { name: "Add expense" }).click();
     await expect(addDialog).toBeHidden();
 
     const ad = bsToAd(Number(bsYear), NEPALI_MONTHS.indexOf(monthName as (typeof NEPALI_MONTHS)[number]) + 1, 15);
     const [adYear, adMonth] = ad.split("-").map(Number);
     await page.goto(`/expenses?year=${adYear}&month=${adMonth}`);
     await expectNoErrorBoundary(page);
-    await page.getByPlaceholder("Search expenses...").fill(note);
-    const row = page.getByRole("row").filter({ hasText: note });
-    await expect(row).toContainText(formatShortDate(ad, "english"));
+    await searchExpenses(page, note);
+    await expect(expenseRow(page, note)).toHaveCount(1);
+    await expect(page.getByText(formatShortDate(ad, "english")).first()).toBeVisible();
 
-    await row.getByRole("button", { name: "Row actions" }).click();
+    await openRowMenu(page, note);
     await page.getByRole("menuitem", { name: "Edit" }).click();
     await expect(page.getByRole("dialog").getByLabel("Date")).toHaveText(picked);
+  });
+
+  test("repeats an expense for today from its menu", async ({ page }) => {
+    const note = `repeat-e2e-${Date.now()}`;
+
+    await page.getByRole("complementary").getByRole("button", { name: "Add expense", exact: true }).click();
+    const addDialog = page.getByRole("dialog", { name: "Add expense" });
+    await addDialog.getByLabel("Amount").fill("75");
+    await pickFirstCategory(page, addDialog);
+    await addDialog.getByLabel("Note").fill(note);
+    await addDialog.getByRole("button", { name: "Add expense" }).click();
+    await expect(addDialog).toBeHidden();
+
+    await searchExpenses(page, note);
+    await expect(expenseRow(page, note)).toHaveCount(1);
+    await openRowMenu(page, note);
+    await page.getByRole("menuitem", { name: "Repeat today" }).click();
+    await expect(expenseRow(page, note)).toHaveCount(2);
   });
 
   test("opens the bulk-add dialog", async ({ page }) => {
     await page.getByRole("button", { name: "Bulk add" }).click();
 
-    await expect(page.getByRole("dialog").getByRole("heading", { name: "Add Expenses in Bulk" })).toBeVisible();
+    await expect(page.getByRole("dialog").getByRole("heading", { name: "Add in bulk" })).toBeVisible();
+    await expect(page.getByRole("dialog").getByRole("button", { name: "Save" })).toBeDisabled();
   });
 });

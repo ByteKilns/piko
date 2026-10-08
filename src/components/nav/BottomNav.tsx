@@ -9,7 +9,7 @@ import { usePathname } from "next/navigation";
 import { BOTTOM_BAR, isActivePath, MORE_GROUPS } from "@/components/nav/nav-items";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { AddExpenseModal } from "@/modules/expenses/components/AddExpenseModal";
+import { ExpenseDialog } from "@/modules/expenses/components/ExpenseDialog";
 import { VoiceEntryButton } from "@/modules/voice-entry/components/VoiceEntryButton";
 
 type Category = { groupName: string; id: string; name: string };
@@ -19,12 +19,13 @@ type Props = {
   categories: Category[];
   currentMemberId: string;
   members: Member[];
+  quickCategoryIds: string[];
   unreadNotifications: number;
 };
 
 const BAR_ITEM = "relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px]";
 
-export function BottomNav({ categories, currentMemberId, members, unreadNotifications }: Props) {
+export function BottomNav({ categories, currentMemberId, members, quickCategoryIds, unreadNotifications }: Props) {
   const pathname = usePathname();
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -66,7 +67,7 @@ export function BottomNav({ categories, currentMemberId, members, unreadNotifica
       <button
         aria-label="Add expense"
         className={cn(
-          "fixed right-4 bottom-20 z-10 grid size-12 place-items-center bg-ink text-paper shadow-dialog transition-[transform,opacity] duration-200 md:hidden",
+          "fixed right-4 bottom-20 z-10 grid size-12 place-items-center bg-signal-fill text-white shadow-dialog transition-[transform,opacity] duration-200 md:hidden",
           fabHiddenClass,
         )}
         onClick={() => setAddExpenseOpen(true)}
@@ -82,6 +83,7 @@ export function BottomNav({ categories, currentMemberId, members, unreadNotifica
         )}
         currentMemberId={currentMemberId}
         members={members}
+        quickCategoryIds={quickCategoryIds}
       />
 
       <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-10 flex border-t-2 border-rule bg-paper pb-[env(safe-area-inset-bottom)] md:hidden">
@@ -145,12 +147,13 @@ export function BottomNav({ categories, currentMemberId, members, unreadNotifica
         </SheetContent>
       </Sheet>
 
-      <AddExpenseModal
+      <ExpenseDialog
         categories={categories}
         currentMemberId={currentMemberId}
         members={members}
         onOpenChange={setAddExpenseOpen}
         open={addExpenseOpen}
+        quickCategoryIds={quickCategoryIds}
       />
     </>
   );

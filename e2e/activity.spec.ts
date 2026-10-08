@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 
+import { expenseRow, openRowMenu, pickFirstCategory, searchExpenses } from "./support/expenses";
 import { gotoRoute } from "./support/nav";
 
 async function chooseFilter(page: Page, filter: string, option: string) {
@@ -25,13 +26,14 @@ test.describe("activity", () => {
     await page.getByRole("complementary").getByRole("button", { exact: true, name: "Add expense" }).click();
     const addDialog = page.getByRole("dialog");
     await addDialog.getByLabel("Amount").fill("1234");
-    await addDialog.getByLabel("Note (optional)").fill(note);
+    await pickFirstCategory(page, addDialog);
+    await addDialog.getByLabel("Note").fill(note);
     await addDialog.getByRole("button", { name: "Add Expense" }).click();
     await expect(addDialog).toBeHidden();
 
-    await page.getByPlaceholder("Search expenses...").fill(note);
-    const expenseRow = page.getByRole("row").filter({ hasText: note });
-    await expenseRow.getByRole("button", { name: "Row actions" }).click();
+    await searchExpenses(page, note);
+    const row = expenseRow(page, note);
+    await openRowMenu(page, note);
     await page.getByRole("menuitem", { name: "Edit" }).click();
     const editDialog = page.getByRole("dialog");
     await editDialog.getByLabel("Amount").fill("4321");
@@ -39,9 +41,9 @@ test.describe("activity", () => {
     await expect(editDialog).toBeHidden();
 
     page.once("dialog", (dialog) => dialog.accept());
-    await expenseRow.getByRole("button", { name: "Row actions" }).click();
+    await openRowMenu(page, note);
     await page.getByRole("menuitem", { name: "Delete" }).click();
-    await expect(expenseRow).toHaveCount(0);
+    await expect(row).toHaveCount(0);
 
     await gotoRoute(page, "/activity");
     await page.getByPlaceholder("Search activity...").fill(note);

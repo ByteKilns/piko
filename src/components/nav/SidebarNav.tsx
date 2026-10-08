@@ -14,7 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { logoutAction } from "@/lib/actions/auth";
 import { SIDEBAR_COLLAPSED_COOKIE_NAME } from "@/lib/sidebar-cookie";
 import { cn } from "@/lib/utils";
-import { AddExpenseModal } from "@/modules/expenses/components/AddExpenseModal";
+import { ExpenseDialog } from "@/modules/expenses/components/ExpenseDialog";
 import { VoiceEntryButton } from "@/modules/voice-entry/components/VoiceEntryButton";
 
 type Category = { groupName: string; id: string; name: string };
@@ -25,6 +25,7 @@ type Props = {
   currentMemberId: string;
   initialCollapsed: boolean;
   members: Member[];
+  quickCategoryIds: string[];
   unreadNotifications: number;
 };
 
@@ -60,7 +61,7 @@ function NavLink({ badge, collapsed, item, pathname }: { badge?: number; collaps
   );
 }
 
-export function SidebarNav({ categories, currentMemberId, initialCollapsed, members, unreadNotifications }: Props) {
+export function SidebarNav({ categories, currentMemberId, initialCollapsed, members, quickCategoryIds, unreadNotifications }: Props) {
   const pathname = usePathname();
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(initialCollapsed);
@@ -122,6 +123,7 @@ export function SidebarNav({ categories, currentMemberId, initialCollapsed, memb
           className="grid size-10 shrink-0 place-items-center border border-ink text-ink hover:bg-ink/6"
           currentMemberId={currentMemberId}
           members={expenseMembers}
+          quickCategoryIds={quickCategoryIds}
         />
       </div>
 
@@ -178,12 +180,13 @@ export function SidebarNav({ categories, currentMemberId, initialCollapsed, memb
         </div>
       </nav>
 
-      <AddExpenseModal
+      <ExpenseDialog
         categories={categories}
         currentMemberId={currentMemberId}
         members={expenseMembers}
         onOpenChange={setAddExpenseOpen}
         open={addExpenseOpen}
+        quickCategoryIds={quickCategoryIds}
       />
     </aside>
   );

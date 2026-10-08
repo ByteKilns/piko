@@ -6,7 +6,7 @@ import { Mic } from "lucide-react";
 
 import { isSpeechRecognitionSupported } from "@/lib/useSpeechRecognition";
 import { cn } from "@/lib/utils";
-import { AddExpenseModal } from "@/modules/expenses/components/AddExpenseModal";
+import { ExpenseDialog } from "@/modules/expenses/components/ExpenseDialog";
 import { VoiceEntryModal } from "@/modules/voice-entry/components/VoiceEntryModal";
 import type { ExpenseDraft } from "@/modules/voice-entry/lib/sanitize-voice-expense";
 
@@ -18,9 +18,10 @@ type Props = {
   className?: string;
   currentMemberId: string;
   members: Member[];
+  quickCategoryIds?: string[];
 };
 
-export function VoiceEntryButton({ categories, className, currentMemberId, members }: Props) {
+export function VoiceEntryButton({ categories, className, currentMemberId, members, quickCategoryIds }: Props) {
   const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
   const [draft, setDraft] = useState<ExpenseDraft | null>(null);
@@ -65,7 +66,7 @@ export function VoiceEntryButton({ categories, className, currentMemberId, membe
       />
 
       {resultModalOpen && (
-        <AddExpenseModal
+        <ExpenseDialog
           categories={categories}
           currentMemberId={currentMemberId}
           initial={draft ?? undefined}
@@ -74,6 +75,7 @@ export function VoiceEntryButton({ categories, className, currentMemberId, membe
             if (!open) closeResultModal();
           }}
           open
+          quickCategoryIds={quickCategoryIds}
         />
       )}
     </>

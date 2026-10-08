@@ -18,9 +18,11 @@ type Props = {
   containerClassName?: string;
   error?: string;
   id?: string;
+  inputClassName?: string;
   label?: string;
   onCategoriesChange?: (category: Category) => void;
   onValueChange: (value: string) => void;
+  placeholder?: string;
   value: string;
 };
 
@@ -29,9 +31,11 @@ export function CategoryComboboxField({
   containerClassName,
   error,
   id,
+  inputClassName,
   label,
   onCategoriesChange,
   onValueChange,
+  placeholder = "Search categories...",
   value,
 }: Props) {
   const generatedId = useId();
@@ -115,6 +119,7 @@ export function CategoryComboboxField({
             aria-expanded={open}
             aria-invalid={Boolean(error)}
             autoComplete="off"
+            className={inputClassName}
             id={fieldId}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -122,7 +127,7 @@ export function CategoryComboboxField({
             }}
             onFocus={() => setOpen(true)}
             onKeyDown={handleKeyDown}
-            placeholder="Search categories..."
+            placeholder={placeholder}
             ref={anchorRef}
             role="combobox"
             value={open ? query : (selected?.name ?? "")}
@@ -151,7 +156,7 @@ export function CategoryComboboxField({
             <button
               aria-selected={index === highlighted}
               className={cn(
-                "flex w-full items-center justify-between gap-1.5 rounded-md px-1.5 py-1 text-left text-sm",
+                "flex w-full items-center justify-between gap-1.5 px-2.5 py-1.5 text-left text-sm",
                 index === highlighted ? "bg-accent text-accent-foreground" : "hover:bg-accent",
               )}
               id={optionId(index)}

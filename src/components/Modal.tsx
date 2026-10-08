@@ -21,11 +21,24 @@ type Props = {
   children: ReactNode;
   className?: string;
   footer?: ReactNode;
+  // Keyboard hint on the right of the footer (desktop only), e.g. "Enter to
+  // save · Esc to close" for forms that submit on Enter.
+  hint?: string;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   subtitle?: string;
   title: string;
 };
+
+// Radix focuses the first focusable element (the header's Close button) when
+// a dialog opens. A field marked `data-autofocus` — the big amount input —
+// takes that focus instead.
+function focusMarkedField(event: Event) {
+  const target = (event.currentTarget as HTMLElement | null)?.querySelector<HTMLElement>("[data-autofocus]");
+  if (!target) return;
+  event.preventDefault();
+  target.focus();
+}
 
 // Every modal in the app should go through this component instead of
 // reassembling Dialog/DialogContent/DialogHeader/DialogFooter by hand —
@@ -38,10 +51,10 @@ type Props = {
 // trapped inside it — pass `overflow-visible` there (and cancel
 // DialogContent's own `overflow-hidden` via `className`) to let it float
 // over the dialog instead.
-export function Modal({ bodyClassName, children, className, footer, onOpenChange, open, subtitle, title }: Props) {
+export function Modal({ bodyClassName, children, className, footer, hint, onOpenChange, open, subtitle, title }: Props) {
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className={className} showCloseButton={false}>
+      <DialogContent className={className} onOpenAutoFocus={focusMarkedField} showCloseButton={false}>
         <DialogHeader>
           <div className="flex min-w-0 flex-col gap-0.5">
             <DialogTitle>{title}</DialogTitle>
@@ -64,6 +77,7 @@ export function Modal({ bodyClassName, children, className, footer, onOpenChange
                 Cancel
               </Button>
             </DialogClose>
+            {hint && <span className="ml-auto hidden text-xs text-n-600 sm:block">{hint}</span>}
           </DialogFooter>
         )}
       </DialogContent>
