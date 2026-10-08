@@ -23,6 +23,8 @@
   --color-n-800: var(--n-800);
   --color-signal: var(--signal);
   --color-signal-ink: var(--signal-ink);
+  --color-signal-fill: var(--signal-fill);
+  --color-signal-fill-hover: var(--signal-fill-hover);
   --shadow-menu: var(--elevation-menu);
   --shadow-dialog: var(--elevation-dialog);
 
@@ -84,6 +86,9 @@
   --n-800: #3d3936;
   --signal: #d23a24;
   --signal-ink: #a82a18;
+  /* Filled accent (primary buttons) — same in both themes so white text keeps 4.5:1. */
+  --signal-fill: #d23a24;
+  --signal-fill-hover: #b4301c;
   --elevation-menu: 0 4px 16px rgb(32 30 29 / 0.12);
   --elevation-dialog: 0 16px 48px rgb(32 30 29 / 0.22);
 

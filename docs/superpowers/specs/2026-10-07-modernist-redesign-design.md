@@ -15,7 +15,7 @@ Settings, Login).
 | --- | --- |
 | Scope | **Match the designs fully** — new behaviours shown in mockups are built (incl. schema changes); panels the mockups omit are removed. |
 | Tokens | The mockups' design-system stylesheet is not available — **values are inferred** from the mockups (below). Font stays **Host Grotesk**. |
-| Theme | **Keep light/dark/system.** The **accent-colour picker is removed for now** (one red accent, as in the mockups); a configurable accent may return later and is out of scope here. |
+| Theme | **Keep light/dark/system; the app opens in Light** (as the mockups) unless the person picks otherwise. The **accent-colour picker is removed for now** (one red accent, as in the mockups); a configurable accent may return later and is out of scope here. |
 | Forms | **Design fields first**; fields the design omits but the app needs/stores live in a collapsed **More details** section with sensible defaults. |
 | Delivery | **Phased on `redesign/modernist`**, one commit per phase, user review between phases. |
 | Build approach | Re-theme shadcn primitives in place + a small set of shared composites (approach A). |
@@ -34,6 +34,7 @@ Light (`:root`):
 | `--rule` | `#3d3936` | 2px column-header / sidebar rules, 1px group rows |
 | `--n-200 … --n-800` | `#e6e2db` `#d8d3cb` `#b5afa6` `#8f8981` `#6e6862` `#56514c` `#3d3936` | warm neutral scale (200 meter track, 300 row rules, 400 disabled, 500 decimals/placeholder, 600 labels, 700 secondary text, 800 body copy) |
 | `--signal` / `--signal-ink` | `#d23a24` / `#a82a18` | the single red accent. `--signal` for marks: active-nav bar, tab underline, selected-ledger bar, filter dot, today marker, caret, payout cell, unread badge, overspend meter segment. `--signal-ink` for red **text**: over budget, over income, overdue, negative amounts, errors, Delete |
+| `--signal-fill` / `--signal-fill-hover` | `#d23a24` / `#b4301c` (both themes) | filled accent: **primary buttons** (Add expense, dialog submit) with white text — same in light and dark so the text keeps 4.5:1 |
 | `--shadow-md` / `--shadow-lg` | `0 4px 16px rgb(32 30 29 / .12)` / `0 16px 48px rgb(32 30 29 / .22)` | menus / dialogs only |
 
 Dark (`.dark`): `--paper #161413`, `--surface #22201e`, `--ink #f3efe8`, `--rule #d3cec6`,
@@ -70,7 +71,7 @@ and `chart-*` tokens are removed in phase 6.
 
 ### 1.3 Primitive restyle (`src/components/ui/*`)
 
-`button` (variants: `primary` ink fill, `secondary` 1px ink outline, `ghost` text-only,
+`button` (variants: `primary` red fill (`signal-fill`, white text — the mockups' `btn-primary`), `secondary` 1px ink outline, `ghost` text-only,
 `icon`; heights 38/40px), `input`/`select` (square, 1px `n-400`, 38px, focus ring = signal),
 `dialog` (layout in §2.4), `dropdown-menu` (square, 1px rule border, `shadow-md`, 8×14px items,
 destructive items `signal-ink`), `tabs` (superseded by `LineTabs`), `sheet`, `popover`,
@@ -350,7 +351,7 @@ Mobile app: unaffected (does not read recurring; categories change is additive).
 | --- | --- | --- |
 | 1 | Foundation & shell: tokens, accent-picker removal, primitive restyle, shared composites, sidebar, bottom nav, frame, loading/error, N shortcut, Login | User reviews shell + one page in light/dark, desktop/mobile |
 | 2 | Data & logic: 3 migrations, pacing carry-over, quarterly, dhuku completion, activity/revert, icon guess | Unit tests green; no visual change |
-| 3 | Home, Expenses, Budget | User reviews pages |
+| 3 | Home, Expenses (delivered early, ahead of phases 2–3, at the user's request), Budget | User reviews pages |
 | 4 | Recurring, Savings, Dhuku, Reports | User reviews pages |
 | 5 | Loans, Categories, Notifications, Activity, Settings | User reviews pages |
 | 6 | Cleanup: delete orphaned components/tokens, update `docs/architecture.md`, `graphify update .` | Final pass |
