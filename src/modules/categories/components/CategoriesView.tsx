@@ -45,7 +45,7 @@ export function CategoriesView({ categories }: { categories: CategoryEditing[] }
     <div>
       <PageHeader
         actions={
-          <Button onClick={() => setDialog({ editing: null, open: true })} variant="secondary">
+          <Button className="h-9.5" onClick={() => setDialog({ editing: null, open: true })} variant="outline">
             <Plus />
             Add category
           </Button>

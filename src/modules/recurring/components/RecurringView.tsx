@@ -146,7 +146,7 @@ export function RecurringView(props: Props) {
     <div>
       <PageHeader
         actions={
-          <Button onClick={() => setDialog({ editing: null, open: true })} variant="secondary">
+          <Button className="h-9.5" onClick={() => setDialog({ editing: null, open: true })} variant="outline">
             <Plus />
             Add recurring
           </Button>

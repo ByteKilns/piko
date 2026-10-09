@@ -121,7 +121,7 @@ export function SavingsGoalsView(props: Props) {
     <div>
       <PageHeader
         actions={
-          <Button onClick={openNew} variant="secondary">
+          <Button className="h-9.5" onClick={openNew} variant="outline">
             <Plus />
             New goal
           </Button>

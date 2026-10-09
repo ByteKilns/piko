@@ -97,7 +97,7 @@ export function ReportsView(props: Props) {
     <div>
       <PageHeader
         actions={
-          <Button onClick={() => downloadExpensesCsv(props.exportRows, props.monthLabel)} variant="secondary">
+          <Button className="h-9.5" onClick={() => downloadExpensesCsv(props.exportRows, props.monthLabel)} variant="outline">
             <Download />
             Export
           </Button>
@@ -456,7 +456,7 @@ function SavingsReport({ averageProgress, contributions, goalCount, goals, month
         <p className="max-w-[52ch] text-[15px] leading-[1.55] text-n-800 text-pretty">
           Once money goes toward a savings goal, this report shows how much you set aside each month and how close each goal is.
         </p>
-        <Button asChild className="mt-1.5" variant="secondary">
+        <Button asChild className="mt-1.5 h-9.5" variant="outline">
           <Link href="/savings-goals">Go to Savings goals</Link>
         </Button>
       </div>

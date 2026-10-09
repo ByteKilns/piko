@@ -123,7 +123,7 @@ export function DhukuView(props: Props) {
     <div>
       <PageHeader
         actions={
-          <Button onClick={() => setDialog({ editing: null, open: true })} variant="secondary">
+          <Button className="h-9.5" onClick={() => setDialog({ editing: null, open: true })} variant="outline">
             <Plus />
             Add dhuku
           </Button>
@@ -234,7 +234,7 @@ export function DhukuView(props: Props) {
                     className="h-auto px-2.5 py-1.25 text-[13px]"
                     onClick={() => setLogTarget({ id: row.id, monthly: row.monthly, name: row.name, pot: row.pot })}
                     type="button"
-                    variant="secondary"
+                    variant="outline"
                   >
                     Log entry
                   </Button>

@@ -130,7 +130,7 @@ export function BudgetView(props: Props) {
               <Copy />
               Copy {props.prevMonthName}&apos;s budget
             </Button>
-            <Button onClick={openNew} variant="secondary">
+            <Button className="h-9.5" onClick={openNew} variant="outline">
               <Plus />
               Add budget
             </Button>

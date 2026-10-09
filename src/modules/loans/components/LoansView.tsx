@@ -107,7 +107,7 @@ export function LoansView(props: Props) {
     <div>
       <PageHeader
         actions={
-          <Button onClick={() => setDialog({ editing: null, open: true })} variant="secondary">
+          <Button className="h-9.5" onClick={() => setDialog({ editing: null, open: true })} variant="outline">
             <Plus />
             Add loan
           </Button>
@@ -190,7 +190,7 @@ export function LoansView(props: Props) {
                     className="h-auto px-2.5 py-1.25 text-[13px]"
                     onClick={() => setPaymentTarget({ id: row.id, name: row.counterpartyName })}
                     type="button"
-                    variant="secondary"
+                    variant="outline"
                   >
                     Record payment
                   </Button>
