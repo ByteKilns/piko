@@ -16,7 +16,12 @@ export function MoreDetails({ children, forceOpen = false, label = "More details
   const isOpen = open || forceOpen;
 
   return (
-    <details onToggle={(event) => setOpen(event.currentTarget.open)} open={isOpen}>
+    <details
+      onToggle={(event) => {
+        if (!forceOpen) setOpen(event.currentTarget.open);
+      }}
+      open={isOpen}
+    >
       <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-[13px] text-n-700 hover:text-ink [&::-webkit-details-marker]:hidden">
         {label}
         <ChevronDown aria-hidden className={cn("size-3.5 transition-transform", isOpen && "rotate-180")} />
