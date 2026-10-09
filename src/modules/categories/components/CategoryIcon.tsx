@@ -2,12 +2,14 @@ import { createElement } from "react";
 
 import { cn } from "@/lib/utils";
 import { guessCategoryIcon } from "@/modules/categories/lib/guess-category-icon";
+import { getRecurringIcon } from "@/modules/recurring/lib/recurring-icons";
 
-type Props = { className?: string; groupName: string; name: string; variant?: "filled" | "outline" };
+type Props = { className?: string; groupName: string; icon?: null | string; name: string; variant?: "filled" | "outline" };
 
-// 28px square with the category's icon: filled for money spent, outlined for
-// money that's only scheduled (an upcoming bill).
-export function CategoryIcon({ className, groupName, name, variant = "filled" }: Props) {
+// 28px square with the category's icon: the category's own icon when set,
+// otherwise a keyword guess from its name. Filled for money spent, outlined
+// for money that's only scheduled (an upcoming bill).
+export function CategoryIcon({ className, groupName, icon, name, variant = "filled" }: Props) {
   return (
     <span
       aria-hidden
@@ -17,10 +19,12 @@ export function CategoryIcon({ className, groupName, name, variant = "filled" }:
         className,
       )}
     >
-      {/* createElement, not <Icon />: the icon is a fixed lucide component looked
-          up by name, which the React Compiler lint can't tell from one built
-          during render. */}
-      {createElement(guessCategoryIcon(name, groupName), { className: "size-3.75 text-ink", strokeWidth: 1.7 })}
+      {/* createElement, not <Icon />: the icon is looked up by name, which the
+          React Compiler lint can't tell from one built during render. */}
+      {createElement(icon ? getRecurringIcon(icon) : guessCategoryIcon(name, groupName), {
+        className: "size-3.75 text-ink",
+        strokeWidth: 1.7,
+      })}
     </span>
   );
 }

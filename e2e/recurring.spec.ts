@@ -20,4 +20,10 @@ test.describe("recurring", () => {
 
     await expect(page.getByRole("dialog").getByRole("heading", { name: "Add recurring" })).toBeVisible();
   });
+
+  test("offers a quarterly repeat", async ({ page }) => {
+    await page.getByRole("button", { name: "Add recurring" }).first().click();
+
+    await expect(page.getByRole("dialog").getByRole("radio", { name: "Quarterly" })).toBeVisible();
+  });
 });

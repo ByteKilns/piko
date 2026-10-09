@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildRecurringTimeline, dayOfHouseholdCalendar, nextDueDateForDay } from "./recurring-view";
+import { advanceDueDate, buildRecurringTimeline, dayOfHouseholdCalendar, monthlyEquivalent, nextDueDateForDay } from "./recurring-view";
 
 describe("buildRecurringTimeline", () => {
   it("marks due, paid, today and past days across the period", () => {
@@ -66,5 +66,25 @@ describe("nextDueDateForDay", () => {
 describe("dayOfHouseholdCalendar", () => {
   it("reads the day straight off an AD date in english mode", () => {
     expect(dayOfHouseholdCalendar("2026-10-09", "english")).toBe(9);
+  });
+});
+
+describe("advanceDueDate", () => {
+  it("advances by the cycle length", () => {
+    expect(advanceDueDate("2026-01-15", "monthly")).toBe("2026-02-15");
+    expect(advanceDueDate("2026-01-15", "quarterly")).toBe("2026-04-15");
+    expect(advanceDueDate("2026-01-15", "yearly")).toBe("2027-01-15");
+  });
+
+  it("clamps a leap-day date", () => {
+    expect(advanceDueDate("2024-02-29", "yearly")).toBe("2025-03-01");
+  });
+});
+
+describe("monthlyEquivalent", () => {
+  it("spreads each frequency across the month", () => {
+    expect(monthlyEquivalent("monthly")).toBe(1);
+    expect(monthlyEquivalent("quarterly")).toBeCloseTo(1 / 3);
+    expect(monthlyEquivalent("yearly")).toBeCloseTo(1 / 12);
   });
 });

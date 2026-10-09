@@ -73,7 +73,7 @@ export async function ExpensesPage({ searchParams }: Props) {
 
   return (
     <ExpensesView
-      categories={categories.map((c) => ({ groupName: c.groupName, id: c.id, name: c.name }))}
+      categories={categories.map((c) => ({ groupName: c.groupName, icon: c.icon, id: c.id, name: c.name }))}
       currentMemberId={memberId}
       dateFormat={dateFormat}
       daysLeft={isCurrentMonth ? daysLeftInMonth(year, month, dateFormat) : null}

@@ -8,7 +8,7 @@ export async function CategoriesPage() {
 
   return (
     <CategoriesView
-      categories={categories.map((c) => ({ archived: c.archived, budgetType: c.budgetType, groupName: c.groupName, id: c.id, name: c.name }))}
+      categories={categories.map((c) => ({ archived: c.archived, budgetType: c.budgetType, groupName: c.groupName, icon: c.icon, id: c.id, name: c.name }))}
     />
   );
 }

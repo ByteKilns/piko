@@ -12,11 +12,14 @@ import { TextField } from "@/components/TextField";
 import { Button } from "@/components/ui/button";
 import { createCategoryAction, updateCategoryAction } from "@/modules/categories/api/categories.actions";
 import { CATEGORY_GROUPS } from "@/modules/categories/lib/category-icons";
+import { IconPicker } from "@/modules/recurring/components/IconPicker";
+import type { RecurringIcon } from "@/modules/recurring/lib/recurring-icons";
 
 export type CategoryEditing = {
   archived: boolean;
   budgetType: "fixed" | "flexible";
   groupName: string;
+  icon: null | string;
   id: string;
   name: string;
 };
@@ -63,6 +66,7 @@ function CategoryFields({
   const [name, setName] = useState(category?.name ?? "");
   const [groupName, setGroupName] = useState(category?.groupName ?? CATEGORY_GROUPS[0]);
   const [budgetType, setBudgetType] = useState<"fixed" | "flexible">(category?.budgetType ?? "flexible");
+  const [icon, setIcon] = useState<RecurringIcon>((category?.icon as RecurringIcon) ?? "receipt");
   const [error, setError] = useState<string | undefined>();
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -73,7 +77,7 @@ function CategoryFields({
     }
     onPendingChange(true);
     try {
-      const payload = { budgetType, groupName, name: name.trim() };
+      const payload = { budgetType, groupName, icon, name: name.trim() };
       if (category) {
         await updateCategoryAction(category.id, payload);
         toast.success("Category updated");
@@ -118,6 +122,7 @@ function CategoryFields({
         ]}
         value={budgetType}
       />
+      <IconPicker onChange={setIcon} value={icon} />
     </form>
   );
 }

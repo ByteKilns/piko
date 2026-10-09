@@ -243,6 +243,7 @@ export async function DashboardPage({ searchParams }: Props) {
     rows: group.rows.map((row) => ({
       amount: row.amount,
       categoryGroupName: category(row.categoryId)?.groupName ?? "",
+      categoryIcon: category(row.categoryId)?.icon ?? null,
       categoryName: row.categoryName,
       id: row.id,
       note: row.note,

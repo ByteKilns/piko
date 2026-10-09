@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   ]);
 
   return NextResponse.json({
-    categories: categories.map((c) => ({ id: c.id, name: c.name })),
+    categories: categories.map((c) => ({ id: c.id, name: c.name, icon: c.icon })),
     members: members.map((m) => ({ id: m.id, name: m.user.name })),
   });
 }

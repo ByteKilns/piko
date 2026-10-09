@@ -11,6 +11,9 @@ export const categories = pgTable("categories", {
     .references(() => households.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   groupName: text("group_name").notNull(),
+  // Optional icon key (recurring-icon names); null falls back to a keyword
+  // guess from the name. Additive.
+  icon: text("icon"),
   budgetType: budgetTypeEnum("budget_type").notNull().default("flexible"),
   archived: boolean("archived").notNull().default(false),
 });

@@ -40,7 +40,7 @@ import {
 import { roleForOwner } from "@/modules/expenses/lib/member-tone";
 import { markRecurringExpensePaidAction } from "@/modules/recurring/api/recurring.actions";
 
-type Category = { groupName: string; id: string; name: string };
+type Category = { groupName: string; icon?: null | string; id: string; name: string };
 type Member = { id: string; name: string };
 
 export type ExpenseRecord = Omit<ExpenseItem, "categoryName"> & { recurringExpenseId: null | string };
@@ -48,7 +48,7 @@ export type ExpenseRecord = Omit<ExpenseItem, "categoryName"> & { recurringExpen
 export type UpcomingBill = {
   amount: number;
   categoryId: string;
-  frequency: "monthly" | "yearly";
+  frequency: "monthly" | "quarterly" | "yearly";
   id: string;
   name: string;
   nextDueDate: string;
@@ -67,7 +67,7 @@ type Props = {
   monthLabel: string;
   monthNav: MonthNavModel;
   quickCategoryIds: string[];
-  recurringFrequencies: Record<string, "monthly" | "yearly">;
+  recurringFrequencies: Record<string, "monthly" | "quarterly" | "yearly">;
   today: string;
   upcoming: UpcomingBill[];
 };
@@ -80,7 +80,7 @@ const COLUMNS: RowColumns = {
   sm: "28px minmax(0,1fr) 96px 28px",
 };
 const FIRST_DAYS_SHOWN = 7;
-const FREQUENCY_LABEL = { monthly: "Monthly", yearly: "Yearly" } as const;
+const FREQUENCY_LABEL = { monthly: "Monthly", quarterly: "Quarterly", yearly: "Yearly" } as const;
 const RANGE_LABEL: Record<DateRange, string> = { month: "Whole month", today: "Today", week: "Last 7 days" };
 
 function percent(part: number, whole: number) {
@@ -213,7 +213,7 @@ export function ExpensesView(props: Props) {
 
     return (
       <Row columns={COLUMNS} key={row.id} onClick={record ? () => setEditing(record) : undefined}>
-        <CategoryIcon groupName={row.categoryGroupName} name={row.categoryName} variant={upcoming ? "outline" : "filled"} />
+        <CategoryIcon groupName={row.categoryGroupName} icon={categoryById.get(row.categoryId)?.icon} name={row.categoryName} variant={upcoming ? "outline" : "filled"} />
         <div className="flex min-w-0 flex-col gap-0.5">
           <div className="flex min-w-0 items-baseline gap-2.5 overflow-hidden">
             <span className="shrink-0 text-[15px] whitespace-nowrap">{row.categoryName}</span>

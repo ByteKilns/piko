@@ -7,7 +7,7 @@ export const recurringExpenseSchema = z
     amount: z.number().positive(),
     categoryId: z.string().uuid(),
     endDate: z.string().nullable(), // "YYYY-MM-DD"
-    frequency: z.enum(["monthly", "yearly"]),
+    frequency: z.enum(["monthly", "quarterly", "yearly"]),
     icon: z.enum(RECURRING_ICONS),
     name: z.string().min(1),
     nextDueDate: z.string(), // "YYYY-MM-DD"

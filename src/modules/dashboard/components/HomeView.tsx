@@ -37,6 +37,7 @@ export type HomeOwnerRow = {
 export type HomeRecentRow = {
   amount: number;
   categoryGroupName: string;
+  categoryIcon: null | string;
   categoryName: string;
   id: string;
   note: null | string;
@@ -318,7 +319,7 @@ export function HomeView(props: Props) {
                     href="/expenses"
                     key={row.id}
                   >
-                    <CategoryIcon groupName={row.categoryGroupName} name={row.categoryName} />
+                    <CategoryIcon groupName={row.categoryGroupName} icon={row.categoryIcon} name={row.categoryName} />
                     <span className="flex min-w-0 items-baseline gap-2.5">
                       <span className="text-[15px]">{row.categoryName}</span>
                       {row.note && <span className="truncate text-[13px] text-n-600">{row.note}</span>}

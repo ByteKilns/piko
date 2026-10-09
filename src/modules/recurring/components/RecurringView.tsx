@@ -39,7 +39,7 @@ export type RecurringRowModel = {
   canPay: boolean;
   categoryName: string;
   editing: RecurringEditing;
-  frequency: "monthly" | "yearly";
+  frequency: "monthly" | "quarterly" | "yearly";
   icon: string;
   id: string;
   name: string;
@@ -82,7 +82,7 @@ const COLUMNS: RowColumns = {
   md: "28px minmax(140px,1.5fr) minmax(0,0.8fr) minmax(0,1.2fr) 96px 28px",
   sm: "28px minmax(130px,1.5fr) minmax(0,0.7fr) minmax(0,1.3fr) 96px 28px",
 };
-const FREQUENCY_LABEL = { monthly: "Monthly", yearly: "Yearly" } as const;
+const FREQUENCY_LABEL = { monthly: "Monthly", quarterly: "Quarterly", yearly: "Yearly" } as const;
 
 export function RecurringView(props: Props) {
   const { currentMemberId, members } = props;

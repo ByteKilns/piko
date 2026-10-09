@@ -139,6 +139,39 @@ export async function deleteDhukuAction(id: string) {
   revalidateDhukuPaths();
 }
 
+async function setDhukuCompleted(id: string, completed: boolean) {
+  const member = await getCurrentMember();
+  const { householdId } = member;
+  const before = await findDhukuInHousehold(householdId, id);
+  if (!before) return;
+
+  const [updated] = await db
+    .update(dhukus)
+    .set({ completedAt: completed ? new Date() : null })
+    .where(and(eq(dhukus.id, id), eq(dhukus.householdId, householdId)))
+    .returning();
+
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: completed ? "completed" : "resumed",
+    after: updated,
+    before,
+    entityId: id,
+    entityType: "dhuku",
+    summary: dhukuSummary(f, before),
+  });
+
+  revalidateDhukuPaths();
+}
+
+export async function completeDhukuAction(id: string) {
+  await setDhukuCompleted(id, true);
+}
+
+export async function reopenDhukuAction(id: string) {
+  await setDhukuCompleted(id, false);
+}
+
 async function getDhukuInHousehold(householdId: string, dhukuId: string) {
   const dhuku = await findDhukuInHousehold(householdId, dhukuId);
   if (!dhuku) {

@@ -37,10 +37,11 @@ export async function createCategoryAction(input: CategoryInput) {
       budgetType: parsed.budgetType,
       groupName: parsed.groupName,
       householdId,
+      icon: parsed.icon ?? null,
       name: parsed.name,
     })
     .returning();
-  const category = { archived: row.archived, budgetType: row.budgetType, groupName: row.groupName, id: row.id, name: row.name };
+  const category = { archived: row.archived, budgetType: row.budgetType, groupName: row.groupName, icon: row.icon, id: row.id, name: row.name };
 
   await logActivity(activityActor(member), {
     action: "created",
@@ -65,7 +66,7 @@ export async function updateCategoryAction(id: string, input: CategoryInput) {
 
   const [updated] = await db
     .update(categories)
-    .set({ budgetType: parsed.budgetType, groupName: parsed.groupName, name: parsed.name })
+    .set({ budgetType: parsed.budgetType, groupName: parsed.groupName, name: parsed.name, ...(parsed.icon !== undefined ? { icon: parsed.icon } : {}) })
     .where(and(eq(categories.id, id), eq(categories.householdId, householdId)))
     .returning();
 

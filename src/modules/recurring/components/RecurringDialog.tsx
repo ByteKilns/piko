@@ -30,7 +30,7 @@ export type RecurringEditing = {
   categoryId: string;
   dueDay: number;
   endDate: null | string;
-  frequency: "monthly" | "yearly";
+  frequency: "monthly" | "quarterly" | "yearly";
   icon: string;
   id: string;
   name: string;
@@ -91,7 +91,7 @@ function RecurringFields({ categories, currentMemberId, dateFormat, editing, mem
 
   const [name, setName] = useState(editing?.name ?? "");
   const [amount, setAmount] = useState(editing ? String(editing.amount) : "");
-  const [frequency, setFrequency] = useState<"monthly" | "yearly">(editing?.frequency ?? "monthly");
+  const [frequency, setFrequency] = useState<"monthly" | "quarterly" | "yearly">(editing?.frequency ?? "monthly");
   const [owner, setOwner] = useState<RecurringOwnerKey>(editing?.ownerKey ?? "me");
   const [dueDay, setDueDay] = useState(editing ? String(editing.dueDay) : "1");
   const [categoryId, setCategoryId] = useState(editing?.categoryId ?? defaultCategoryId);
@@ -175,6 +175,7 @@ function RecurringFields({ categories, currentMemberId, dateFormat, editing, mem
         onChange={setFrequency}
         options={[
           { label: "Monthly", value: "monthly" },
+          { label: "Quarterly", value: "quarterly" },
           { label: "Yearly", value: "yearly" },
         ]}
         value={frequency}

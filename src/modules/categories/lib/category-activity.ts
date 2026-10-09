@@ -1,6 +1,6 @@
 import { diffFields, type FieldSpec } from "@/modules/activity/lib/diff";
 
-export type CategorySnapshot = { budgetType: string; groupName: string; name: string };
+export type CategorySnapshot = { budgetType: string; groupName: string; icon?: null | string; name: string };
 
 function budgetTypeLabel(value: unknown): null | string {
   if (value === "fixed") return "Fixed";
@@ -22,6 +22,7 @@ export function categoryFields(): FieldSpec<CategorySnapshot>[] {
     { format: text, key: "name", label: "Name" },
     { format: text, key: "groupName", label: "Group" },
     { format: budgetTypeLabel, key: "budgetType", label: "Type" },
+    { format: text, key: "icon", label: "Icon" },
   ];
 }
 

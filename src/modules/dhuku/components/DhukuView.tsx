@@ -15,7 +15,7 @@ import { RowMenu } from "@/components/RowMenu";
 import { Row, type RowColumns, RowsHeader } from "@/components/Rows";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { deleteDhukuAction, deleteDhukuEntryAction } from "@/modules/dhuku/api/dhuku.actions";
+import { completeDhukuAction, deleteDhukuAction, deleteDhukuEntryAction, reopenDhukuAction } from "@/modules/dhuku/api/dhuku.actions";
 import { DhukuDialog, type DhukuEditing, type DhukuOwnerKey } from "@/modules/dhuku/components/DhukuDialog";
 import { LogEntryDialog, type LogEntryTarget } from "@/modules/dhuku/components/LogEntryDialog";
 import type { DhukuCell } from "@/modules/dhuku/lib/dhuku-view";
@@ -32,6 +32,7 @@ export type DhukuRowModel = {
   editing: DhukuEditing;
   entries: DhukuEntryModel[];
   id: string;
+  manualCompleted: boolean;
   monthly: number;
   monthText: string;
   name: string;
@@ -241,6 +242,9 @@ export function DhukuView(props: Props) {
                 <RowMenu
                   items={[
                     { label: "Edit", onSelect: () => setDialog({ editing: row.editing, open: true }) },
+                    row.manualCompleted
+                      ? { label: "Reopen", onSelect: () => void run(() => reopenDhukuAction(row.id), "Dhuku reopened") }
+                      : { label: "Mark completed", onSelect: () => void run(() => completeDhukuAction(row.id), "Dhuku completed") },
                     { destructive: true, label: "Delete", onSelect: () => void remove(row) },
                   ]}
                 />

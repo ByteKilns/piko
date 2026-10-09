@@ -4,7 +4,7 @@ import { categories } from "./categories";
 import { householdMembers } from "./householdMembers";
 import { households } from "./households";
 
-export const recurringFrequencyEnum = pgEnum("recurring_frequency", ["monthly", "yearly"]);
+export const recurringFrequencyEnum = pgEnum("recurring_frequency", ["monthly", "quarterly", "yearly"]);
 export const recurringStatusEnum = pgEnum("recurring_status", ["active", "paused", "completed"]);
 
 export const recurringExpenses = pgTable("recurring_expenses", {

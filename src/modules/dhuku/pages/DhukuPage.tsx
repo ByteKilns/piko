@@ -29,16 +29,16 @@ export async function DhukuPage() {
     const entriesLite = rawEntries.map((e) => ({ amount: Number(e.amount), date: e.date, id: e.id, note: e.note, type: e.type }));
     const progress = dhukuProgress(entriesLite);
     const months = dhuku.totalMembers;
-    const completed = progress.paidCount >= months;
+    const completed = dhuku.completedAt !== null || progress.paidCount >= months;
     const active = !completed;
     const monthly = Number(dhuku.monthlyContribution);
     const interest = dhuku.interestPerMonth === null ? null : Number(dhuku.interestPerMonth);
     const nextDueDate = completed ? null : addMonths(dhuku.startDate, progress.paidCount);
     const nextAmount = progress.payoutAt !== null ? monthly + (interest ?? 0) : monthly;
-    return { active, completed, dhuku, interest, monthly, months, nextAmount, nextDueDate, progress, rawEntries };
+    return { active, completed, dhuku, interest, manualCompleted: dhuku.completedAt !== null, monthly, months, nextAmount, nextDueDate, progress, rawEntries };
   });
 
-  const rows: DhukuRowModel[] = computed.map(({ active, completed, dhuku, interest, monthly, months, nextAmount, nextDueDate, progress, rawEntries }) => {
+  const rows: DhukuRowModel[] = computed.map(({ active, completed, dhuku, interest, manualCompleted, monthly, months, nextAmount, nextDueDate, progress, rawEntries }) => {
     let nextSub: string;
     let nextTone: "default" | "muted" | "negative";
     if (completed || nextDueDate === null) {
@@ -79,6 +79,7 @@ export async function DhukuPage() {
       },
       entries,
       id: dhuku.id,
+      manualCompleted,
       monthly,
       monthText: completed ? `All ${months} months paid` : `Month ${progress.paidCount + 1} of ${months}`,
       name: dhuku.name,

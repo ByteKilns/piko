@@ -19,4 +19,10 @@ test.describe("budget", () => {
 
     await expect(page.getByRole("dialog").getByRole("heading", { name: "Set a budget" })).toBeVisible();
   });
+
+  test("opens the set-income dialog", async ({ page }) => {
+    await page.getByRole("button", { name: "Set income" }).click();
+
+    await expect(page.getByRole("dialog").getByRole("heading", { name: "Set income" })).toBeVisible();
+  });
 });

@@ -23,6 +23,9 @@ export const dhukus = pgTable("dhukus", {
   interestPerMonth: numeric("interest_per_month", { precision: 12, scale: 2 }),
   startDate: date("start_date").notNull(),
   note: text("note"),
+  // Set when a dhuku is manually marked completed (or auto-completes); null
+  // means it's derived from the logged months.
+  completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

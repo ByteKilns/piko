@@ -16,10 +16,9 @@ import { listCategories } from "@/modules/categories/api/categories";
 import { listExpensesForMonth } from "@/modules/expenses/api/expenses.actions";
 import { listRecurringExpenses } from "@/modules/recurring/api/recurring.actions";
 import { type RecurringRowModel, RecurringView } from "@/modules/recurring/components/RecurringView";
-import { buildRecurringTimeline, dayOfHouseholdCalendar, type TimelineEntry } from "@/modules/recurring/lib/recurring-view";
+import { buildRecurringTimeline, dayOfHouseholdCalendar, monthlyEquivalent, type TimelineEntry } from "@/modules/recurring/lib/recurring-view";
 
-const FREQUENCY_LABEL = { monthly: "Monthly", yearly: "Yearly" } as const;
-const PER_MONTH = { monthly: 1, yearly: 1 / 12 } as const;
+const FREQUENCY_LABEL = { monthly: "Monthly", quarterly: "Quarterly", yearly: "Yearly" } as const;
 
 function percent(part: number, whole: number): number {
   return whole > 0 ? Math.round((part / whole) * 100) : 0;
@@ -118,7 +117,7 @@ export async function RecurringPage({ searchParams }: Props) {
   });
 
   const activeItems = recurringItems.filter((i) => i.status === "active");
-  const monthly = activeItems.reduce((sum, i) => sum + Number(i.amount) * PER_MONTH[i.frequency], 0);
+  const monthly = activeItems.reduce((sum, i) => sum + Number(i.amount) * monthlyEquivalent(i.frequency), 0);
   const income = incomes.reduce((sum, i) => sum + Number(i.amount), 0);
   const paidTotal = paidExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const dueItems = activeItems.filter((i) => !paidIds.has(i.id) && dayNumberInPeriod(i.nextDueDate, year, month, dateFormat) !== null);

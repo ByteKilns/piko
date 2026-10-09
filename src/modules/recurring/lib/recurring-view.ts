@@ -94,3 +94,26 @@ export function dayOfHouseholdCalendar(dateStr: string, dateFormat: DateFormat):
   if (dateFormat === "english") return Number(dateStr.split("-")[2]);
   return adToBs(dateStr).day;
 }
+
+export type RecurringFrequency = "monthly" | "quarterly" | "yearly";
+
+// How many months until the next occurrence.
+const MONTHS_PER_CYCLE: Record<RecurringFrequency, number> = { monthly: 1, quarterly: 3, yearly: 12 };
+
+// Advances an AD due date by one cycle. Yearly/quarterly go through month
+// arithmetic (yearly = +12 months) so leap-day dates clamp the same way.
+export function advanceDueDate(dueDate: string, frequency: RecurringFrequency): string {
+  const next = new Date(`${dueDate}T00:00:00`);
+  next.setMonth(next.getMonth() + MONTHS_PER_CYCLE[frequency]);
+  const year = next.getFullYear();
+  const month = String(next.getMonth() + 1).padStart(2, "0");
+  const day = String(next.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// The monthly-equivalent of one cycle's amount (monthly ×1, quarterly ×⅓,
+// yearly ×1/12) — what the ledger calls "monthly commitments".
+export function monthlyEquivalent(frequency: RecurringFrequency): number {
+  return 1 / MONTHS_PER_CYCLE[frequency];
+}
+

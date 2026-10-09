@@ -10,6 +10,7 @@ import { activityActor, loadActivityFormatters, logActivities, logActivity } fro
 import { listCategories } from "@/modules/categories/api/categories";
 import { expenseSummary } from "@/modules/expenses/lib/expense-activity";
 import { recurringChanges, recurringSummary } from "@/modules/recurring/lib/recurring-activity";
+import { advanceDueDate } from "@/modules/recurring/lib/recurring-view";
 import { type RecurringExpenseInput, recurringExpenseSchema } from "@/modules/recurring/schemas/recurring.schema";
 
 function revalidateRecurringPaths() {
@@ -192,16 +193,6 @@ export async function resumeRecurringExpenseAction(id: string) {
 
 export async function completeRecurringExpenseAction(id: string) {
   await setRecurringStatus(id, "completed", "completed");
-}
-
-function advanceDueDate(dueDate: string, frequency: "monthly" | "yearly"): string {
-  const next = new Date(`${dueDate}T00:00:00`);
-  if (frequency === "monthly") {
-    next.setMonth(next.getMonth() + 1);
-  } else {
-    next.setFullYear(next.getFullYear() + 1);
-  }
-  return next.toISOString().slice(0, 10);
 }
 
 // Marking a recurring item paid logs a real expense against it (so it shows

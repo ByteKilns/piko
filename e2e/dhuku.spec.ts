@@ -20,4 +20,10 @@ test.describe("dhuku", () => {
 
     await expect(page.getByRole("dialog").getByRole("heading", { name: "Add a dhuku" })).toBeVisible();
   });
+
+  test("opens the log-entry dialog", async ({ page }) => {
+    await page.getByRole("button", { name: "Log entry" }).first().click();
+
+    await expect(page.getByRole("dialog").getByRole("heading", { name: "Log entry" })).toBeVisible();
+  });
 });

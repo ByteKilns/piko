@@ -80,7 +80,7 @@ export function CategoriesView({ categories }: { categories: CategoryEditing[] }
           </RowGroupHead>
           {group.rows.map((category) => (
             <Row columns={COLUMNS} key={category.id} onClick={() => setDialog({ editing: category, open: true })}>
-              <CategoryIcon groupName={category.groupName} name={category.name} />
+              <CategoryIcon groupName={category.groupName} icon={category.icon} name={category.name} />
               <span className="truncate text-[15px]">{category.name}</span>
               <span className="text-xs text-n-600">{category.budgetType === "fixed" ? "Fixed" : "Flexible"}</span>
               <div className="flex justify-end">
