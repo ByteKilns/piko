@@ -80,6 +80,17 @@ It also carries the Next-only bits a module can't: `export const metadata` (page
 and, when needed, route segment config (`dynamic`, `revalidate`, `runtime`, …).
 Route handlers in `src/app/api/**` are the exception — they hold real logic.
 
+**Redesigned pages** follow a two-part split: the `pages/<X>Page.tsx` server component
+fetches data and shapes a plain model, then renders a client `components/<X>View.tsx`
+that owns local UI state (tabs, filters, dialogs) and calls server actions. Each page
+renders a single root element (the layout no longer adds vertical spacing). The visual
+language lives in the shared composites under `src/components/` (`PageHeader`, `Ledger`,
+`Rows`, `Modal`, `Money`, `Meter`, `LineTabs`, `Segmented`, …) and the tokens in
+`src/app/globals.css`; read `docs/superpowers/specs/2026-10-07-modernist-redesign-design.md`
+before adding UI. Layout responds to the page's `@container`, not the viewport
+(`@min-[780px]:` etc.). Pages a backend can't yet fill use one clearly named `MOCK_*`
+constant — never a fake write.
+
 **Worked example:** `expenses`. `api/expenses.actions.ts` holds `createExpenseAction`
 (session-based) plus `createExpenseForHousehold(input, { actorName, householdId })` —
 the shared core that both the web action and the mobile route call. Reuse that pattern:
@@ -120,13 +131,15 @@ put the tenancy-agnostic logic in a `...ForHousehold` function so web and mobile
 
 - **Identity** — `users`, `households`, `household_members` (join of user↔household;
   the source of `householdId`/`memberId` for a session).
-- **Money in/out** — `categories` (per household, `budgetType` fixed/flexible, archivable),
-  `expenses` (`paidByMemberId` required, `ownerMemberId` null=shared, optional
-  `recurringExpenseId`), `incomes` (per member/month), `recurring_expenses` (bills with
-  `nextDueDate`), `monthly_budgets` + `budget_items` (planned amount per category/owner).
+- **Money in/out** — `categories` (per household, `budgetType` fixed/flexible, optional
+  `icon` key, archivable), `expenses` (`paidByMemberId` required, `ownerMemberId` null=shared,
+  optional `recurringExpenseId`), `incomes` (per member/month), `recurring_expenses` (bills
+  with `nextDueDate`, `frequency` monthly/quarterly/yearly), `monthly_budgets` +
+  `budget_items` (planned amount per category/owner).
 - **Goals & obligations** — `savings_goals` + `savings_contributions`,
   `loans` + `loan_payments` (`direction` given/taken), `dhukus` + `dhuku_entries`
-  (rotating savings group: contribution/payout).
+  (rotating savings group: contribution/payout; `completedAt` set when marked complete,
+  otherwise derived from the logged months).
 - **System** — `notifications` (deduped via unique `(householdId, dedupeKey)`),
   `activity_logs` (append-only audit trail: actor, entity, action, display-ready
   summary + field diffs, web/mobile source; written by actions via `logActivity`,
@@ -150,8 +163,9 @@ Conventions to keep when adding columns/tables:
   chains so the real Postgres error is visible server-side — the client error boundary
   (`src/components/ErrorState.tsx`) only sees a stripped message.
 - **Safe-to-spend pacing** (`src/modules/dashboard/lib/pacing.ts`): splits the
-  month's flexible budget into a weekly release with a last-week buffer,
-  surfaced on the dashboard.
+  month's flexible budget into a weekly release with a last-week buffer, carries
+  unspent allowance forward between weeks, and surfaces `safeToday` (remaining ÷
+  days left in the week) on the dashboard hero.
 - **App releases**: publishing is gated by `APP_RELEASE_ADMIN_EMAILS`
   (`src/lib/release-admin.ts`); APKs are uploaded to Vercel Blob via a client-token
   flow (`src/app/api/app-releases/upload/route.ts`). `handleUpload` requires

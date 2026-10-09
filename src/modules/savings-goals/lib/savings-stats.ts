@@ -1,9 +1,33 @@
 import { formatMonthShort } from "@/lib/date-format";
 import type { DateFormat } from "@/lib/date-format-cookie";
-import type { GoalCardData } from "@/modules/savings-goals/components/GoalCard";
-import type { ContributionEntry } from "@/modules/savings-goals/components/RecentContributionsCard";
+import type { MemberRole } from "@/modules/expenses/lib/member-tone";
 
 export type GoalStatus = "at-risk" | "behind" | "on-track";
+
+export type GoalCardData = {
+  createdAt: Date;
+  description: null | string;
+  id: string;
+  image: null | string;
+  name: string;
+  ownerMemberId: null | string;
+  ownerName: null | string;
+  pct: null | number;
+  saved: number;
+  status: GoalStatus;
+  targetAmount: null | number;
+  targetDate: null | string;
+};
+
+export type ContributionEntry = {
+  amount: number;
+  date: string;
+  goalImage: null | string;
+  goalName: string;
+  id: string;
+  ownerLabel: string;
+  role: MemberRole;
+};
 
 export type Goal = {
   createdAt: Date;

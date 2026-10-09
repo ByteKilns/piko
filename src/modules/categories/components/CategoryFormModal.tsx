@@ -9,9 +9,10 @@ import { SelectField } from "@/components/SelectField";
 import { TextField } from "@/components/TextField";
 import { Button } from "@/components/ui/button";
 import { createCategoryAction, updateCategoryAction } from "@/modules/categories/api/categories.actions";
-import type { Category } from "@/modules/categories/hooks/useCategoryTableColumns";
 import { CATEGORY_GROUPS } from "@/modules/categories/lib/category-icons";
 import { type CategoryInput, categorySchema } from "@/modules/categories/schemas/category.schema";
+
+type Category = { archived: boolean; budgetType: "fixed" | "flexible"; groupName: string; id: string; name: string };
 
 type Props = {
   category: Category | null;

@@ -38,10 +38,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         unreadNotifications={unreadNotifications}
       />
       <main className="min-w-0 flex-1 px-4 pt-5 pb-28 md:px-12 md:pt-9 md:pb-16">
-        {/* @container: composites lay out against the content width, not the window.
-            space-y-6 spaces the pages not yet redesigned (each redesigned page renders
-            a single root element); removed in phase 6. */}
-        <div className="@container max-w-280 space-y-6">{children}</div>
+        {/* @container: composites lay out against the content width, not the window. */}
+        <div className="@container max-w-280">{children}</div>
       </main>
       <BottomNav
         categories={expenseCategories}

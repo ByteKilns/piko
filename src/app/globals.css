@@ -39,11 +39,6 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -60,9 +55,6 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --color-surface-secondary: var(--surface-secondary);
-  --color-surface-featured: var(--surface-featured);
-  --color-surface-positive: var(--surface-positive);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -119,15 +111,6 @@
   --sidebar-accent-foreground: var(--ink);
   --sidebar-border: var(--rule);
   --sidebar-ring: var(--signal);
-  /* Retired in phase 6. Remapped so pages not yet redesigned sit on the new palette. */
-  --surface-secondary: var(--surface);
-  --surface-featured: var(--surface);
-  --surface-positive: var(--surface);
-  --chart-1: var(--n-300);
-  --chart-2: var(--n-500);
-  --chart-3: var(--n-600);
-  --chart-4: var(--n-700);
-  --chart-5: var(--ink);
 }
 
 /* next-themes puts .dark on <html> (the :root element), so every variable
