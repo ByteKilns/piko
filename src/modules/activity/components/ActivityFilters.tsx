@@ -34,27 +34,27 @@ export function ActivityFilters({ members, realMemberId, value }: Props) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-2 shadow-[0_2px_12px_rgba(102,45,145,0.06)]">
+    <div className="flex flex-wrap items-center gap-1 pt-4 pb-6">
       <form
-        className="relative min-w-48 flex-1"
+        className="relative mr-2.5 min-w-48 flex-[0_1_290px]"
         onSubmit={(e) => {
           e.preventDefault();
           apply({ q: query.trim() || undefined });
         }}
         role="search"
       >
-        <Search className="pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-n-600" />
         <Input
           aria-label="Search activity"
-          className="bg-muted pl-8"
+          className="pl-8"
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search activity..."
           value={query}
         />
       </form>
 
-      <label className="flex items-center gap-1.5 rounded-lg border border-input bg-muted px-2.5 py-1.5 text-sm text-foreground">
-        <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+      <label className="flex items-center gap-1.5 border border-n-400 px-2.5 py-1.5 text-sm text-n-800">
+        <CalendarDays className="h-3.5 w-3.5 shrink-0 text-n-600" />
         <input
           aria-label="From date"
           className="w-28 bg-transparent outline-none"
@@ -62,7 +62,7 @@ export function ActivityFilters({ members, realMemberId, value }: Props) {
           type="date"
           value={value.from ?? ""}
         />
-        <span className="text-muted-foreground/60">to</span>
+        <span className="text-n-500">to</span>
         <input
           aria-label="To date"
           className="w-28 bg-transparent outline-none"
@@ -72,7 +72,7 @@ export function ActivityFilters({ members, realMemberId, value }: Props) {
         />
       </label>
 
-      <div className="mx-1 h-5 w-px shrink-0 bg-border" />
+      <div className="mx-1 h-5 w-px shrink-0 bg-n-300" />
 
       <Select onValueChange={(v) => apply({ member: v === ALL ? undefined : v })} value={value.member ?? ALL}>
         <SelectTrigger aria-label="Member" className="text-muted-foreground" size="sm">
@@ -116,7 +116,7 @@ export function ActivityFilters({ members, realMemberId, value }: Props) {
         </SelectContent>
       </Select>
 
-      <Button className="ml-auto text-muted-foreground" disabled={!hasActiveFilters} onClick={clearFilters} type="button" variant="ghost">
+      <Button className="ml-auto text-n-600" disabled={!hasActiveFilters} onClick={clearFilters} type="button" variant="ghost">
         Clear filters
       </Button>
     </div>

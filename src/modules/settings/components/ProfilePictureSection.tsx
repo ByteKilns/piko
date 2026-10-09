@@ -5,10 +5,10 @@ import { useRef, useState, useTransition } from "react";
 import { Upload } from "lucide-react";
 import { toast } from "sonner";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SectionHeading } from "@/components/SectionHeading";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateProfileImageAction } from "@/modules/settings/api/settings.actions";
+import { SettingsRow } from "@/modules/settings/components/SettingsRow";
 
 const TARGET_SIZE = 160;
 
@@ -27,9 +27,7 @@ function resizeToDataUrl(file: File): Promise<string> {
         return;
       }
       const side = Math.min(img.width, img.height);
-      const sx = (img.width - side) / 2;
-      const sy = (img.height - side) / 2;
-      ctx.drawImage(img, sx, sy, side, side, 0, 0, TARGET_SIZE, TARGET_SIZE);
+      ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, TARGET_SIZE, TARGET_SIZE);
       resolve(canvas.toDataURL("image/jpeg", 0.85));
     };
     img.onerror = () => reject(new Error("Could not read image"));
@@ -44,50 +42,58 @@ export function ProfilePictureSection({ initialImage, name }: Props) {
   const [pending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
+  function save(next: null | string) {
+    setImage(next);
+    startTransition(async () => {
+      try {
+        await updateProfileImageAction(next);
+        toast.success(next ? "Photo updated" : "Photo removed");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to save photo");
+      }
+    });
+  }
 
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
     try {
-      const dataUrl = await resizeToDataUrl(file);
-      setImage(dataUrl);
-      startTransition(async () => {
-        try {
-          await updateProfileImageAction(dataUrl);
-          toast.success("Profile picture updated");
-        } catch (err) {
-          toast.error(err instanceof Error ? err.message : "Failed to save profile picture");
-        }
-      });
+      save(await resizeToDataUrl(file));
     } catch {
       toast.error("Could not process that image");
     }
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium">Profile picture</CardTitle>
-      </CardHeader>
-      <CardContent className="flex items-center gap-4">
-        <Avatar className="size-16" size="lg">
-          {image && <AvatarImage alt={name} src={image} />}
-          <AvatarFallback className="bg-primary/10 text-lg text-primary">
-            {name.charAt(0).toUpperCase() || "?"}
-          </AvatarFallback>
-        </Avatar>
-
-        <div>
-          <Button disabled={pending} onClick={() => inputRef.current?.click()} type="button" variant="outline">
-            <Upload className="h-4 w-4" />
-            {pending ? "Uploading..." : "Change picture"}
-          </Button>
-          <p className="mt-1 text-xs text-muted-foreground">JPG or PNG, square images look best.</p>
-        </div>
-
-        <input accept="image/*" className="hidden" onChange={handleFileChange} ref={inputRef} type="file" />
-      </CardContent>
-    </Card>
+    <section>
+      <SectionHeading>Profile</SectionHeading>
+      <SettingsRow
+        control={
+          <div className="flex items-center gap-3">
+            <span className="grid size-12 shrink-0 place-items-center overflow-hidden bg-surface text-lg font-semibold text-n-700">
+              {image ? (
+                // eslint-disable-next-line @next/next/no-img-element -- a client-side data URL, not a remote asset
+                <img alt={name} className="h-full w-full object-cover" src={image} />
+              ) : (
+                name.charAt(0).toUpperCase() || "?"
+              )}
+            </span>
+            <Button disabled={pending} onClick={() => inputRef.current?.click()} type="button" variant="outline">
+              <Upload />
+              Change
+            </Button>
+            {image && (
+              <Button disabled={pending} onClick={() => save(null)} type="button" variant="ghost">
+                Remove
+              </Button>
+            )}
+            <input accept="image/*" className="hidden" onChange={handleFileChange} ref={inputRef} type="file" />
+          </div>
+        }
+        description="JPG or PNG — square images look best."
+        label="Photo"
+      />
+    </section>
   );
 }

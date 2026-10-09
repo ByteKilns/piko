@@ -5,9 +5,9 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { SectionHeading } from "@/components/SectionHeading";
 import { TextField } from "@/components/TextField";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { changePasswordAction } from "@/modules/settings/api/settings.actions";
 import { changePasswordSchema } from "@/modules/settings/schemas/password.schema";
 
@@ -48,41 +48,37 @@ export function PasswordSection() {
   });
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium">Password</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form className="max-w-sm space-y-3" onSubmit={onSubmit}>
-          <TextField
-            autoComplete="current-password"
-            error={errors.currentPassword?.message}
-            id="current-password"
-            label="Current password"
-            type="password"
-            {...register("currentPassword")}
-          />
-          <TextField
-            autoComplete="new-password"
-            error={errors.newPassword?.message}
-            id="new-password"
-            label="New password"
-            type="password"
-            {...register("newPassword")}
-          />
-          <TextField
-            autoComplete="new-password"
-            error={errors.confirmPassword?.message}
-            id="confirm-password"
-            label="Confirm new password"
-            type="password"
-            {...register("confirmPassword")}
-          />
-          <Button disabled={isSubmitting} type="submit">
-            {isSubmitting ? "Saving..." : "Change Password"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <section>
+      <SectionHeading>Password</SectionHeading>
+      <form className="flex max-w-sm flex-col gap-3 pt-4" onSubmit={onSubmit}>
+        <TextField
+          autoComplete="current-password"
+          error={errors.currentPassword?.message}
+          id="current-password"
+          label="Current password"
+          type="password"
+          {...register("currentPassword")}
+        />
+        <TextField
+          autoComplete="new-password"
+          error={errors.newPassword?.message}
+          id="new-password"
+          label="New password"
+          type="password"
+          {...register("newPassword")}
+        />
+        <TextField
+          autoComplete="new-password"
+          error={errors.confirmPassword?.message}
+          id="confirm-password"
+          label="Confirm new password"
+          type="password"
+          {...register("confirmPassword")}
+        />
+        <Button className="self-start" disabled={isSubmitting} type="submit">
+          {isSubmitting ? "Saving..." : "Change Password"}
+        </Button>
+      </form>
+    </section>
   );
 }

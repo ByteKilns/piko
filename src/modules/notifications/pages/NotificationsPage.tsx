@@ -1,10 +1,7 @@
-import { Bell, CalendarDays, CircleAlert, CircleCheck } from "lucide-react";
 import { cookies } from "next/headers";
 
-import { StatAmount } from "@/components/StatAmount";
-import { StatCardGrid } from "@/components/StatCardGrid";
-import { formatMonthYear } from "@/lib/date-format";
-import { getDateFormatPref } from "@/lib/date-format-cookie";
+import { formatShortDate } from "@/lib/date-format";
+import { type DateFormat, getDateFormatPref } from "@/lib/date-format-cookie";
 import { NOTIFICATION_PREFS_COOKIE_NAME, parseNotificationPreferences } from "@/lib/notification-preferences-cookie";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { listCategories } from "@/modules/categories/api/categories";
@@ -15,15 +12,25 @@ import {
   syncDueSoonNotifications,
   syncLoanInstallmentsDueSoonNotifications,
 } from "@/modules/notifications/api/notifications.actions";
-import { NotificationsHeader } from "@/modules/notifications/components/NotificationsHeader";
-import { NotificationsPageClient } from "@/modules/notifications/components/NotificationsPageClient";
+import { type NotificationRowModel, NotificationsView, type UpcomingPaymentModel } from "@/modules/notifications/components/NotificationsView";
+import { formatNotificationTime } from "@/modules/notifications/lib/notification-format";
 import { listRecurringExpenses } from "@/modules/recurring/api/recurring.actions";
-import { trendPct } from "@/modules/reports/lib/reports-stats";
 
 function displayLabel(role: "me" | "partner" | "shared", name: string): string {
   if (role === "shared") return "Shared";
   if (role === "me") return "Me";
   return name;
+}
+
+function dayLabelFor(createdAt: Date, dateFormat: DateFormat): string {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const day = new Date(createdAt);
+  day.setHours(0, 0, 0, 0);
+  const diff = Math.round((today.getTime() - day.getTime()) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  return formatShortDate(createdAt.toISOString().slice(0, 10), dateFormat);
 }
 
 export async function NotificationsPage() {
@@ -45,115 +52,56 @@ export async function NotificationsPage() {
   ]);
 
   const preferences = parseNotificationPreferences(cookieStore.get(NOTIFICATION_PREFS_COOKIE_NAME)?.value);
-
   const categoryById = new Map(categories.map((c) => [c.id, c]));
   const memberById = new Map(members.map((m) => [m.id, m]));
 
-  const rows = notificationRows.map((n) => ({
+  const rows: NotificationRowModel[] = notificationRows.map((n) => ({
     body: n.body,
     category: n.category,
-    createdAt: n.createdAt,
+    dayLabel: dayLabelFor(n.createdAt, dateFormat),
     id: n.id,
-    readAt: n.readAt,
-    severity: n.severity,
+    read: n.readAt !== null,
+    time: formatNotificationTime(n.createdAt, dateFormat),
     title: n.title,
   }));
 
   const now = new Date();
   const in7Days = new Date(now);
   in7Days.setDate(in7Days.getDate() + 7);
-  const upcomingPayments = recurringItems
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const upcoming: UpcomingPaymentModel[] = recurringItems
     .filter((item) => item.status === "active")
     .filter((item) => {
       const due = new Date(`${item.nextDueDate}T00:00:00`);
-      return due >= new Date(now.getFullYear(), now.getMonth(), now.getDate()) && due <= in7Days;
+      return due >= startOfToday && due <= in7Days;
     })
     .sort((a, b) => a.nextDueDate.localeCompare(b.nextDueDate))
     .map((item) => {
       const owner = item.ownerMemberId ? memberById.get(item.ownerMemberId) : null;
-      const ownerLabel = displayLabel(roleForOwner(item.ownerMemberId, memberId), owner?.user.name ?? "Partner");
       return {
         amount: Number(item.amount),
-        categoryGroupName: categoryById.get(item.categoryId)?.groupName ?? "Other",
+        dueLabel: formatShortDate(item.nextDueDate, dateFormat),
+        groupName: categoryById.get(item.categoryId)?.groupName ?? "Other",
         id: item.id,
         name: item.name,
-        nextDueDate: item.nextDueDate,
-        ownerLabel,
+        ownerLabel: displayLabel(roleForOwner(item.ownerMemberId, memberId), owner?.user.name ?? "Partner"),
       };
     });
 
-  const totalNotifications = rows.length;
-  const unreadCount = rows.filter((r) => r.readAt === null).length;
-
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const resolvedThisMonth = rows.filter((r) => r.readAt !== null && r.readAt >= monthStart).length;
-  const resolvedLastMonth = rows.filter((r) => r.readAt !== null && r.readAt >= lastMonthStart && r.readAt < monthStart).length;
-  const resolvedTrend = trendPct(resolvedThisMonth, resolvedLastMonth);
-
-  const monthLabel = formatMonthYear(now.toISOString().slice(0, 10), dateFormat);
+  const resolvedThisMonth = notificationRows.filter((n) => n.readAt !== null && n.readAt >= monthStart).length;
 
   return (
-    <>
-      <NotificationsHeader monthLabel={monthLabel} />
-
-      <StatCardGrid
-        cards={[
-          {
-            content: (
-              <div>
-                <StatAmount>{totalNotifications}</StatAmount>
-                <p className="text-xs text-muted-foreground">This month</p>
-              </div>
-            ),
-            icon: Bell,
-            title: "Total notifications",
-            tone: "purple",
-          },
-          {
-            content: (
-              <div>
-                <StatAmount>{unreadCount}</StatAmount>
-                <p className="text-xs text-muted-foreground">Need your attention</p>
-              </div>
-            ),
-            icon: CircleAlert,
-            title: "Unread",
-            tone: "pink",
-          },
-          {
-            content: (
-              <div>
-                <StatAmount>{upcomingPayments.length}</StatAmount>
-                <p className="text-xs text-muted-foreground">Next 7 days</p>
-              </div>
-            ),
-            icon: CalendarDays,
-            title: "Upcoming payments",
-            tone: "amber",
-          },
-          {
-            content: (
-              <div>
-                <StatAmount>{resolvedThisMonth}</StatAmount>
-                <p className="text-xs text-muted-foreground">
-                  {resolvedTrend === null ? "Resolved this month" : `${resolvedTrend >= 0 ? "+" : ""}${resolvedTrend}% vs last month`}
-                </p>
-              </div>
-            ),
-            icon: CircleCheck,
-            title: "Resolved alerts",
-            tone: "green",
-          },
-        ]}
-      />
-
-      <NotificationsPageClient
-        dateFormat={dateFormat}
-        initialPreferences={preferences}
-        rows={rows}
-        upcomingPayments={upcomingPayments}
-      />
-    </>
+    <NotificationsView
+      ledger={{
+        budgetAlerts: rows.filter((r) => r.category === "budget").length,
+        resolved: resolvedThisMonth,
+        unread: rows.filter((r) => !r.read).length,
+        upcomingCount: upcoming.length,
+      }}
+      notifications={rows}
+      preferences={preferences}
+      upcoming={upcoming}
+    />
   );
 }

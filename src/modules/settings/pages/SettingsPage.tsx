@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 
+import { SectionHeading } from "@/components/SectionHeading";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { logoutAction } from "@/lib/actions/auth";
@@ -10,10 +10,11 @@ import { isReleaseAdmin } from "@/lib/release-admin";
 import { getCurrentMember } from "@/lib/session";
 import { listReleases } from "@/modules/app-releases/api/app-releases";
 import { AppReleasesSection } from "@/modules/app-releases/components/AppReleasesSection";
+import { AppearanceSection } from "@/modules/settings/components/AppearanceSection";
 import { DateFormatSection } from "@/modules/settings/components/DateFormatSection";
 import { PasswordSection } from "@/modules/settings/components/PasswordSection";
 import { ProfilePictureSection } from "@/modules/settings/components/ProfilePictureSection";
-import { ThemeSection } from "@/modules/settings/components/ThemeSection";
+import { SettingsRow } from "@/modules/settings/components/SettingsRow";
 
 export async function SettingsPage() {
   const { householdId, userId } = await getCurrentMember();
@@ -25,30 +26,34 @@ export async function SettingsPage() {
   const releases = canPublishReleases ? await listReleases() : [];
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-sm text-muted-foreground">Manage your account and appearance</p>
+    <div className="max-w-180">
+      <header className="mb-8 flex flex-col gap-2">
+        <h1 className="text-[34px] leading-none font-extrabold tracking-[-0.02em]">Settings</h1>
+        <p className="text-[15px] text-n-700">Manage your account and appearance</p>
+      </header>
+
+      <div className="flex flex-col gap-9">
+        <AppearanceSection />
+        <DateFormatSection initialFormat={dateFormat} />
+        <ProfilePictureSection initialImage={user?.image ?? null} name={user?.name ?? "?"} />
+        <PasswordSection />
+        {canPublishReleases && <AppReleasesSection releases={releases} />}
+
+        <section>
+          <SectionHeading>Account</SectionHeading>
+          <SettingsRow
+            control={
+              <form action={logoutAction}>
+                <Button className="text-signal-ink" type="submit" variant="ghost">
+                  Sign out
+                </Button>
+              </form>
+            }
+            description="Sign out of this device."
+            label="Sign out"
+          />
+        </section>
       </div>
-
-      <ThemeSection />
-      <DateFormatSection initialFormat={dateFormat} />
-      <ProfilePictureSection initialImage={user?.image ?? null} name={user?.name ?? "?"} />
-      <PasswordSection />
-      {canPublishReleases && <AppReleasesSection releases={releases} />}
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium">Account</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form action={logoutAction}>
-            <Button type="submit" variant="destructive">
-              Sign out
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
     </div>
   );
 }

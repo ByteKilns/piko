@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { PageHeader } from "@/components/PageHeader";
 import { getDateFormatPref } from "@/lib/date-format-cookie";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 
@@ -34,35 +35,34 @@ export async function ActivityPage({ searchParams }: Props) {
 
   return (
     <>
-      <div>
-        <h1 className="text-xl font-semibold">Activity</h1>
-        <p className="text-sm text-muted-foreground">Who added, edited or deleted what across the household</p>
-      </div>
+      <PageHeader subtitle="Who added, edited or deleted what" title="Activity" />
 
-      <ActivityFilters
-        members={members.map((m) => ({ id: m.id, name: m.user.name }))}
-        realMemberId={memberId}
-        value={params}
-      />
+      <ActivityFilters members={members.map((m) => ({ id: m.id, name: m.user.name }))} realMemberId={memberId} value={params} />
 
       {entries.length === 0 ? (
-        <p className="rounded-xl border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
+        <p className="border-b border-n-300 px-2 py-10 text-sm text-n-700">
           {hasFilters || filters.cursor
             ? "No activity matches these filters."
             : "No activity yet. Changes anyone in the household makes will show up here."}
         </p>
       ) : (
-        <ActivityTimeline
-          dateFormat={dateFormat}
-          entries={entries}
-          memberImages={new Map(members.map((m) => [m.id, m.user.image]))}
-        />
+        <ActivityTimeline dateFormat={dateFormat} entries={entries} realMemberId={memberId} />
       )}
 
       {(filters.cursor || nextCursor) && (
-        <nav aria-label="Activity pages" className="flex items-center justify-between text-sm font-medium text-primary">
-          {filters.cursor ? <Link href={activityHref(params)}>← Back to newest</Link> : <span />}
-          {nextCursor && <Link href={activityHref({ ...params, cursor: nextCursor })}>Older activity →</Link>}
+        <nav aria-label="Activity pages" className="mt-7 flex items-center justify-between border-t-2 border-rule pt-4 text-sm font-semibold">
+          {filters.cursor ? (
+            <Link className="text-signal-ink hover:text-signal" href={activityHref(params)}>
+              ← Back to newest
+            </Link>
+          ) : (
+            <span />
+          )}
+          {nextCursor && (
+            <Link className="text-signal-ink hover:text-signal" href={activityHref({ ...params, cursor: nextCursor })}>
+              Older activity →
+            </Link>
+          )}
         </nav>
       )}
     </>

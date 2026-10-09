@@ -37,7 +37,7 @@ export async function changePasswordAction(input: ChangePasswordInput) {
   });
 }
 
-export async function updateProfileImageAction(imageDataUrl: string) {
+export async function updateProfileImageAction(imageDataUrl: null | string) {
   const member = await getCurrentMember();
   const { userId } = member;
   const parsed = profileImageSchema.parse(imageDataUrl);
@@ -48,7 +48,7 @@ export async function updateProfileImageAction(imageDataUrl: string) {
     action: "updated",
     entityId: member.memberId,
     entityType: "account",
-    summary: "Changed their profile photo",
+    summary: parsed ? "Changed their profile photo" : "Removed their profile photo",
   });
   revalidatePath("/", "layout");
 }

@@ -7,6 +7,7 @@ const MAX_DATA_URL_LENGTH = 500_000;
 export const profileImageSchema = z
   .string()
   .startsWith("data:image/")
-  .max(MAX_DATA_URL_LENGTH);
+  .max(MAX_DATA_URL_LENGTH)
+  .nullable();
 
 export type ProfileImageInput = z.infer<typeof profileImageSchema>;
