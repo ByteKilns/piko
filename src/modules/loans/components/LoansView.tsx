@@ -132,7 +132,7 @@ export function LoansView(props: Props) {
       </Ledger>
 
       <LineTabs
-        className="mt-5.5"
+        className="mt-5.5 mb-6.5"
         label="Direction"
         onChange={(value) => setTab(value)}
         tabs={[

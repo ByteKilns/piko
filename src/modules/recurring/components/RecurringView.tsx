@@ -245,7 +245,7 @@ export function RecurringView(props: Props) {
             />
           </div>
         }
-        className="mt-9"
+        className="mt-9 mb-5.5"
         label="Status"
         onChange={(value) => setTab(value)}
         tabs={[

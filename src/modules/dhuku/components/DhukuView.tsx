@@ -164,7 +164,7 @@ export function DhukuView(props: Props) {
             </span>
           </span>
         }
-        className="mt-5.5"
+        className="mt-5.5 mb-6.5"
         label="Status"
         onChange={(value) => setTab(value)}
         tabs={[

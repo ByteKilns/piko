@@ -172,7 +172,7 @@ export function BudgetView(props: Props) {
 
       <LineTabs
         aside="Click a row to change its budget"
-        className="mt-5.5"
+        className="mt-5.5 mb-6.5"
         label="Owner"
         onChange={(value) => setTab(value)}
         tabs={[
