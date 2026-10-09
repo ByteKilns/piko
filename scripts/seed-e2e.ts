@@ -18,6 +18,7 @@ import postgres from "postgres";
 import {
   budgetItems,
   categories,
+  dhukuEntries,
   dhukus,
   expenses,
   householdMembers,
@@ -258,16 +259,24 @@ async function main() {
     principalAmount: "60000",
   });
 
-  await db.insert(dhukus).values({
-    householdId: household.id,
-    interestPerMonth: null,
-    monthlyContribution: "2000",
-    name: "Family dhuku",
-    note: null,
-    ownerMemberId: null,
-    startDate: dateFor(oldest.year, oldest.month, 1),
-    totalMembers: 6,
-  });
+  const [dhuku] = await db
+    .insert(dhukus)
+    .values({
+      householdId: household.id,
+      interestPerMonth: null,
+      monthlyContribution: "2000",
+      name: "Family dhuku",
+      note: null,
+      ownerMemberId: null,
+      startDate: dateFor(oldest.year, oldest.month, 1),
+      totalMembers: 6,
+    })
+    .returning();
+  await db.insert(dhukuEntries).values([
+    { amount: "2000", date: dateFor(months[1].year, months[1].month, 1), dhukuId: dhuku.id, note: null, type: "contribution" },
+    { amount: "2000", date: dateFor(months[2].year, months[2].month, 1), dhukuId: dhuku.id, note: null, type: "contribution" },
+    { amount: "12000", date: dateFor(months[2].year, months[2].month, 15), dhukuId: dhuku.id, note: null, type: "payout" },
+  ]);
 
   await client.end();
   console.log(`Seeded e2e database "${name}" with ${HISTORY_MONTHS} months of history`);
