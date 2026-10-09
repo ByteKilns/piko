@@ -79,6 +79,8 @@ export async function createSavingsGoalAction(input: SavingsGoalInput) {
   });
 
   revalidateSavingsGoalsPaths();
+
+  return created;
 }
 
 export async function updateSavingsGoalAction(id: string, input: SavingsGoalInput) {

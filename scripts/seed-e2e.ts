@@ -26,6 +26,8 @@ import {
   loans,
   monthlyBudgets,
   recurringExpenses,
+  savingsContributions,
+  savingsGoals,
   users,
 } from "../src/db/schema";
 import { DEFAULT_CATEGORIES } from "../src/modules/categories/lib/default-categories";
@@ -206,6 +208,25 @@ async function main() {
       paidByMemberId: e.owner ?? m1.id,
     })),
   );
+
+  // One savings goal with contributions, so the dashboard/savings pages show
+  // goals and recent contributions rather than the empty state.
+  const [goal] = await db
+    .insert(savingsGoals)
+    .values({
+      description: null,
+      householdId: household.id,
+      image: null,
+      name: "Emergency fund",
+      ownerMemberId: null,
+      targetAmount: "300000",
+      targetDate: dateFor(current.year + 1, current.month, 1),
+    })
+    .returning();
+  await db.insert(savingsContributions).values([
+    { amount: "20000", date: dateFor(current.year, current.month, 2), goalId: goal.id, memberId: m1.id },
+    { amount: "10000", date: dateFor(current.year, current.month, 7), goalId: goal.id, memberId: m2.id },
+  ]);
 
   // Fixed commitments for the current month: a bill, a taken-loan installment,
   // and an active dhuku contribution.
