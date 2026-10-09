@@ -181,6 +181,32 @@ async function main() {
     { categoryId: idOf("EMI"), monthlyBudgetId: currentBudget.id, ownerMemberId: m1.id, plannedAmount: "8000" },
   ]);
 
+  // Current-month income and spending so the dashboard, budget and reports
+  // pages show live figures (some inside a budget, some outside, one over).
+  await db.insert(incomes).values([
+    { amount: "90000", householdId: household.id, memberId: m1.id, month: current.month, year: current.year },
+    { amount: "40000", householdId: household.id, memberId: m2.id, month: current.month, year: current.year },
+  ]);
+  const currentExpenses = [
+    { amount: 9000, category: "Groceries", day: 3, owner: null },
+    { amount: 5000, category: "Dining Out", day: 5, owner: m1.id },
+    { amount: 4500, category: "Entertainment", day: 6, owner: m2.id },
+    { amount: 6900, category: "Shopping", day: 8, owner: null },
+    { amount: 3000, category: "Petrol", day: 9, owner: m1.id },
+    { amount: 2500, category: "Utilities", day: 4, owner: null },
+  ];
+  await db.insert(expenses).values(
+    currentExpenses.map((e) => ({
+      amount: String(e.amount),
+      categoryId: idOf(e.category),
+      date: dateFor(current.year, current.month, e.day),
+      householdId: household.id,
+      note: null,
+      ownerMemberId: e.owner,
+      paidByMemberId: e.owner ?? m1.id,
+    })),
+  );
+
   // Fixed commitments for the current month: a bill, a taken-loan installment,
   // and an active dhuku contribution.
   await db.insert(recurringExpenses).values({

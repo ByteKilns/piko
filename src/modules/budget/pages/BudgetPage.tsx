@@ -1,19 +1,18 @@
 import { getDateFormatPref } from "@/lib/date-format-cookie";
-import { nextMonth, parseMonthParam, previousMonth } from "@/lib/month-nav";
+import { formatMoney } from "@/lib/money";
+import { buildMonthNav, parseMonthParam, previousMonth } from "@/lib/month-nav";
 import { currentPeriodYearMonth, formatPeriodLabel, MAX_NAVIGABLE_YEAR, MIN_NAVIGABLE_YEAR } from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { getBudgetItemsForMonth, getIncomesForMonth } from "@/modules/budget/api/budget.actions";
-import { AllocationSummaryCard } from "@/modules/budget/components/AllocationSummaryCard";
-import { BudgetGroups } from "@/modules/budget/components/BudgetGroups";
-import { BudgetHeader } from "@/modules/budget/components/BudgetHeader";
-import { BudgetHealthCard } from "@/modules/budget/components/BudgetHealthCard";
-import { BudgetSummaryCards } from "@/modules/budget/components/BudgetSummaryCards";
-import { TopBudgetCategoriesCard } from "@/modules/budget/components/TopBudgetCategoriesCard";
-import { budgetGroups, topBudgetCategories } from "@/modules/budget/lib/budget-groups";
-import { budgetVsActual } from "@/modules/budget/lib/calculations";
+import { BudgetView } from "@/modules/budget/components/BudgetView";
+import { buildBudgetGroups, buildBudgetLead, overBudgetRows } from "@/modules/budget/lib/budget-view";
 import { listCategories } from "@/modules/categories/api/categories";
 import { listExpensesForMonth } from "@/modules/expenses/api/expenses.actions";
 import { checkBudgetReminder } from "@/modules/notifications/api/notifications.actions";
+
+function percent(part: number, whole: number): number {
+  return whole > 0 ? Math.round((part / whole) * 100) : 0;
+}
 
 type Props = { searchParams: Promise<{ month?: string; year?: string }> };
 
@@ -25,7 +24,7 @@ export async function BudgetPage({ searchParams }: Props) {
   const year = parseMonthParam(params.year, currentYear, MAX_NAVIGABLE_YEAR[dateFormat], MIN_NAVIGABLE_YEAR[dateFormat]);
   const month = parseMonthParam(params.month, currentMonth, 12);
   const prev = previousMonth(year, month);
-  const next = nextMonth(year, month);
+  const isCurrentMonth = year === currentYear && month === currentMonth;
 
   const [members, categories, incomes, budgetItems, expenseRows, prevBudgetItems] = await Promise.all([
     getHouseholdMembers(householdId),
@@ -36,81 +35,70 @@ export async function BudgetPage({ searchParams }: Props) {
     getBudgetItemsForMonth(prev.year, prev.month),
   ]);
 
-  if (year === currentYear && month === currentMonth) {
+  if (isCurrentMonth) {
     await checkBudgetReminder(householdId, year, month, budgetItems.length);
   }
 
   const memberList = members.map((m) => ({ id: m.id, name: m.user.name }));
-  const combinedIncome = incomes.reduce((s, i) => s + Number(i.amount), 0);
+  const partner = members.find((m) => m.id !== memberId) ?? null;
+  const categoryList = categories.map((c) => ({ budgetType: c.budgetType, groupName: c.groupName, id: c.id, name: c.name }));
 
-  const vsActual = budgetVsActual(
-    budgetItems.map((b) => ({
-      categoryId: b.categoryId,
-      ownerMemberId: b.ownerMemberId,
-      plannedAmount: Number(b.plannedAmount),
-    })),
-    expenseRows.map((e) => ({
-      amount: Number(e.amount),
-      categoryId: e.categoryId,
-      ownerMemberId: e.ownerMemberId,
-    })),
-  );
+  const groups = buildBudgetGroups({
+    budgetItems: budgetItems.map((b) => ({ categoryId: b.categoryId, ownerMemberId: b.ownerMemberId, plannedAmount: Number(b.plannedAmount) })),
+    categories: categoryList,
+    expenses: expenseRows.map((e) => ({ amount: Number(e.amount), categoryId: e.categoryId, ownerMemberId: e.ownerMemberId })),
+    meId: memberId,
+    partnerId: partner?.id ?? null,
+    partnerName: partner?.user.name ?? null,
+  });
 
-  const groups = budgetGroups(vsActual, categories, memberList, memberId);
-  const topCategories = topBudgetCategories(groups, 5);
+  const income = incomes.reduce((sum, i) => sum + Number(i.amount), 0);
+  const budgeted = groups.reduce((sum, g) => sum + g.budgeted, 0);
+  const spentIn = groups.reduce((sum, g) => sum + g.spent, 0);
+  const allSpent = expenseRows.reduce((sum, e) => sum + Number(e.amount), 0);
+  const outside = allSpent - spentIn;
 
-  const totalBudget = groups.reduce((s, g) => s + g.totalPlanned, 0);
-  const allocated = totalBudget;
-  const unallocated = combinedIncome - allocated;
+  const lead = buildBudgetLead({ allSpent, budgeted, income, outside, overBudget: overBudgetRows(groups) });
 
-  const incomesByMember = Object.fromEntries(incomes.map((i) => [i.memberId, Number(i.amount)]));
-  const itemsByCategory: Record<string, Record<string, number>> = {};
-  for (const b of budgetItems) {
-    const ownerKey = b.ownerMemberId ?? "shared";
-    itemsByCategory[b.categoryId] ??= {};
-    itemsByCategory[b.categoryId][ownerKey] = Number(b.plannedAmount);
+  const spentByKey: Record<string, number> = {};
+  for (const e of expenseRows) {
+    const ownerKey = e.ownerMemberId === null ? "shared" : e.ownerMemberId === memberId ? "me" : "partner";
+    const key = `${e.categoryId}::${ownerKey}`;
+    spentByKey[key] = (spentByKey[key] ?? 0) + Number(e.amount);
   }
 
-  const monthLabel = formatPeriodLabel(year, month, dateFormat);
-
   return (
-    <>
-      <BudgetHeader
-        canCopyPreviousMonth={prevBudgetItems.length > 0}
-        month={month}
-        monthLabel={monthLabel}
-        nextHref={`/budget?year=${next.year}&month=${next.month}`}
-        prevHref={`/budget?year=${prev.year}&month=${prev.month}`}
-        year={year}
-      />
-
-      <BudgetSummaryCards
-        allocated={allocated}
-        combinedIncome={combinedIncome}
-        totalBudget={totalBudget}
-        unallocated={unallocated}
-      />
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <BudgetGroups
-            categories={categories}
-            groups={groups}
-            incomesByMember={incomesByMember}
-            itemsByCategory={itemsByCategory}
-            members={memberList}
-            month={month}
-            realMemberId={memberId}
-            year={year}
-          />
-        </div>
-
-        <div className="space-y-6">
-          <BudgetHealthCard allocated={allocated} combinedIncome={combinedIncome} unallocated={unallocated} />
-          <AllocationSummaryCard groups={groups} />
-          <TopBudgetCategoriesCard categories={topCategories} />
-        </div>
-      </div>
-    </>
+    <BudgetView
+      canCopy={prevBudgetItems.length > 0}
+      categories={categoryList}
+      currentMemberId={memberId}
+      groups={groups}
+      income={income}
+      incomes={Object.fromEntries(incomes.map((i) => [i.memberId, Number(i.amount)]))}
+      lead={lead}
+      ledger={{
+        budgeted,
+        budgetedRatio: income > 0 ? budgeted / income : 0,
+        budgetedSub: `${percent(budgeted, income)}% of Rs ${formatMoney(income, { currency: false })} income`,
+        outside,
+        outsideSub: `${percent(outside, allSpent)}% of all spending`,
+        spentIn,
+        spentInSub: budgeted > 0 ? `${percent(spentIn, budgeted)}% of what's budgeted` : "Nothing budgeted yet",
+        unplanned: income - budgeted,
+        unplannedSub: `${percent(income - budgeted, income)}% of income`,
+      }}
+      members={memberList}
+      month={month}
+      monthNav={buildMonthNav({
+        allowFuture: true,
+        basePath: "/budget",
+        current: { month: currentMonth, year: currentYear },
+        dateFormat,
+        selected: { month, year },
+      })}
+      prevMonthName={formatPeriodLabel(prev.year, prev.month, dateFormat).split(" ")[0]}
+      spentByKey={spentByKey}
+      year={year}
+    />
   );
 }

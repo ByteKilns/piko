@@ -7,16 +7,16 @@ test.describe("budget", () => {
     await gotoRoute(page, "/budget");
   });
 
-  test("shows the month's budget summary", async ({ page }) => {
+  test("shows the month's plan", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "Budget", exact: true })).toBeVisible();
-    await expect(page.getByText("Plan your money for the month")).toBeVisible();
-    await expect(page.getByText("Total Budget").first()).toBeVisible();
-    await expect(page.getByText("Unbudgeted").first()).toBeVisible();
+    await expect(page.getByText("Budgeted", { exact: true })).toBeVisible();
+    await expect(page.getByText("Spent in budgets", { exact: true })).toBeVisible();
+    await expect(page.getByText("Click a row to change its budget")).toBeVisible();
   });
 
   test("opens the budget editor", async ({ page }) => {
-    await page.getByRole("button", { name: "Add Budget" }).first().click();
+    await page.getByRole("button", { name: "Add budget" }).click();
 
-    await expect(page.getByRole("dialog").getByRole("heading", { name: "Edit budget" })).toBeVisible();
+    await expect(page.getByRole("dialog").getByRole("heading", { name: "Set a budget" })).toBeVisible();
   });
 });

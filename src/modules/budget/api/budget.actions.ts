@@ -10,7 +10,7 @@ import { activityActor, loadActivityFormatters, logActivities, logActivity } fro
 import { listCategories } from "@/modules/categories/api/categories";
 
 import { budgetItemChanges, budgetItemSummary, incomeChanges, incomeSummary } from "../lib/budget-activity";
-import { type SetBudgetItemInput, setBudgetItemSchema } from "../schemas/budget-item.schema";
+import { type RemoveBudgetItemInput, removeBudgetItemSchema, type SetBudgetItemInput, setBudgetItemSchema } from "../schemas/budget-item.schema";
 import { type SetIncomeInput, setIncomeSchema } from "../schemas/income.schema";
 
 // Insert-or-get in one statement. A select-then-insert would race when two
@@ -153,6 +153,39 @@ export async function setBudgetItemAction(input: SetBudgetItemInput) {
       ? { action: "updated", after: item, before, changes: budgetItemChanges(f, before, after), entityId: itemId, entityType: "budget_item", summary }
       : { action: "created", after: item, before: null, entityId: itemId, entityType: "budget_item", summary },
   );
+
+  revalidatePath("/budget");
+  revalidatePath("/dashboard");
+}
+
+export async function removeBudgetItemAction(input: RemoveBudgetItemInput) {
+  const member = await getCurrentMember();
+  const { householdId } = member;
+  const parsed = removeBudgetItemSchema.parse(input);
+
+  const budget = await getOrCreateMonthlyBudget(householdId, parsed.year, parsed.month);
+  const [before] = await db
+    .select()
+    .from(budgetItems)
+    .where(
+      and(
+        eq(budgetItems.monthlyBudgetId, budget.id),
+        eq(budgetItems.categoryId, parsed.categoryId),
+        parsed.ownerMemberId === null ? isNull(budgetItems.ownerMemberId) : eq(budgetItems.ownerMemberId, parsed.ownerMemberId),
+      ),
+    );
+  if (!before) return;
+
+  await db.delete(budgetItems).where(eq(budgetItems.id, before.id));
+
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "deleted",
+    before,
+    entityId: before.id,
+    entityType: "budget_item",
+    summary: budgetItemSummary(f, before, { month: parsed.month, year: parsed.year }),
+  });
 
   revalidatePath("/budget");
   revalidatePath("/dashboard");
