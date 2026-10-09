@@ -1,29 +1,34 @@
+import { formatShortDate } from "@/lib/date-format";
 import { getDateFormatPref } from "@/lib/date-format-cookie";
-import { nextMonth, parseMonthParam, previousMonth } from "@/lib/month-nav";
-import { currentPeriodYearMonth, formatPeriodLabel, MAX_NAVIGABLE_YEAR, MIN_NAVIGABLE_YEAR, resolvePeriod } from "@/lib/month-period";
+import { buildMonthNav, parseMonthParam, previousMonth } from "@/lib/month-nav";
+import {
+  currentPeriodYearMonth,
+  dayNumberInPeriod,
+  daysElapsedInPeriod,
+  formatPeriodLabel,
+  MAX_NAVIGABLE_YEAR,
+  MIN_NAVIGABLE_YEAR,
+  resolvePeriod,
+} from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { getBudgetItemsForMonth, getIncomesForMonth, listAllIncomes } from "@/modules/budget/api/budget.actions";
 import { listCategories } from "@/modules/categories/api/categories";
-import { dailyCashFlowPoints, dhukuCashFlow, loanPaymentCashFlow } from "@/modules/dashboard/lib/cash-flow";
 import { pctOfIncome } from "@/modules/dashboard/lib/format";
-import { listDhukuEntries } from "@/modules/dhuku/api/dhuku.actions";
 import { listExpensesForMonth, listExpensesForRange } from "@/modules/expenses/api/expenses.actions";
-import { ownerBreakdown } from "@/modules/expenses/lib/expense-breakdown";
 import { roleForOwner } from "@/modules/expenses/lib/member-tone";
-import { listLoanPayments, listLoans } from "@/modules/loans/api/loans.actions";
-import { ReportsHeader } from "@/modules/reports/components/ReportsHeader";
-import { ReportsTabs } from "@/modules/reports/components/ReportsTabs";
+import { ReportsView } from "@/modules/reports/components/ReportsView";
 import {
   budgetVsActual,
   categoryBreakdown,
   categoryChanges,
   dailySpendingPace,
   monthlyIncomeExpenseTrend,
-  spendingInsight,
   topExpenses,
+  trendPct,
 } from "@/modules/reports/lib/reports-stats";
+import { expenseLead } from "@/modules/reports/lib/reports-view";
 import { listSavingsContributions, listSavingsGoals } from "@/modules/savings-goals/api/savings-goals.actions";
-import { buildContributionEntries, buildGoalCards, monthlyTotals, savingsOverviewStats } from "@/modules/savings-goals/lib/savings-stats";
+import { buildGoalCards, savingsOverviewStats } from "@/modules/savings-goals/lib/savings-stats";
 
 type Props = { searchParams: Promise<{ month?: string; year?: string }> };
 
@@ -35,17 +40,18 @@ export async function ReportsPage({ searchParams }: Props) {
   const year = parseMonthParam(params.year, currentYear, MAX_NAVIGABLE_YEAR[dateFormat], MIN_NAVIGABLE_YEAR[dateFormat]);
   const month = parseMonthParam(params.month, currentMonth, 12);
   const prev = previousMonth(year, month);
-  const next = nextMonth(year, month);
+  const period = resolvePeriod(year, month, dateFormat);
+  const isCurrent = year === currentYear && month === currentMonth;
 
   let rangeStartYm = { month, year };
   for (let i = 0; i < 5; i++) rangeStartYm = previousMonth(rangeStartYm.year, rangeStartYm.month);
   const rangeStart = resolvePeriod(rangeStartYm.year, rangeStartYm.month, dateFormat).startDate;
-  const rangeEnd = resolvePeriod(year, month, dateFormat).endDate;
 
   const [
     members,
     categories,
     incomeRows,
+    prevIncomeRows,
     allIncomeRows,
     budgetItemRows,
     expenseRows,
@@ -53,35 +59,27 @@ export async function ReportsPage({ searchParams }: Props) {
     rangeExpenseRows,
     goalRows,
     contributionRows,
-    dhukuEntryRows,
-    loanRows,
-    loanPaymentRows,
   ] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
     getIncomesForMonth(year, month),
+    getIncomesForMonth(prev.year, prev.month),
     listAllIncomes(),
     getBudgetItemsForMonth(year, month),
     listExpensesForMonth(year, month, dateFormat),
     listExpensesForMonth(prev.year, prev.month, dateFormat),
-    listExpensesForRange(rangeStart, rangeEnd),
+    listExpensesForRange(rangeStart, period.endDate),
     listSavingsGoals(householdId),
     listSavingsContributions(householdId),
-    listDhukuEntries(householdId),
-    listLoans(householdId),
-    listLoanPayments(householdId),
   ]);
 
   const memberById = new Map(members.map((m) => [m.id, m]));
   const category = (id: string) => categories.find((c) => c.id === id);
   const categoryName = (id: string) => category(id)?.name ?? "Unknown";
 
-  const expenses = expenseRows.map((e) => ({
-    amount: Number(e.amount),
-    categoryId: e.categoryId,
-    ownerMemberId: e.ownerMemberId,
-  }));
+  const expenses = expenseRows.map((e) => ({ amount: Number(e.amount), categoryId: e.categoryId, ownerMemberId: e.ownerMemberId }));
   const combinedIncome = incomeRows.reduce((s, i) => s + Number(i.amount), 0);
+  const prevIncome = prevIncomeRows.reduce((s, i) => s + Number(i.amount), 0);
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
   const prevTotalExpenses = prevExpenseRows.reduce((s, e) => s + Number(e.amount), 0);
 
@@ -95,7 +93,8 @@ export async function ReportsPage({ searchParams }: Props) {
     prevExpenseRows.map((e) => ({ amount: Number(e.amount), categoryId: e.categoryId })),
     categories,
   );
-  const largestExpenses = topExpenses(
+  const slices = categoryBreakdown(expenses, categories);
+  const largest = topExpenses(
     expenseRows.map((e) => ({
       amount: Number(e.amount),
       categoryName: categoryName(e.categoryId),
@@ -104,20 +103,23 @@ export async function ReportsPage({ searchParams }: Props) {
       id: e.id,
       note: e.note,
     })),
-  );
+  ).map((row) => ({
+    amount: row.amount,
+    categoryName: row.categoryName,
+    dateLabel: formatShortDate(row.date, dateFormat),
+    id: row.id,
+    name: row.note ?? row.categoryName,
+  }));
 
-  const ownerSlices = ownerBreakdown(
-    expenses,
-    members.map((m) => ({ id: m.id, name: m.user.name })),
-    memberId,
-  );
-  const expenseSlices = categoryBreakdown(expenses, categories);
+  const ownerSlice = (ownerId: null | string) =>
+    expenses.filter((e) => e.ownerMemberId === ownerId).reduce((s, e) => s + e.amount, 0);
+  const partner = members.find((m) => m.id !== memberId) ?? null;
+  const ownerSlices = [
+    { amount: ownerSlice(memberId), key: "me" as const, label: "Me" },
+    ...(partner ? [{ amount: ownerSlice(partner.id), key: "partner" as const, label: partner.user.name }] : []),
+    { amount: ownerSlice(null), key: "shared" as const, label: "Shared" },
+  ].map((slice) => ({ ...slice, pct: totalExpenses > 0 ? Math.round((slice.amount / totalExpenses) * 100) : 0 }));
 
-  const rangeExpenses = rangeExpenseRows.map((e) => ({ amount: Number(e.amount), date: e.date }));
-  const allIncomes = allIncomeRows.map((i) => ({ amount: Number(i.amount), month: i.month, year: i.year }));
-  const trendPoints = monthlyIncomeExpenseTrend(allIncomes, rangeExpenses, { month, year }, 6, dateFormat);
-
-  const insightMessage = spendingInsight(totalExpenses, prevTotalExpenses);
   const totalPlanned = budgetItemRows.reduce((s, b) => s + Number(b.plannedAmount), 0);
   const pacePoints = dailySpendingPace(
     expenseRows.map((e) => ({ amount: Number(e.amount), date: e.date })),
@@ -126,18 +128,52 @@ export async function ReportsPage({ searchParams }: Props) {
     totalPlanned,
     dateFormat,
   );
-  const cashFlowEvents = [...dhukuCashFlow(dhukuEntryRows), ...loanPaymentCashFlow(loanPaymentRows, loanRows)];
-  const dailyPoints = dailyCashFlowPoints(expenseRows, incomeRows, cashFlowEvents, year, month, dateFormat);
+  const daily = new Array<number>(period.daysInPeriod).fill(0);
+  const topCategoryByDay = new Array<null | string>(period.daysInPeriod).fill(null);
+  const topCountByDay = new Array<number>(period.daysInPeriod).fill(0);
+  for (const e of expenseRows) {
+    const day = dayNumberInPeriod(e.date, year, month, dateFormat);
+    if (day === null) continue;
+    daily[day - 1] += Number(e.amount);
+    topCategoryByDay[day - 1] = categoryName(e.categoryId);
+    topCountByDay[day - 1] += 1;
+  }
+  const biggestDay = daily.reduce((best, amount, i) => (amount > daily[best] ? i : best), 0);
+  const annotation =
+    daily[biggestDay] > 0
+      ? {
+          amount: daily[biggestDay],
+          day: biggestDay + 1,
+          label: `${topCategoryByDay[biggestDay] ?? "Spending"}${topCountByDay[biggestDay] > 1 ? ` × ${topCountByDay[biggestDay]}` : ""}`,
+        }
+      : null;
 
-  const incomeSlices = members.map((m) => ({
-    amount: incomeRows.filter((i) => i.memberId === m.id).reduce((s, i) => s + Number(i.amount), 0),
-    key: (m.id === memberId ? "me" : "partner") as "me" | "partner",
-    label: m.id === memberId ? "Me" : m.user.name,
-    tone: (m.id === memberId ? "green" : "orange") as "green" | "orange",
+  const unbudgetedLines = budgetLines.filter((l) => l.planned === 0 && l.spent > 0);
+  const unbudgeted = unbudgetedLines.length > 0 ? { count: unbudgetedLines.length, names: unbudgetedLines.slice(0, 4).map((l) => l.name) } : null;
+
+  const prevMonthName = formatPeriodLabel(prev.year, prev.month, dateFormat).split(" ")[0];
+  const lead = expenseLead({ budgetLines, changes, current: totalExpenses, prevMonthName, previous: prevTotalExpenses });
+
+  const trendPoints = monthlyIncomeExpenseTrend(
+    allIncomeRows.map((i) => ({ amount: Number(i.amount), month: i.month, year: i.year })),
+    rangeExpenseRows.map((e) => ({ amount: Number(e.amount), date: e.date })),
+    { month, year },
+    6,
+    dateFormat,
+  );
+
+  const incomeMembers = [
+    { amount: incomeRows.filter((i) => i.memberId === memberId).reduce((s, i) => s + Number(i.amount), 0), key: "me" as const, label: "Me" },
+    ...(partner
+      ? [{ amount: incomeRows.filter((i) => i.memberId === partner.id).reduce((s, i) => s + Number(i.amount), 0), key: "partner" as const, label: partner.user.name }]
+      : []),
+  ].map((member) => ({
+    ...member,
+    trendPct: trendPct(member.amount, prevIncomeRows.filter((i) => i.memberId === (member.key === "me" ? memberId : partner?.id)).reduce((s, i) => s + Number(i.amount), 0)),
   }));
 
   const contributions = contributionRows.map((c) => ({ amount: Number(c.amount), date: c.date, goalId: c.goalId }));
-  const { goals, statusCounts } = buildGoalCards(goalRows, contributions, memberById);
+  const { goals } = buildGoalCards(goalRows, contributions, memberById);
   const savingsStats = savingsOverviewStats(
     goalRows.map((g) => ({
       createdAt: g.createdAt,
@@ -149,14 +185,14 @@ export async function ReportsPage({ searchParams }: Props) {
     year,
     month,
   );
-  const savingsVsLastMonthPct =
-    savingsStats.lastMonthContribution > 0
-      ? Math.round(
-          ((savingsStats.monthlyContribution - savingsStats.lastMonthContribution) / savingsStats.lastMonthContribution) * 100,
-        )
-      : null;
-  const savingsPoints = monthlyTotals(contributions, 6, dateFormat);
-  const recentContributions = buildContributionEntries(contributionRows, goalRows, memberById, memberId);
+  const monthContributions = contributionRows
+    .filter((c) => dayNumberInPeriod(c.date, year, month, dateFormat) !== null)
+    .map((c) => ({
+      amount: Number(c.amount),
+      dateLabel: formatShortDate(c.date, dateFormat),
+      goalName: goalRows.find((g) => g.id === c.goalId)?.name ?? "Unknown goal",
+      id: c.id,
+    }));
 
   const monthLabel = formatPeriodLabel(year, month, dateFormat);
   const exportRows = expenseRows.map((e) => ({
@@ -168,42 +204,48 @@ export async function ReportsPage({ searchParams }: Props) {
   }));
 
   return (
-    <>
-      <ReportsHeader
-        exportRows={exportRows}
-        monthLabel={monthLabel}
-        nextHref={`/reports?year=${next.year}&month=${next.month}`}
-        prevHref={`/reports?year=${prev.year}&month=${prev.month}`}
-      />
-
-      <ReportsTabs
-        budgetHref={`/budget?year=${year}&month=${month}`}
-        budgetLines={budgetLines}
-        categoryChanges={changes}
-        combinedIncome={combinedIncome}
-        dailyPoints={dailyPoints}
-        dateFormat={dateFormat}
-        expenseSlices={expenseSlices}
-        goals={goals}
-        goalStatusCounts={statusCounts}
-        incomeSlices={incomeSlices}
-        insightMessage={insightMessage}
-        largestExpenses={largestExpenses}
-        monthLabel={monthLabel}
-        ownerSlices={ownerSlices}
-        pacePoints={pacePoints}
-        pctOfIncome={pctOfIncome(totalExpenses, combinedIncome)}
-        previousLabel={formatPeriodLabel(prev.year, prev.month, dateFormat)}
-        realMemberId={memberId}
-        recentContributions={recentContributions}
-        savingsAverageProgress={savingsStats.averageProgress}
-        savingsMonthlyContribution={savingsStats.monthlyContribution}
-        savingsPoints={savingsPoints}
-        savingsVsLastMonthPct={savingsVsLastMonthPct}
-        totalExpenses={totalExpenses}
-        totalPlanned={totalPlanned}
-        trendPoints={trendPoints}
-      />
-    </>
+    <ReportsView
+      budgetHref={`/budget?year=${year}&month=${month}`}
+      expenses={{
+        budgetLines,
+        changes,
+        largest,
+        lead,
+        ownerSlices,
+        pace: {
+          annotation,
+          daily,
+          daysInPeriod: period.daysInPeriod,
+          points: pacePoints,
+          todayDay: isCurrent ? daysElapsedInPeriod(period) : period.daysInPeriod,
+          totalPlanned,
+        },
+        slices,
+        spent: totalExpenses,
+        spentPctOfIncome: pctOfIncome(totalExpenses, combinedIncome),
+        spentTrendPct: trendPct(totalExpenses, prevTotalExpenses),
+        unbudgeted,
+      }}
+      exportRows={exportRows}
+      income={{
+        months: trendPoints.map((p) => ({ income: p.income, label: p.label, left: p.income - p.expenses, spent: p.expenses })),
+        members: incomeMembers,
+        overspend: Math.max(0, totalExpenses - combinedIncome),
+        spentPct: pctOfIncome(totalExpenses, combinedIncome),
+        total: combinedIncome,
+        trendPct: trendPct(combinedIncome, prevIncome),
+      }}
+      monthLabel={monthLabel}
+      monthNav={buildMonthNav({ basePath: "/reports", current: { month: currentMonth, year: currentYear }, dateFormat, selected: { month, year } })}
+      prevMonthName={prevMonthName}
+      savings={{
+        averageProgress: savingsStats.averageProgress,
+        contributions: monthContributions,
+        goalCount: goals.length,
+        goals: goals.map((g) => ({ id: g.id, name: g.name, pct: g.pct ?? 0, saved: g.saved, target: g.targetAmount })),
+        monthlyContribution: savingsStats.monthlyContribution,
+        totalSaved: savingsStats.totalSaved,
+      }}
+    />
   );
 }

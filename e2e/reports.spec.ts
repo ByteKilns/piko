@@ -9,9 +9,7 @@ test.describe("reports", () => {
 
   test("shows the reports header and expense tab", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "Reports", exact: true })).toBeVisible();
-    await expect(page.getByText("Understand your money, make better decisions")).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Expenses" })).toBeVisible();
-    await expect(page.getByText("Expense Breakdown").first()).toBeVisible();
+    await expect(page.getByText("Spending pace")).toBeVisible();
     await expect(page.getByText("Budget vs actual", { exact: true })).toBeVisible();
     await expect(page.getByText("Biggest changes", { exact: true })).toBeVisible();
     await expect(page.getByText("Largest expenses", { exact: true })).toBeVisible();
@@ -19,9 +17,9 @@ test.describe("reports", () => {
 
   test("switches between report tabs", async ({ page }) => {
     await page.getByRole("tab", { name: "Income" }).click();
-    await expect(page.getByText(/Total income this month:/)).toBeVisible();
+    await expect(page.getByText("Last 6 months")).toBeVisible();
 
     await page.getByRole("tab", { name: "Savings" }).click();
-    await expect(page.getByText("Savings Overview").first()).toBeVisible();
+    await expect(page.getByText("Goal progress")).toBeVisible();
   });
 });
