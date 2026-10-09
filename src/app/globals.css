@@ -160,3 +160,13 @@
     cursor: pointer;
   }
 }
+
+/* Sidebar motion "1a — Subtle & polished": with reduced motion nothing
+   travels — state changes just crossfade. */
+@media (prefers-reduced-motion: reduce) {
+  [data-motion-root] * {
+    transition-duration: 120ms !important;
+    transition-delay: 0ms !important;
+    transition-property: opacity, color, background-color !important;
+  }
+}
