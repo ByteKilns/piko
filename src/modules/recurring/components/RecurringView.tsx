@@ -340,7 +340,7 @@ export function RecurringView(props: Props) {
           Rent, subscriptions, insurance, EMIs — add anything that repeats. Each one appears in Expenses as{" "}
           <span className="font-semibold text-ink">Upcoming</span> until you mark it paid, so nothing slips.
         </p>
-        <Button onClick={() => setDialog({ editing: null, open: true })} variant="ghost">
+        <Button className="h-9.5" onClick={() => setDialog({ editing: null, open: true })}>
           <Plus />
           Add recurring
         </Button>
