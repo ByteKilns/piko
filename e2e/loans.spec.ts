@@ -9,13 +9,13 @@ test.describe("loans", () => {
 
   test("shows loan stats and tabs", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "Loans", exact: true })).toBeVisible();
-    await expect(page.getByText("Track money lent out and borrowed")).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Lent Out" })).toBeVisible();
+    await expect(page.getByText("Money you've lent and borrowed")).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Lent" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Borrowed" })).toBeVisible();
   });
 
   test("opens the add-loan dialog", async ({ page }) => {
-    await page.getByRole("button", { name: "Add Loan" }).first().click();
+    await page.getByRole("button", { name: "Add loan" }).first().click();
 
     await expect(page.getByRole("dialog").getByRole("heading", { name: "Add a loan" })).toBeVisible();
   });
