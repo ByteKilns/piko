@@ -170,10 +170,9 @@ export function RecurringView(props: Props) {
         </LedgerCell>
       </Ledger>
 
-      {props.timeline.marks.length > 0 && (
-        <section className="mt-8">
-          <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-4">
-            <span className="micro-label text-n-600">{props.monthName}, day by day</span>
+      <section className="mt-8">
+        <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-4">
+          <span className="micro-label text-n-600">{props.monthName}, day by day</span>
             <span className="flex items-center gap-4 text-xs text-n-700">
               <span className="inline-flex items-center gap-1.5">
                 <span className="size-2.25 bg-ink" />
@@ -231,8 +230,7 @@ export function RecurringView(props: Props) {
               ))}
             </div>
           </div>
-        </section>
-      )}
+      </section>
 
       <LineTabs
         aside={
