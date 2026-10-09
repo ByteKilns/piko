@@ -12,7 +12,7 @@ setup("authenticate", async ({ page }) => {
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await page.waitForURL("**/dashboard");
-  await expect(page.getByText("Here's your financial overview for")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Home", exact: true })).toBeVisible();
 
   await page.context().storageState({ path: storageStatePath });
 });

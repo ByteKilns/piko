@@ -16,6 +16,7 @@ import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 
 import {
+  budgetItems,
   categories,
   dhukus,
   expenses,
@@ -23,6 +24,7 @@ import {
   households,
   incomes,
   loans,
+  monthlyBudgets,
   recurringExpenses,
   users,
 } from "../src/db/schema";
@@ -164,6 +166,20 @@ async function main() {
   const now = new Date();
   const current = { month: now.getMonth() + 1, year: now.getFullYear() };
   const oldest = months[0];
+
+  // A small plan for the current month so the dashboard hero (weekly pacing)
+  // and the budget page have something to render. Groceries is shared and
+  // flexible; the rest sit with one member.
+  const [currentBudget] = await db
+    .insert(monthlyBudgets)
+    .values({ householdId: household.id, month: current.month, year: current.year })
+    .returning();
+  await db.insert(budgetItems).values([
+    { categoryId: idOf("Groceries"), monthlyBudgetId: currentBudget.id, ownerMemberId: null, plannedAmount: "15000" },
+    { categoryId: idOf("Dining Out"), monthlyBudgetId: currentBudget.id, ownerMemberId: m1.id, plannedAmount: "6000" },
+    { categoryId: idOf("Entertainment"), monthlyBudgetId: currentBudget.id, ownerMemberId: m2.id, plannedAmount: "4000" },
+    { categoryId: idOf("EMI"), monthlyBudgetId: currentBudget.id, ownerMemberId: m1.id, plannedAmount: "8000" },
+  ]);
 
   // Fixed commitments for the current month: a bill, a taken-loan installment,
   // and an active dhuku contribution.

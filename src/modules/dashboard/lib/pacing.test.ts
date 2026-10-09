@@ -54,7 +54,27 @@ describe("currentWeekPacing", () => {
     const week = currentWeekPacing(schedule, 10, spentByDay);
     expect(week.index).toBe(1);
     expect(week.spent).toBe(500);
-    expect(week.remaining).toBe(week.allowance - 500);
+    expect(week.remaining).toBe(week.allowance + week.carryIn - 500);
+  });
+
+  it("carries unspent allowance from earlier weeks forward", () => {
+    const spentByDay = new Array(30).fill(0);
+    spentByDay[0] = 100; // week 0 allowance is 650, so 550 carries into week 1
+    const week = currentWeekPacing(schedule, 8, spentByDay);
+    expect(week.index).toBe(1);
+    expect(week.carryIn).toBe(550);
+    expect(week.remaining).toBe(650 + 550);
+  });
+
+  it("reports the days left in the week and the next week's start", () => {
+    const week = currentWeekPacing(schedule, 10, []);
+    expect(week.daysLeftInWeek).toBe(5); // days 10..14
+    expect(week.nextWeekStartDay).toBe(15);
+  });
+
+  it("spreads the remaining allowance over the days left in the week", () => {
+    const week = currentWeekPacing(schedule, 10, []);
+    expect(week.safeToday).toBe(Math.round(week.remaining / week.daysLeftInWeek));
   });
 
   it("never reports negative remaining", () => {

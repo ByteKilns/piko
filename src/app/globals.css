@@ -84,11 +84,11 @@
   --n-600: #6e6862;
   --n-700: #56514c;
   --n-800: #3d3936;
-  --signal: #d23a24;
-  --signal-ink: #a82a18;
+  --signal: #ec3013;
+  --signal-ink: #c02a10;
   /* Filled accent (primary buttons) — same in both themes so white text keeps 4.5:1. */
-  --signal-fill: #d23a24;
-  --signal-fill-hover: #b4301c;
+  --signal-fill: #ec3013;
+  --signal-fill-hover: #c9290f;
   --elevation-menu: 0 4px 16px rgb(32 30 29 / 0.12);
   --elevation-dialog: 0 16px 48px rgb(32 30 29 / 0.22);
 
@@ -144,8 +144,8 @@
   --n-600: #9a948c;
   --n-700: #b7b1a9;
   --n-800: #d3cec6;
-  --signal: #ef5a42;
-  --signal-ink: #ff8a73;
+  --signal: #ff6247;
+  --signal-ink: #ff9c88;
   --elevation-menu: 0 4px 16px rgb(0 0 0 / 0.45);
   --elevation-dialog: 0 16px 48px rgb(0 0 0 / 0.6);
 }

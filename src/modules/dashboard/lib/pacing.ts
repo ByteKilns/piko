@@ -18,8 +18,12 @@ export type PacingSchedule = {
 
 export type WeekPacing = {
   allowance: number;
+  carryIn: number;
+  daysLeftInWeek: number;
   index: number;
+  nextWeekStartDay: number;
   remaining: number;
+  safeToday: number;
   spent: number;
 };
 
@@ -81,17 +85,41 @@ export function buildPacingSchedule(input: {
 }
 
 // Where the given day sits in the schedule, and how much of that week's
-// allowance is left. `spentByDay` is indexed from day 1 (index 0).
+// allowance is left. Unspent allowance from earlier weeks rolls forward as
+// `carryIn` (spec §3.1), and `safeToday` spreads what's left over the days
+// remaining in the week. `spentByDay` is indexed from day 1 (index 0).
 export function currentWeekPacing(schedule: PacingSchedule, dayOfPeriod: number, spentByDay: number[]): WeekPacing {
   const week =
     schedule.weeks.find((w) => dayOfPeriod >= w.startDay && dayOfPeriod <= w.endDay) ??
     schedule.weeks[schedule.weeks.length - 1];
 
-  let spent = 0;
-  const lastDay = Math.min(dayOfPeriod, week.endDay);
-  for (let day = week.startDay; day <= lastDay; day++) {
-    spent += spentByDay[day - 1] ?? 0;
+  // carryIn(k) = max(0, allowance(k−1) + carryIn(k−1) − spent(k−1)).
+  let carryIn = 0;
+  for (let i = 0; i < week.index; i++) {
+    const earlier = schedule.weeks[i];
+    carryIn = Math.max(0, earlier.allowance + carryIn - spentInRange(spentByDay, earlier.startDay, earlier.endDay));
   }
 
-  return { allowance: week.allowance, index: week.index, remaining: Math.max(0, week.allowance - spent), spent };
+  const spent = spentInRange(spentByDay, week.startDay, Math.min(dayOfPeriod, week.endDay));
+  const remaining = Math.max(0, week.allowance + carryIn - spent);
+  const daysLeftInWeek = Math.max(1, week.endDay - dayOfPeriod + 1);
+
+  return {
+    allowance: week.allowance,
+    carryIn,
+    daysLeftInWeek,
+    index: week.index,
+    nextWeekStartDay: week.endDay + 1,
+    remaining,
+    safeToday: Math.round(remaining / daysLeftInWeek),
+    spent,
+  };
+}
+
+function spentInRange(spentByDay: number[], startDay: number, endDay: number): number {
+  let total = 0;
+  for (let day = startDay; day <= endDay; day++) {
+    total += spentByDay[day - 1] ?? 0;
+  }
+  return total;
 }

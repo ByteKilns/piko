@@ -33,13 +33,13 @@ Light (`:root`):
 | `--ink` | `#201e1d` | text, primary button fill, 2px section rules |
 | `--rule` | `#3d3936` | 2px column-header / sidebar rules, 1px group rows |
 | `--n-200 … --n-800` | `#e6e2db` `#d8d3cb` `#b5afa6` `#8f8981` `#6e6862` `#56514c` `#3d3936` | warm neutral scale (200 meter track, 300 row rules, 400 disabled, 500 decimals/placeholder, 600 labels, 700 secondary text, 800 body copy) |
-| `--signal` / `--signal-ink` | `#d23a24` / `#a82a18` | the single red accent. `--signal` for marks: active-nav bar, tab underline, selected-ledger bar, filter dot, today marker, caret, payout cell, unread badge, overspend meter segment. `--signal-ink` for red **text**: over budget, over income, overdue, negative amounts, errors, Delete |
-| `--signal-fill` / `--signal-fill-hover` | `#d23a24` / `#b4301c` (both themes) | filled accent: **primary buttons** (Add expense, dialog submit) with white text — same in light and dark so the text keeps 4.5:1 |
+| `--signal` / `--signal-ink` | `#ec3013` / `#c02a10` | the single red accent. `--signal` for marks: active-nav bar, tab underline, selected-ledger bar, filter dot, today marker, caret, payout cell, unread badge, overspend meter segment. `--signal-ink` for red **text**: over budget, over income, overdue, negative amounts, errors, Delete |
+| `--signal-fill` / `--signal-fill-hover` | `#ec3013` / `#c9290f` (both themes) | filled accent: **primary buttons** (Add expense, dialog submit) with white text — same in light and dark so the text keeps 4.5:1 |
 | `--shadow-md` / `--shadow-lg` | `0 4px 16px rgb(32 30 29 / .12)` / `0 16px 48px rgb(32 30 29 / .22)` | menus / dialogs only |
 
 Dark (`.dark`): `--paper #161413`, `--surface #22201e`, `--ink #f3efe8`, `--rule #d3cec6`,
-neutrals inverted (`--n-200 #2a2725` … `--n-800 #d3cec6`), `--signal #ef5a42`,
-`--signal-ink #ff8a73`, shadows at higher alpha.
+neutrals inverted (`--n-200 #2a2725` … `--n-800 #d3cec6`), `--signal #ff6247`,
+`--signal-ink #ff9c88`, shadows at higher alpha.
 
 In this spec, **"negative"** (as a tone) means text rendered in `--signal-ink`.
 
