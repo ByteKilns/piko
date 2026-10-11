@@ -165,7 +165,8 @@ Conventions to keep when adding columns/tables:
 - **Safe-to-spend pacing** (`src/modules/dashboard/lib/pacing.ts`): splits the
   month's flexible budget into a weekly release with a last-week buffer, carries
   unspent allowance forward between weeks, and surfaces `safeToday` (remaining ÷
-  days left in the week) on the dashboard hero.
+  days left in the week) on the dashboard hero. Fixed-category expenses don't
+  count against the allowance (`allowanceSpentByDay` in `dashboard/lib/cash-flow.ts`).
 - **App releases**: publishing is gated by `APP_RELEASE_ADMIN_EMAILS`
   (`src/lib/release-admin.ts`); APKs are uploaded to Vercel Blob via a client-token
   flow (`src/app/api/app-releases/upload/route.ts`). `handleUpload` requires

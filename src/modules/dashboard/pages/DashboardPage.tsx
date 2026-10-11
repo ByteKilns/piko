@@ -2,7 +2,6 @@ import { getDateFormatPref } from "@/lib/date-format-cookie";
 import { buildMonthNav, parseMonthParam, previousMonth } from "@/lib/month-nav";
 import {
   currentPeriodYearMonth,
-  dayNumberInPeriod,
   daysElapsedInPeriod,
   formatPeriodLabel,
   MAX_NAVIGABLE_YEAR,
@@ -15,7 +14,7 @@ import { getBudgetItemsForMonth, getIncomesForMonth } from "@/modules/budget/api
 import { dashboardSummary } from "@/modules/budget/lib/calculations";
 import { listCategories } from "@/modules/categories/api/categories";
 import { type HomeGoal, type HomeOwnerRow, type HomePacing, type HomeRecentGroup, HomeView } from "@/modules/dashboard/components/HomeView";
-import { daysLeftInMonth, loanNetFlowByOwner } from "@/modules/dashboard/lib/cash-flow";
+import { allowanceSpentByDay, daysLeftInMonth, loanNetFlowByOwner } from "@/modules/dashboard/lib/cash-flow";
 import { toExpenseInputs, toIncomeInputs } from "@/modules/dashboard/lib/map-rows";
 import { buildPacingSchedule, currentWeekPacing } from "@/modules/dashboard/lib/pacing";
 import { listExpensesForMonth, listRecentExpenses } from "@/modules/expenses/api/expenses.actions";
@@ -170,6 +169,7 @@ export async function DashboardPage({ searchParams }: Props) {
 
   // Weekly pacing over the flexible part of the budget (fixed commitments are
   // already spoken for): the hero's safe-to-spend figure and its carry-over.
+  // Fixed-category expenses don't count against it, for the same reason.
   const period = resolvePeriod(year, month, dateFormat);
   const flexiblePlanned = budgetItemRows
     .filter((b) => category(b.categoryId)?.budgetType === "flexible")
@@ -177,11 +177,8 @@ export async function DashboardPage({ searchParams }: Props) {
   const pacingSchedule =
     flexiblePlanned > 0 ? buildPacingSchedule({ daysInPeriod: period.daysInPeriod, flexibleTotal: flexiblePlanned }) : null;
   const dayOfPeriod = isCurrentMonth ? daysElapsedInPeriod(period) : period.daysInPeriod;
-  const spentByDay = new Array<number>(period.daysInPeriod).fill(0);
-  for (const expense of expenseRows) {
-    const day = dayNumberInPeriod(expense.date, year, month, dateFormat);
-    if (day !== null) spentByDay[day - 1] += Number(expense.amount);
-  }
+  const fixedCategoryIds = new Set(categories.filter((c) => c.budgetType === "fixed").map((c) => c.id));
+  const spentByDay = allowanceSpentByDay(expenseRows, fixedCategoryIds, year, month, dateFormat);
   const weekPacing = pacingSchedule ? currentWeekPacing(pacingSchedule, dayOfPeriod, spentByDay) : null;
   const pacing: HomePacing | null = weekPacing
     ? {
