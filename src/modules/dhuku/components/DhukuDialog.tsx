@@ -26,6 +26,7 @@ export type DhukuEditing = {
   name: string;
   note: null | string;
   ownerKey: DhukuOwnerKey;
+  potDeduction: null | number;
   startDate: string;
   totalMembers: number;
 };
@@ -82,12 +83,14 @@ function DhukuFields({ currentMemberId, defaultStartDate, editing, members, onDo
   const [startDate, setStartDate] = useState(editing?.startDate ?? defaultStartDate);
   const [hasInterest, setHasInterest] = useState(editing ? editing.interestPerMonth !== null : false);
   const [interest, setInterest] = useState(editing?.interestPerMonth != null ? String(editing.interestPerMonth) : "");
+  const [deduction, setDeduction] = useState(editing?.potDeduction != null ? String(editing.potDeduction) : "");
   const [note, setNote] = useState(editing?.note ?? "");
   const [error, setError] = useState<string | undefined>();
 
   const memberIdFor = (key: DhukuOwnerKey) => (key === "shared" ? null : key === "me" ? currentMemberId : (partner?.id ?? currentMemberId));
   const monthlyValue = Number(monthly) || 0;
   const monthsValue = Number(months) || 0;
+  const deductionValue = Number(deduction) || 0;
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -110,6 +113,7 @@ function DhukuFields({ currentMemberId, defaultStartDate, editing, members, onDo
       name: name.trim(),
       note: note.trim() || undefined,
       ownerMemberId: memberIdFor(owner),
+      potDeduction: deductionValue > 0 ? deductionValue : null,
       startDate,
       totalMembers: Math.round(monthsValue),
     };
@@ -182,12 +186,18 @@ function DhukuFields({ currentMemberId, defaultStartDate, editing, members, onDo
 
       <p className="text-[13px] text-n-700">
         {monthlyValue > 0 && monthsValue > 0
-          ? `Pot when it's your turn: ${formatMoney(monthlyValue * monthsValue)}`
-          : "The pot is the monthly amount × number of months."}
+          ? `Pot when it's your turn: ${formatMoney(monthlyValue * monthsValue - deductionValue)}, plus interest from members who took theirs before you.`
+          : "The pot is the monthly amount × number of months, less anything taken out of each pot."}
       </p>
 
       <MoreDetails>
         <NepaliDateField label="Start date" onChange={setStartDate} value={startDate} />
+        <AmountInput
+          label="Taken from each pot"
+          onChange={(event) => setDeduction(event.target.value)}
+          placeholder="e.g. 3000 for the meeting's food"
+          value={deduction}
+        />
         <label className="flex items-center gap-2 text-sm text-n-800">
           <input checked={hasInterest} onChange={(event) => setHasInterest(event.target.checked)} type="checkbox" />
           I&apos;ve taken (or will take) my payout, and owe interest

@@ -3,7 +3,7 @@ import { date, integer, numeric, pgEnum, pgTable, text, timestamp, uuid } from "
 import { householdMembers } from "./householdMembers";
 import { households } from "./households";
 
-export const dhukuEntryTypeEnum = pgEnum("dhuku_entry_type", ["contribution", "payout"]);
+export const dhukuEntryTypeEnum = pgEnum("dhuku_entry_type", ["contribution", "payout", "fine"]);
 
 export const dhukus = pgTable("dhukus", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -21,6 +21,9 @@ export const dhukus = pgTable("dhukus", {
   // Fixed extra amount owed per month once you've taken your payout — null
   // until known / not applicable.
   interestPerMonth: numeric("interest_per_month", { precision: 12, scale: 2 }),
+  // Taken out of every pot before it's paid out, e.g. the meeting's food.
+  // null = nothing is taken out.
+  potDeduction: numeric("pot_deduction", { precision: 12, scale: 2 }),
   startDate: date("start_date").notNull(),
   note: text("note"),
   // Set when a dhuku is manually marked completed (or auto-completes); null

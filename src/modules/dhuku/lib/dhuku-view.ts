@@ -6,26 +6,31 @@ export type DhukuEntryLite = {
   date: string;
   id: string;
   note: null | string;
-  type: "contribution" | "payout";
+  type: "contribution" | "fine" | "payout";
 };
 
 export type DhukuProgress = {
   contributed: number;
+  fines: number;
   paidCount: number;
   payoutAt: null | number;
   received: number;
 };
 
 // A payout doesn't count as a month paid; it marks the month it was taken in.
+// A fine isn't a month either; it's added up on its own.
 export function dhukuProgress(entries: DhukuEntryLite[]): DhukuProgress {
   const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
   let paidCount = 0;
   let contributed = 0;
+  let fines = 0;
   let received = 0;
   let payoutAt: null | number = null;
 
   for (const entry of sorted) {
-    if (entry.type === "payout") {
+    if (entry.type === "fine") {
+      fines += entry.amount;
+    } else if (entry.type === "payout") {
       received += entry.amount;
       if (payoutAt === null) payoutAt = paidCount;
     } else {
@@ -34,7 +39,7 @@ export function dhukuProgress(entries: DhukuEntryLite[]): DhukuProgress {
     }
   }
 
-  return { contributed, paidCount, payoutAt, received };
+  return { contributed, fines, paidCount, payoutAt, received };
 }
 
 export type DhukuCellState = "next" | "paid" | "payout" | "upcoming";

@@ -11,7 +11,16 @@ describe("dhukuProgress", () => {
       { amount: 3000, date: "2026-04-01", id: "d", note: null, type: "contribution" },
     ]);
 
-    expect(progress).toEqual({ contributed: 9000, paidCount: 3, payoutAt: 2, received: 36000 });
+    expect(progress).toEqual({ contributed: 9000, fines: 0, paidCount: 3, payoutAt: 2, received: 36000 });
+  });
+
+  it("keeps fines out of the months paid and adds them up on their own", () => {
+    const progress = dhukuProgress([
+      { amount: 3000, date: "2026-01-01", id: "a", note: null, type: "contribution" },
+      { amount: 100, date: "2026-01-01", id: "b", note: null, type: "fine" },
+    ]);
+
+    expect(progress).toEqual({ contributed: 3000, fines: 100, paidCount: 1, payoutAt: null, received: 0 });
   });
 });
 

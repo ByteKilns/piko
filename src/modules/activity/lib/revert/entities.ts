@@ -68,7 +68,7 @@ export const ENTITY_REVERT: Partial<Record<ActivityEntityType, EntityRevert>> = 
         restored: (n) => `Also brings back ${plural(n, "entry", "entries")}.`,
       },
     ],
-    editable: ["completedAt", "interestPerMonth", "monthlyContribution", "name", "note", "ownerMemberId", "startDate", "totalMembers"],
+    editable: ["completedAt", "interestPerMonth", "monthlyContribution", "name", "note", "ownerMemberId", "potDeduction", "startDate", "totalMembers"],
     fields: (f) => [...rowFields(dhukuFields(f)), { format: (v) => (v ? "Completed" : "Active"), key: "completedAt", label: "Status" }],
     noun: "dhuku",
     references: (r) => ({ categoryIds: [], memberIds: ids(r.ownerMemberId) }),
@@ -81,7 +81,7 @@ export const ENTITY_REVERT: Partial<Record<ActivityEntityType, EntityRevert>> = 
     noun: "dhuku entry",
     parentNoun: "dhuku",
     references: (r) => ({ categoryIds: [], memberIds: [], parentId: String(r.dhukuId) }),
-    summary: (f, r) => `${r.type === "payout" ? "Payout" : "Contribution"} · ${f.money(r.amount)}`,
+    summary: (f, r) => `${r.type === "payout" ? "Payout" : r.type === "fine" ? "Fine" : "Contribution"} · ${f.money(r.amount)}`,
   },
   expense: {
     children: [],

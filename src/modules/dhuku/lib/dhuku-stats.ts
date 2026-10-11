@@ -1,5 +1,5 @@
 // src/modules/dhuku/lib/dhuku-stats.ts
-export type DhukuEntryType = "contribution" | "payout";
+export type DhukuEntryType = "contribution" | "fine" | "payout";
 export type DhukuStatus = "active" | "completed";
 
 export type DhukuRow = {
@@ -41,8 +41,10 @@ export type DhukuCardData = {
   totalReceived: number;
 };
 
+// A month counts once its contribution is logged. Payouts and fines never add
+// a month, the same as the Dhuku page counts them.
 export function monthsLogged(entries: Pick<EntryRow, "type">[]): number {
-  return entries.length;
+  return entries.filter((e) => e.type === "contribution").length;
 }
 
 export function hasTakenPayout(entries: Pick<EntryRow, "type">[]): boolean {

@@ -5,6 +5,7 @@ import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { todayISO } from "@/lib/today";
 import { listDhukuEntries, listDhukus } from "@/modules/dhuku/api/dhuku.actions";
 import { type DhukuEntryModel, type DhukuRowModel, DhukuView } from "@/modules/dhuku/components/DhukuView";
+import { dhukuRealCost, expectedPot } from "@/modules/dhuku/lib/dhuku-money";
 import { addMonths, dhukuMonthCells, dhukuProgress } from "@/modules/dhuku/lib/dhuku-view";
 
 export async function DhukuPage() {
@@ -33,64 +34,92 @@ export async function DhukuPage() {
     const active = !completed;
     const monthly = Number(dhuku.monthlyContribution);
     const interest = dhuku.interestPerMonth === null ? null : Number(dhuku.interestPerMonth);
+    const potDeduction = dhuku.potDeduction === null ? null : Number(dhuku.potDeduction);
+    const terms = { monthlyContribution: monthly, potDeduction, totalMembers: months };
     const nextDueDate = completed ? null : addMonths(dhuku.startDate, progress.paidCount);
     const nextAmount = progress.payoutAt !== null ? monthly + (interest ?? 0) : monthly;
-    return { active, completed, dhuku, interest, manualCompleted: dhuku.completedAt !== null, monthly, months, nextAmount, nextDueDate, progress, rawEntries };
-  });
-
-  const rows: DhukuRowModel[] = computed.map(({ active, completed, dhuku, interest, manualCompleted, monthly, months, nextAmount, nextDueDate, progress, rawEntries }) => {
-    let nextSub: string;
-    let nextTone: "default" | "muted" | "negative";
-    if (completed || nextDueDate === null) {
-      nextSub = "—";
-      nextTone = "muted";
-    } else if (nextDueDate < today) {
-      nextSub = "Overdue — log it if already paid";
-      nextTone = "negative";
-    } else if (nextDueDate <= period.endDate) {
-      nextSub = `Rs ${Math.round(nextAmount).toLocaleString("en-US")} due this month`;
-      nextTone = "default";
-    } else {
-      nextSub = `Rs ${Math.round(nextAmount).toLocaleString("en-US")} upcoming`;
-      nextTone = "muted";
-    }
-
-    const entries: DhukuEntryModel[] = rawEntries.map((e) => ({
-      amount: Number(e.amount),
-      dateLabel: formatDate(e.date, dateFormat),
-      id: e.id,
-      type: e.type,
-    }));
-
+    // This month's meeting is the next one unless its contribution is already
+    // logged; one member takes the pot at each meeting.
+    const paidThisPeriod = rawEntries.some((e) => e.type === "contribution" && e.date >= period.startDate && e.date <= period.endDate);
+    const meetingNumber = Math.min(months, Math.max(1, paidThisPeriod ? progress.paidCount : progress.paidCount + 1));
+    const pot = expectedPot(terms, interest, meetingNumber);
+    const realCost = dhukuRealCost(terms, entriesLite);
     return {
       active,
-      cells: dhukuMonthCells(months, progress.paidCount, progress.payoutAt, completed),
       completed,
-      contributed: progress.contributed,
-      editing: {
-        id: dhuku.id,
-        interestPerMonth: interest,
-        monthlyContribution: monthly,
-        name: dhuku.name,
-        note: dhuku.note,
-        ownerKey: roleFor(dhuku.ownerMemberId),
-        startDate: dhuku.startDate,
-        totalMembers: months,
-      },
-      entries,
-      id: dhuku.id,
-      manualCompleted,
+      dhuku,
+      interest,
+      manualCompleted: dhuku.completedAt !== null,
       monthly,
-      monthText: completed ? `All ${months} months paid` : `Month ${progress.paidCount + 1} of ${months}`,
-      name: dhuku.name,
-      nextLabel: completed || nextDueDate === null ? "Completed" : formatDate(nextDueDate, dateFormat),
-      nextSub,
-      nextTone,
-      ownerKey: roleFor(dhuku.ownerMemberId),
-      pct: months > 0 ? Math.round((progress.paidCount / months) * 100) : 0,
-      pot: monthly * months,
+      months,
+      nextAmount,
+      nextDueDate,
+      pot,
+      potDeduction,
+      progress,
+      rawEntries,
+      realCost,
     };
   });
+
+  const rows: DhukuRowModel[] = computed.map(
+    ({ active, completed, dhuku, interest, manualCompleted, monthly, months, nextAmount, nextDueDate, pot, potDeduction, progress, rawEntries, realCost }) => {
+      let nextSub: string;
+      let nextTone: "default" | "muted" | "negative";
+      if (completed || nextDueDate === null) {
+        nextSub = "—";
+        nextTone = "muted";
+      } else if (nextDueDate < today) {
+        nextSub = "Overdue — log it if already paid";
+        nextTone = "negative";
+      } else if (nextDueDate <= period.endDate) {
+        nextSub = `Rs ${Math.round(nextAmount).toLocaleString("en-US")} due this month`;
+        nextTone = "default";
+      } else {
+        nextSub = `Rs ${Math.round(nextAmount).toLocaleString("en-US")} upcoming`;
+        nextTone = "muted";
+      }
+
+      const entries: DhukuEntryModel[] = rawEntries.map((e) => ({
+        amount: Number(e.amount),
+        dateLabel: formatDate(e.date, dateFormat),
+        id: e.id,
+        type: e.type,
+      }));
+
+      return {
+        active,
+        cells: dhukuMonthCells(months, progress.paidCount, progress.payoutAt, completed),
+        completed,
+        contributed: progress.contributed,
+        editing: {
+          id: dhuku.id,
+          interestPerMonth: interest,
+          monthlyContribution: monthly,
+          name: dhuku.name,
+          note: dhuku.note,
+          ownerKey: roleFor(dhuku.ownerMemberId),
+          potDeduction,
+          startDate: dhuku.startDate,
+          totalMembers: months,
+        },
+        entries,
+        id: dhuku.id,
+        manualCompleted,
+        monthly,
+        monthText: completed ? `All ${months} months paid` : `Month ${progress.paidCount + 1} of ${months}`,
+        name: dhuku.name,
+        nextAmount,
+        nextLabel: completed || nextDueDate === null ? "Completed" : formatDate(nextDueDate, dateFormat),
+        nextSub,
+        nextTone,
+        ownerKey: roleFor(dhuku.ownerMemberId),
+        pct: months > 0 ? Math.round((progress.paidCount / months) * 100) : 0,
+        pot,
+        realCost,
+      };
+    },
+  );
 
   const due = computed.filter((c) => c.active && c.nextDueDate !== null && c.nextDueDate <= period.endDate);
   const activeCount = computed.filter((c) => c.active).length;

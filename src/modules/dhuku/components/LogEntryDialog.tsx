@@ -17,6 +17,8 @@ import { addDhukuEntryAction } from "@/modules/dhuku/api/dhuku.actions";
 
 export type LogEntryTarget = { id: string; monthly: number; name: string; pot: number };
 
+type EntryKind = "contribution" | "fine" | "payout";
+
 type Props = {
   onOpenChange: (open: boolean) => void;
   open: boolean;
@@ -24,6 +26,12 @@ type Props = {
 };
 
 const FORM_ID = "dhuku-entry-form";
+
+const AMOUNT_LABEL: Record<EntryKind, string> = {
+  contribution: "Amount paid in",
+  fine: "Fine paid",
+  payout: "Amount received",
+};
 
 export function LogEntryDialog({ onOpenChange, open, target }: Props) {
   const [pending, setPending] = useState(false);
@@ -49,15 +57,16 @@ export function LogEntryDialog({ onOpenChange, open, target }: Props) {
 
 function LogEntryFields({ onDone, onPendingChange, target }: { onDone: () => void; onPendingChange: (pending: boolean) => void; target: LogEntryTarget }) {
   const router = useRouter();
-  const [kind, setKind] = useState<"contribution" | "payout">("contribution");
+  const [kind, setKind] = useState<EntryKind>("contribution");
   const [amount, setAmount] = useState(String(target.monthly));
   const [date, setDate] = useState(todayISO());
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | undefined>();
 
-  function chooseKind(value: "contribution" | "payout") {
+  function chooseKind(value: EntryKind) {
     setKind(value);
-    setAmount(String(value === "contribution" ? target.monthly : target.pot));
+    // A fine has no usual amount, so it starts empty.
+    setAmount(value === "contribution" ? String(target.monthly) : value === "payout" ? String(target.pot) : "");
     setError(undefined);
   }
 
@@ -88,13 +97,14 @@ function LogEntryFields({ onDone, onPendingChange, target }: { onDone: () => voi
         options={[
           { label: "Contribution", value: "contribution" },
           { label: "Payout received", value: "payout" },
+          { label: "Fine", value: "fine" },
         ]}
         value={kind}
       />
       <AmountInput
         data-autofocus
         error={error}
-        label={kind === "contribution" ? "Amount paid in" : "Amount received"}
+        label={AMOUNT_LABEL[kind]}
         onChange={(event) => {
           setAmount(event.target.value);
           setError(undefined);

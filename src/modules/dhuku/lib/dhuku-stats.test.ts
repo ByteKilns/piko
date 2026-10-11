@@ -17,8 +17,8 @@ function entry(overrides: Partial<EntryRow> = {}): EntryRow {
 }
 
 describe("monthsLogged", () => {
-  it("counts every entry regardless of type", () => {
-    expect(monthsLogged([entry(), entry({ type: "payout" }), entry()])).toBe(3);
+  it("counts contributions only: a payout or a fine is never a month", () => {
+    expect(monthsLogged([entry(), entry({ type: "payout" }), entry({ type: "fine" }), entry()])).toBe(2);
   });
 
   it("returns 0 for no entries", () => {
@@ -102,12 +102,12 @@ describe("buildDhukuCards", () => {
 
     expect(card.ownerName).toBe("Nirjal");
     expect(card.hasTaken).toBe(true);
-    expect(card.monthsLogged).toBe(2);
+    expect(card.monthsLogged).toBe(1);
     expect(card.totalContributed).toBe(1000);
     expect(card.totalReceived).toBe(13000);
     expect(card.expectedNextAmount).toBe(1200);
     expect(card.status).toBe("active");
-    expect(card.nextDueDate).toBe("2026-03-15");
+    expect(card.nextDueDate).toBe("2026-02-15");
   });
 
   it("sets nextDueDate to null once the cycle is completed", () => {
@@ -125,7 +125,8 @@ describe("buildDhukuCards", () => {
     ];
     const entryRows: EntryRow[] = [
       { amount: "1000", date: "2026-01-15", dhukuId: "d1", id: "e1", note: null, type: "contribution" },
-      { amount: "2000", date: "2026-02-15", dhukuId: "d1", id: "e2", note: null, type: "payout" },
+      { amount: "1000", date: "2026-02-15", dhukuId: "d1", id: "e2", note: null, type: "contribution" },
+      { amount: "2000", date: "2026-02-15", dhukuId: "d1", id: "e3", note: null, type: "payout" },
     ];
 
     const [card] = buildDhukuCards(dhukuRows, entryRows, new Map());

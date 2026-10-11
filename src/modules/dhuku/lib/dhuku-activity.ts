@@ -7,6 +7,7 @@ export type DhukuSnapshot = {
   name: string;
   note?: null | string;
   ownerMemberId: null | string;
+  potDeduction?: null | number | string;
   startDate: string;
   totalMembers: number;
 };
@@ -22,6 +23,7 @@ export function dhukuFields(f: ActivityFormatters): FieldSpec<DhukuSnapshot>[] {
     { format: f.text, key: "totalMembers", label: "Members" },
     { format: f.money, key: "monthlyContribution", label: "Monthly contribution" },
     { format: f.money, key: "interestPerMonth", label: "Interest per month" },
+    { format: f.money, key: "potDeduction", label: "Taken from each pot" },
     { format: f.date, key: "startDate", label: "Start date" },
     { format: f.owner, key: "ownerMemberId", label: "For" },
     { format: f.text, key: "note", label: "Note" },
@@ -37,6 +39,7 @@ export type DhukuEntrySnapshot = { amount: number | string; date?: null | string
 function entryTypeLabel(value: unknown): null | string {
   if (value === "payout") return "Payout";
   if (value === "contribution") return "Contribution";
+  if (value === "fine") return "Fine";
   return null;
 }
 
@@ -55,5 +58,5 @@ export function dhukuEntrySummary(
   entry: { amount: number | string; type: string },
   dhukuName: string,
 ): string {
-  return `${entry.type === "payout" ? "Payout" : "Contribution"} · ${f.money(entry.amount)} · ${dhukuName}`;
+  return `${entryTypeLabel(entry.type) ?? "Entry"} · ${f.money(entry.amount)} · ${dhukuName}`;
 }

@@ -40,4 +40,10 @@ describe("dhukuEntryFields", () => {
     const type = dhukuEntryFields(f).find((s) => s.key === "type")!;
     expect([type.format("payout"), type.format("contribution")]).toEqual(["Payout", "Contribution"]);
   });
+
+  it("labels a fine", () => {
+    const type = dhukuEntryFields(f).find((s) => s.key === "type")!;
+    expect(type.format("fine")).toBe("Fine");
+    expect(dhukuEntrySummary(f, { amount: 100, type: "fine" }, "Office dhuku")).toBe("Fine · RS 100 · Office dhuku");
+  });
 });

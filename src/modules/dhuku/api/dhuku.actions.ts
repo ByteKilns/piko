@@ -61,6 +61,7 @@ export async function createDhukuAction(input: DhukuInput) {
     name: parsed.name,
     note: parsed.note?.trim() || null,
     ownerMemberId: parsed.ownerMemberId,
+    potDeduction: parsed.potDeduction === null ? null : String(parsed.potDeduction),
     startDate: parsed.startDate,
     totalMembers: parsed.totalMembers,
   }).returning();
@@ -96,6 +97,7 @@ export async function updateDhukuAction(id: string, input: DhukuInput) {
       name: parsed.name,
       note: parsed.note?.trim() || null,
       ownerMemberId: parsed.ownerMemberId,
+      potDeduction: parsed.potDeduction === null ? null : String(parsed.potDeduction),
       startDate: parsed.startDate,
       totalMembers: parsed.totalMembers,
     })
@@ -200,14 +202,16 @@ export async function addDhukuEntryAction(dhukuId: string, input: DhukuEntryInpu
   const body =
     parsed.type === "payout"
       ? `${actorName} recorded receiving ${formatNPR(parsed.amount)} from ${dhuku.name}.`
-      : `${actorName} recorded a ${formatNPR(parsed.amount)} contribution to ${dhuku.name}.`;
+      : parsed.type === "fine"
+        ? `${actorName} recorded a ${formatNPR(parsed.amount)} fine in ${dhuku.name}.`
+        : `${actorName} recorded a ${formatNPR(parsed.amount)} contribution to ${dhuku.name}.`;
   await insertNotification({
     body,
     category: "shared",
     dedupeKey: `dhuku-entry:${created.id}`,
     householdId,
     severity: "success",
-    title: parsed.type === "payout" ? "Dhuku payout recorded" : "Dhuku contribution recorded",
+    title: parsed.type === "payout" ? "Dhuku payout recorded" : parsed.type === "fine" ? "Dhuku fine recorded" : "Dhuku contribution recorded",
   });
 
   const f = await loadActivityFormatters(householdId);

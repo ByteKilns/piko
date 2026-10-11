@@ -14,15 +14,17 @@ import { PageHeader } from "@/components/PageHeader";
 import { RowMenu } from "@/components/RowMenu";
 import { Row, type RowColumns, RowsHeader } from "@/components/Rows";
 import { Button } from "@/components/ui/button";
+import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { completeDhukuAction, deleteDhukuAction, deleteDhukuEntryAction, reopenDhukuAction } from "@/modules/dhuku/api/dhuku.actions";
 import { DhukuDialog, type DhukuEditing, type DhukuOwnerKey } from "@/modules/dhuku/components/DhukuDialog";
 import { LogEntryDialog, type LogEntryTarget } from "@/modules/dhuku/components/LogEntryDialog";
+import type { DhukuRealCost } from "@/modules/dhuku/lib/dhuku-money";
 import type { DhukuCell } from "@/modules/dhuku/lib/dhuku-view";
 
 type Member = { id: string; name: string };
 
-export type DhukuEntryModel = { amount: number; dateLabel: string; id: string; type: "contribution" | "payout" };
+export type DhukuEntryModel = { amount: number; dateLabel: string; id: string; type: "contribution" | "fine" | "payout" };
 
 export type DhukuRowModel = {
   active: boolean;
@@ -36,12 +38,14 @@ export type DhukuRowModel = {
   monthly: number;
   monthText: string;
   name: string;
+  nextAmount: number;
   nextLabel: string;
   nextSub: string;
   nextTone: "default" | "muted" | "negative";
   ownerKey: DhukuOwnerKey;
   pct: number;
   pot: number;
+  realCost: DhukuRealCost;
 };
 
 type LedgerFigures = {
@@ -232,7 +236,7 @@ export function DhukuView(props: Props) {
                 {row.active && (
                   <Button
                     className="h-auto px-2.5 py-1.25 text-[13px]"
-                    onClick={() => setLogTarget({ id: row.id, monthly: row.monthly, name: row.name, pot: row.pot })}
+                    onClick={() => setLogTarget({ id: row.id, monthly: row.nextAmount, name: row.name, pot: row.pot })}
                     type="button"
                     variant="outline"
                   >
@@ -253,10 +257,19 @@ export function DhukuView(props: Props) {
 
             {open && row.entries.length > 0 && (
               <div className="border-b border-n-300 bg-ink/3 px-2 py-2">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-n-200 pb-2 text-[13px] text-n-700">
+                  <span>
+                    Real cost so far: <strong className="font-semibold text-ink">{formatMoney(row.realCost.total)}</strong>
+                  </span>
+                  <span>
+                    Food share {formatMoney(row.realCost.foodShare)} · interest {formatMoney(row.realCost.interestPaid)} · fines{" "}
+                    {formatMoney(row.realCost.finesPaid)} · less {formatMoney(row.realCost.received)} received in your pot
+                  </span>
+                </div>
                 {row.entries.map((entry) => (
                   <div className="grid grid-cols-[120px_minmax(0,1fr)_auto_auto] items-center gap-4 border-b border-n-200 py-1.5 last:border-0" key={entry.id}>
                     <span className="text-[13px] text-n-600">{entry.dateLabel}</span>
-                    <span className="text-sm">{entry.type === "payout" ? "Payout received" : "Contribution"}</span>
+                    <span className="text-sm">{entry.type === "payout" ? "Payout received" : entry.type === "fine" ? "Fine" : "Contribution"}</span>
                     <span className="text-sm font-semibold">
                       <Money value={entry.amount} />
                     </span>
