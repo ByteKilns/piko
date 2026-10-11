@@ -136,7 +136,9 @@ put the tenancy-agnostic logic in a `...ForHousehold` function so web and mobile
   optional `recurringExpenseId`), `incomes` (per member/month), `recurring_expenses` (bills
   with `nextDueDate`, `frequency` monthly/quarterly/yearly), `monthly_budgets` +
   `budget_items` (planned amount per category/owner).
-- **Goals & obligations** — `savings_goals` + `savings_contributions`,
+- **Goals & obligations** — `savings_pots` (shared or per member, with an
+  emergency reserve) + `savings_pot_plans` + `savings_items` (the priority list) +
+  `savings_deposits`; an expense can be paid from a pot (`expenses.savingsPotId`),
   `loans` + `loan_payments` (`direction` given/taken), `dhukus` + `dhuku_entries`
   (rotating savings group: contribution/payout; `completedAt` set when marked complete,
   otherwise derived from the logged months).

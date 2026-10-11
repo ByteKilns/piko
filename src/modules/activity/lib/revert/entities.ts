@@ -5,7 +5,6 @@ import { dhukuEntryFields, dhukuFields, type DhukuSnapshot, dhukuSummary } from 
 import { expenseFields, type ExpenseSnapshot, expenseSummary } from "@/modules/expenses/lib/expense-activity";
 import { loanFields, loanPaymentFields, type LoanSnapshot, loanSummary } from "@/modules/loans/lib/loan-activity";
 import { recurringFields, type RecurringSnapshot, recurringSummary } from "@/modules/recurring/lib/recurring-activity";
-import { contributionFields, goalFields, goalSummary, type SavingsGoalSnapshot } from "@/modules/savings-goals/lib/savings-activity";
 import { dateFormatLabel, settingsFields } from "@/modules/settings/lib/settings-activity";
 
 import type { ActivityFormatters } from "../activity-values";
@@ -151,29 +150,5 @@ export const ENTITY_REVERT: Partial<Record<ActivityEntityType, EntityRevert>> = 
     noun: "recurring bill",
     references: (r) => ({ categoryIds: ids(r.categoryId), memberIds: ids(r.ownerMemberId) }),
     summary: (f, r) => recurringSummary(f, r as RecurringSnapshot),
-  },
-  savings_contribution: {
-    children: [],
-    editable: ["amount", "date", "memberId"],
-    fields: (f) => rowFields(contributionFields(f)),
-    noun: "contribution",
-    parentNoun: "savings goal",
-    references: (r) => ({ categoryIds: [], memberIds: ids(r.memberId), parentId: String(r.goalId) }),
-    summary: (f, r) => `${f.money(r.amount)} · by ${f.member(r.memberId)}`,
-  },
-  savings_goal: {
-    children: [
-      {
-        kind: "contributions",
-        removed: (n) => `This also removes ${plural(n, "contribution")}.`,
-        restored: (n) => `Also brings back ${plural(n, "contribution")}.`,
-      },
-    ],
-    editable: ["description", "image", "name", "ownerMemberId", "targetAmount", "targetDate"],
-    fields: (f) => [...rowFields(goalFields(f)), { format: (v) => (v ? "Photo" : null), key: "image", label: "Photo" }],
-    noun: "savings goal",
-    opaque: ["image"],
-    references: (r) => ({ categoryIds: [], memberIds: ids(r.ownerMemberId) }),
-    summary: (f, r) => goalSummary(f, r as SavingsGoalSnapshot),
   },
 };

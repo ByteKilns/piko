@@ -89,12 +89,6 @@ describe("planRevert — edits", () => {
     });
   });
 
-  it("shows a line for a swapped photo even though both format the same", () => {
-    const goal = { description: null, id: "g-1", image: "data:a", name: "Trip", ownerMemberId: null, targetAmount: null, targetDate: null };
-    const plan = planRevert(entry({ action: "updated", after: { ...goal, image: "data:b" }, before: goal, entityType: "savings_goal" }), context({ ...goal, image: "data:b" }), "undo", f);
-    expect(plan.kind === "apply" && plan.changes).toEqual([{ field: "Photo", from: "Current version", to: "Earlier version" }]);
-  });
-
   it("flips status changes back (category archived)", () => {
     const category = { archived: false, budgetType: "flexible", groupName: "Household", id: "c-1", name: "Groceries" };
     const plan = planRevert(entry({ action: "archived", after: { ...category, archived: true }, before: category, entityType: "category" }), context({ ...category, archived: true }), "undo", f);

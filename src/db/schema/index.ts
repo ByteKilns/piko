@@ -7,7 +7,6 @@ export * from "./incomes";
 export * from "./recurringExpenses";
 export * from "./expenses";
 export * from "./paybacks";
-export * from "./savingsGoals";
 export * from "./savings";
 export * from "./notifications";
 export * from "./loans";

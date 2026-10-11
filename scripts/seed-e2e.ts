@@ -27,8 +27,10 @@ import {
   loans,
   monthlyBudgets,
   recurringExpenses,
-  savingsContributions,
-  savingsGoals,
+  savingsDeposits,
+  savingsItems,
+  savingsPotPlans,
+  savingsPots,
   users,
 } from "../src/db/schema";
 import { DEFAULT_CATEGORIES } from "../src/modules/categories/lib/default-categories";
@@ -210,23 +212,24 @@ async function main() {
     })),
   );
 
-  // One savings goal with contributions, so the dashboard/savings pages show
-  // goals and recent contributions rather than the empty state.
-  const [goal] = await db
-    .insert(savingsGoals)
-    .values({
-      description: null,
-      householdId: household.id,
-      image: null,
-      name: "Emergency fund",
-      ownerMemberId: null,
-      targetAmount: "300000",
-      targetDate: dateFor(current.year + 1, current.month, 1),
-    })
+  // A shared savings pot with a plan, money in and two list items, so the
+  // savings pages show balances and a forecast rather than the empty state.
+  const [pot] = await db
+    .insert(savingsPots)
+    .values({ heldByMemberId: m1.id, householdId: household.id, name: "Shared savings", ownerMemberId: null, reserveMinimum: "50000" })
     .returning();
-  await db.insert(savingsContributions).values([
-    { amount: "20000", date: dateFor(current.year, current.month, 2), goalId: goal.id, memberId: m1.id },
-    { amount: "10000", date: dateFor(current.year, current.month, 7), goalId: goal.id, memberId: m2.id },
+  await db.insert(savingsPotPlans).values([
+    { memberId: m1.id, monthlyAmount: "10000", potId: pot.id },
+    { memberId: m2.id, monthlyAmount: "5000", potId: pot.id },
+  ]);
+  await db.insert(savingsDeposits).values([
+    { amount: "40000", date: dateFor(current.year, current.month, 1), kind: "opening", memberId: null, potId: pot.id },
+    { amount: "10000", date: dateFor(current.year, current.month, 2), kind: "deposit", memberId: m1.id, potId: pot.id },
+    { amount: "5000", date: dateFor(current.year, current.month, 7), kind: "deposit", memberId: m2.id, potId: pot.id },
+  ]);
+  await db.insert(savingsItems).values([
+    { cost: "300000", name: "Surgery", position: 1, potId: pot.id },
+    { cost: "60000", name: "Vacation", position: 2, potId: pot.id },
   ]);
 
   // Fixed commitments for the current month: a bill, a taken-loan installment,

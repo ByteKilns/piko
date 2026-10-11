@@ -17,8 +17,6 @@ import {
   loans,
   monthlyBudgets,
   recurringExpenses,
-  savingsContributions,
-  savingsGoals,
   savingsItems,
   savingsPots,
 } from "@/db/schema";
@@ -95,7 +93,6 @@ function tableStore(ops: TableOps): RevertStore {
   };
 }
 
-const goalIdsOf = (householdId: string) => db.select({ id: savingsGoals.id }).from(savingsGoals).where(eq(savingsGoals.householdId, householdId));
 const loanIdsOf = (householdId: string) => db.select({ id: loans.id }).from(loans).where(eq(loans.householdId, householdId));
 const dhukuIdsOf = (householdId: string) => db.select({ id: dhukus.id }).from(dhukus).where(eq(dhukus.householdId, householdId));
 const budgetIdsOf = (householdId: string) =>
@@ -209,56 +206,6 @@ const budgetItemStore = tableStore({
       .update(budgetItems)
       .set(reviveRow(budgetItems, set))
       .where(and(eq(budgetItems.id, id), inArray(budgetItems.monthlyBudgetId, budgetIdsOf(h)))),
-});
-
-const goalStore = tableStore({
-  children: [
-    {
-      find: (h, goalId) =>
-        db
-          .select()
-          .from(savingsContributions)
-          .where(and(eq(savingsContributions.goalId, goalId), inArray(savingsContributions.goalId, goalIdsOf(h)))),
-      insert: (tx, _h, goalId, rows) => tx.insert(savingsContributions).values(rows.map((r) => ({ ...reviveRow(savingsContributions, r), goalId }))),
-      kind: "contributions",
-    },
-  ],
-  find: async (h, id) => (await db.select().from(savingsGoals).where(and(eq(savingsGoals.id, id), eq(savingsGoals.householdId, h))))[0],
-  insert: (tx, h, row) => tx.insert(savingsGoals).values({ ...reviveRow(savingsGoals, row), householdId: h }),
-  remove: (tx, h, id) => tx.delete(savingsGoals).where(and(eq(savingsGoals.id, id), eq(savingsGoals.householdId, h))),
-  update: (tx, h, id, set) =>
-    tx
-      .update(savingsGoals)
-      .set(reviveRow(savingsGoals, set))
-      .where(and(eq(savingsGoals.id, id), eq(savingsGoals.householdId, h))),
-});
-
-const contributionStore = tableStore({
-  find: async (h, id) =>
-    (
-      await db
-        .select()
-        .from(savingsContributions)
-        .where(and(eq(savingsContributions.id, id), inArray(savingsContributions.goalId, goalIdsOf(h))))
-    )[0],
-  insert: async (tx, h, row) => {
-    const values = reviveRow(savingsContributions, row);
-    await requireParent(
-      tx
-        .select({ id: savingsGoals.id })
-        .from(savingsGoals)
-        .where(and(eq(savingsGoals.id, values.goalId), eq(savingsGoals.householdId, h))),
-    );
-    await tx.insert(savingsContributions).values(values);
-  },
-  parentIds: (h) => idsOf(goalIdsOf(h)),
-  remove: (tx, h, id) =>
-    tx.delete(savingsContributions).where(and(eq(savingsContributions.id, id), inArray(savingsContributions.goalId, goalIdsOf(h)))),
-  update: (tx, h, id, set) =>
-    tx
-      .update(savingsContributions)
-      .set(reviveRow(savingsContributions, set))
-      .where(and(eq(savingsContributions.id, id), inArray(savingsContributions.goalId, goalIdsOf(h)))),
 });
 
 const loanStore = tableStore({
@@ -451,6 +398,4 @@ export const REVERT_STORES: Partial<Record<ActivityEntityType, RevertStore>> = {
   loan: loanStore,
   loan_payment: loanPaymentStore,
   recurring_expense: recurringStore,
-  savings_contribution: contributionStore,
-  savings_goal: goalStore,
 };

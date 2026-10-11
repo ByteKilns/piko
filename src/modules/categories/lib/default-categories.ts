@@ -25,6 +25,5 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
   { budgetType: "flexible", group: "Personal", name: "Personal" },
   { budgetType: "flexible", group: "Personal", name: "Health/Wellness" },
   { budgetType: "flexible", group: "Personal", name: "Other Personal" },
-  { budgetType: "flexible", group: "Financial", name: "Savings" },
   { budgetType: "flexible", group: "Other", name: "Miscellaneous" },
 ];

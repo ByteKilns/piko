@@ -7,7 +7,7 @@ const routes = [
   { label: "Expenses", path: "/expenses", title: "Expenses · Piko" },
   { label: "Budget", path: "/budget", title: "Budget · Piko" },
   { label: "Recurring", path: "/recurring", title: "Recurring · Piko" },
-  { label: "Savings Goals", path: "/savings-goals", title: "Savings Goals · Piko" },
+  { label: "Savings", path: "/savings", title: "Savings · Piko" },
   { label: "Loans", path: "/loans", title: "Loans · Piko" },
   { label: "Dhuku", path: "/dhuku", title: "Dhuku · Piko" },
   { label: "Reports", path: "/reports", title: "Reports · Piko" },
