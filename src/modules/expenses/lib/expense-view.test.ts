@@ -113,9 +113,9 @@ describe("groupByDay", () => {
     ]);
   });
 
-  it("uses Bikram Sambat dates for nepali households", () => {
+  it("uses Bikram Sambat dates for nepali households, with the English date in brackets", () => {
     const [group] = groupByDay([expense({ date: "2026-10-05" })], { dateFormat: "nepali", today: TODAY });
-    expect(group.sub).toBe("19 Ashwin");
+    expect(group.sub).toBe("19 Ashwin (5 Oct)");
   });
 });
 

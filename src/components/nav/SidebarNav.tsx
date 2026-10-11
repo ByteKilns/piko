@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useLayoutEffect, useRef, useState } from "react";
 
 import { ChevronsUpDown, LogOut, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import Link from "next/link";
@@ -37,9 +37,16 @@ const INDICATOR_TRANSITION = `transform 280ms ${OUT}, opacity 200ms ease`;
 const HOVER_TRANSITION = `transform 180ms ${OUT}, opacity 150ms ease`;
 const HOVER_FADE = "opacity 150ms ease";
 const TIP_TRANSITION = `top 160ms ${OUT}, opacity 150ms ease, transform 150ms ${OUT}`;
-const ENTER_DURATION = 320;
 const ENTER_STAGGER = 22;
 const ENTER_DELAY = 60;
+// header + add row + one label per nav group + a row per item + the account button.
+const ENTER_COUNT = 2 + NAV_GROUPS.reduce((count, group) => count + 1 + group.items.length, 0) + NAV_FOOTER.length + 1;
+
+// The entrance runs from the server-rendered markup (see the sidebar-enter
+// keyframes in globals.css); each block carries its stagger slot here.
+function enterStyle(index: number): CSSProperties {
+  return { "--enter-index": index } as CSSProperties;
+}
 
 function labelTransition(delay: string): string {
   return `opacity 150ms ease-out ${delay}, transform 220ms ${OUT} ${delay}`;
@@ -53,6 +60,7 @@ function NavLink({
   active,
   badge,
   collapsed,
+  enterIndex,
   item,
   labelDelay,
   onBlur,
@@ -63,6 +71,7 @@ function NavLink({
   active: boolean;
   badge?: number;
   collapsed: boolean;
+  enterIndex: number;
   item: NavItem;
   labelDelay: string;
   onBlur: () => void;
@@ -76,9 +85,8 @@ function NavLink({
     <Link
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative flex h-9 items-center text-sm transition-[color,transform] duration-[160ms,120ms] ease-out active:scale-[0.985]",
+        "relative flex h-9 items-center gap-3 px-2.5 text-sm transition-[color,transform] duration-[160ms,120ms] ease-out active:scale-[0.985]",
         active ? "font-semibold text-ink" : "text-n-800 hover:text-ink",
-        collapsed ? "gap-0 px-0 justify-center" : "gap-3 px-2.5",
       )}
       data-enter=""
       href={item.href}
@@ -87,10 +95,11 @@ function NavLink({
       onMouseEnter={(event) => onEnter(item, event.currentTarget)}
       onMouseLeave={onRowLeave}
       ref={(el) => registerRef(item.href, el)}
+      style={enterStyle(enterIndex)}
     >
       <Icon className="size-4 shrink-0" strokeWidth={1.75} />
       <span
-        className={cn("overflow-hidden whitespace-nowrap", collapsed ? "w-0 flex-none opacity-0 -translate-x-1" : "min-w-0 flex-1 truncate opacity-100 translate-x-0")}
+        className={cn("min-w-0 flex-1 truncate", collapsed ? "opacity-0 -translate-x-1" : "opacity-100 translate-x-0")}
         style={{ transition: labelTransition(labelDelay) }}
       >
         {item.label}
@@ -133,6 +142,19 @@ export function SidebarNav({ categories, currentMemberId, initialCollapsed, memb
   const activeHref = allItems.find((item) => isActivePath(pathname, item.href))?.href ?? null;
   const labelDelay = collapsed ? "0ms" : "70ms";
 
+  // Assign each entrance block its stagger slot in render (DOM) order so the
+  // CSS animation-delay matches the old JS stagger exactly.
+  let enterIndex = 0;
+  const headerEnter = enterIndex++;
+  const addEnter = enterIndex++;
+  const groupBlocks = NAV_GROUPS.map((group) => {
+    const labelEnter = enterIndex++;
+    const items = group.items.map((item) => ({ enter: enterIndex++, item }));
+    return { group, items, labelEnter };
+  });
+  const footerBlocks = NAV_FOOTER.map((item) => ({ enter: enterIndex++, item }));
+  const accountEnter = enterIndex++;
+
   const registerRef = useCallback((href: string, el: HTMLAnchorElement | null) => {
     if (el) linkRefs.current.set(href, el);
     else linkRefs.current.delete(href);
@@ -160,28 +182,19 @@ export function SidebarNav({ categories, currentMemberId, initialCollapsed, memb
     }
   }, [activeHref, collapsed]);
 
-  // Entrance: fade each block in with a 6px rise, then reveal the indicator.
+  // Entrance: the 6px rise and per-block stagger come from the sidebar-enter
+  // keyframes in globals.css (so it runs from first paint, not after hydration).
+  // Only the indicator — whose position needs measuring — is revealed here.
   useLayoutEffect(() => {
-    const aside = asideRef.current;
-    if (!aside) return;
     const indicator = indicatorRef.current;
+    if (!indicator) return;
     if (prefersReducedMotion()) {
-      if (indicator) indicator.style.opacity = "1";
+      indicator.style.opacity = "1";
       return;
     }
-    const blocks = Array.from(aside.querySelectorAll<HTMLElement>("[data-enter]"));
-    blocks.forEach((el, index) => {
-      el.animate(
-        [
-          { opacity: 0, transform: "translateY(6px)" },
-          { opacity: 1, transform: "translateY(0)" },
-        ],
-        { delay: ENTER_DELAY + index * ENTER_STAGGER, duration: ENTER_DURATION, easing: OUT, fill: "backwards" },
-      );
-    });
     const timer = window.setTimeout(() => {
-      if (indicator) indicator.style.opacity = "1";
-    }, ENTER_DELAY + blocks.length * ENTER_STAGGER);
+      indicator.style.opacity = "1";
+    }, ENTER_DELAY + ENTER_COUNT * ENTER_STAGGER);
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -237,29 +250,36 @@ export function SidebarNav({ categories, currentMemberId, initialCollapsed, memb
     hideTip();
   }
 
-  function toggleCollapsed() {
-    const next = !collapsed;
+  function setCollapsedState(next: boolean) {
     if (!next) hideTip();
     setCollapsed(next);
     document.cookie = `${SIDEBAR_COLLAPSED_COOKIE_NAME}=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
   }
 
+  function toggleCollapsed() {
+    setCollapsedState(!collapsed);
+  }
+
   return (
     <aside
       className={cn(
-        "sticky top-0 hidden h-screen shrink-0 flex-col gap-5.5 overflow-y-auto border-r-2 border-rule bg-paper pt-5 pb-4.5 text-ink md:flex",
-        collapsed ? "w-16 px-2" : "w-61 px-3.5",
+        "sticky top-0 hidden h-screen shrink-0 flex-col gap-5.5 overflow-x-hidden overflow-y-auto border-r-2 border-rule bg-paper px-3.5 pt-5 pb-4.5 text-ink md:flex",
+        collapsed ? "w-16" : "w-61",
       )}
       data-motion-root=""
       ref={asideRef}
       style={{ transition: WIDTH_TRANSITION }}
     >
-      <div className={cn("flex items-center gap-2.5 px-1", collapsed && "flex-col gap-2 px-0")} data-enter="">
-        <span
-          aria-hidden
+      <div className="flex items-center gap-2.5 px-1" data-enter="" style={enterStyle(headerEnter)}>
+        <button
+          aria-label={collapsed ? "Expand sidebar" : "Piko"}
           className="relative grid size-8 shrink-0 place-items-center bg-ink text-base font-extrabold text-paper"
+          onClick={() => {
+            if (collapsed) setCollapsedState(false);
+          }}
           onMouseEnter={() => setLogoHover(true)}
           onMouseLeave={() => setLogoHover(false)}
+          type="button"
         >
           <span style={{ opacity: collapsed && logoHover ? 0 : 1, transition: "opacity 160ms ease" }}>P</span>
           <svg
@@ -275,11 +295,11 @@ export function SidebarNav({ categories, currentMemberId, initialCollapsed, memb
           >
             <path d="M3 3h18v18H3zM9 3v18" />
           </svg>
-        </span>
+        </button>
         <div
           className={cn(
-            "flex flex-col overflow-hidden",
-            collapsed ? "h-0 w-0 flex-none opacity-0 -translate-x-1" : "min-w-0 flex-1 opacity-100 translate-x-0",
+            "flex min-w-0 flex-1 flex-col overflow-hidden whitespace-nowrap",
+            collapsed ? "opacity-0 -translate-x-1" : "opacity-100 translate-x-0",
           )}
           style={{ transition: labelTransition(labelDelay) }}
         >
@@ -287,10 +307,12 @@ export function SidebarNav({ categories, currentMemberId, initialCollapsed, memb
           <span className="text-xs leading-[1.3] text-n-600">Plan together, grow together</span>
         </div>
         <button
+          aria-hidden={collapsed}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="grid size-7 shrink-0 place-items-center text-n-600 hover:bg-ink/7 hover:text-ink"
+          className={cn("grid size-7 shrink-0 place-items-center text-n-600 hover:bg-ink/7 hover:text-ink", collapsed && "pointer-events-none opacity-0")}
           onClick={toggleCollapsed}
           style={{ transition: `opacity 150ms ease-out ${labelDelay}, background-color 160ms ease, color 160ms ease` }}
+          tabIndex={collapsed ? -1 : undefined}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           type="button"
         >
@@ -298,28 +320,38 @@ export function SidebarNav({ categories, currentMemberId, initialCollapsed, memb
         </button>
       </div>
 
-      <div className={cn("flex gap-1.5", collapsed && "flex-col items-center")} data-enter="">
+      <div className="flex" data-enter="" style={enterStyle(addEnter)}>
         <Button
-          className={cn("h-10 min-w-0 flex-1 justify-start", collapsed && "w-10 flex-none justify-center px-0")}
+          className="h-10 min-w-0 flex-1 justify-start px-2.5"
           onClick={openAddExpense}
           title="Add expense (N)"
           type="button"
         >
           <Plus />
           <span
-            className={cn("overflow-hidden whitespace-nowrap", collapsed ? "w-0 flex-none opacity-0" : "opacity-100")}
+            className={cn("overflow-hidden whitespace-nowrap", collapsed ? "opacity-0" : "opacity-100")}
             style={{ transition: `opacity 150ms ease-out ${labelDelay}` }}
           >
             Add expense
           </span>
         </Button>
-        <VoiceEntryButton
-          categories={categories}
-          className="grid size-10 shrink-0 place-items-center border border-ink text-ink hover:bg-ink/6"
-          currentMemberId={currentMemberId}
-          members={expenseMembers}
-          quickCategoryIds={quickCategoryIds}
-        />
+        <div
+          className="shrink-0 overflow-hidden"
+          style={{
+            marginLeft: collapsed ? 0 : 6,
+            opacity: collapsed ? 0 : 1,
+            transition: `width 260ms ${OUT}, margin-left 260ms ${OUT}, opacity 150ms ease-out ${labelDelay}`,
+            width: collapsed ? 0 : 40,
+          }}
+        >
+          <VoiceEntryButton
+            categories={categories}
+            className="grid size-10 shrink-0 place-items-center border border-ink text-ink hover:bg-ink/6"
+            currentMemberId={currentMemberId}
+            members={expenseMembers}
+            quickCategoryIds={quickCategoryIds}
+          />
+        </div>
       </div>
 
       <nav aria-label="Main" className="relative flex flex-1 flex-col gap-4.5" onMouseLeave={handleNavLeave}>
@@ -332,19 +364,26 @@ export function SidebarNav({ categories, currentMemberId, initialCollapsed, memb
         </span>
         <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-9 bg-ink/6 opacity-0" ref={hoverRef} />
 
-        {NAV_GROUPS.map((group) => (
+        {groupBlocks.map(({ group, items, labelEnter }) => (
           <div className="flex flex-col gap-px" key={group.label}>
-            {collapsed ? (
-              <span aria-hidden className="mx-auto mb-1.5 h-px w-6 bg-n-300" data-enter="" />
-            ) : (
-              <span className="micro-label px-2.5 pb-1.5 font-normal text-n-600" data-enter="">
+            <div className="relative h-5.5 shrink-0" data-enter="" style={enterStyle(labelEnter)}>
+              <span
+                className="micro-label absolute top-px left-2.5 font-normal whitespace-nowrap text-n-600"
+                style={{ opacity: collapsed ? 0 : 1, transition: `opacity 150ms ease-out ${labelDelay}` }}
+              >
                 {group.label}
               </span>
-            )}
-            {group.items.map((item) => (
+              <span
+                aria-hidden
+                className="absolute top-2 left-2.5 h-px w-4 bg-n-400"
+                style={{ opacity: collapsed ? 1 : 0, transition: "opacity 150ms ease-out" }}
+              />
+            </div>
+            {items.map(({ enter, item }) => (
               <NavLink
                 active={item.href === activeHref}
                 collapsed={collapsed}
+                enterIndex={enter}
                 item={item}
                 key={item.href}
                 labelDelay={labelDelay}
@@ -358,11 +397,12 @@ export function SidebarNav({ categories, currentMemberId, initialCollapsed, memb
         ))}
 
         <div className="mt-auto flex flex-col gap-px border-t border-n-300 pt-3.5">
-          {NAV_FOOTER.map((item) => (
+          {footerBlocks.map(({ enter, item }) => (
             <NavLink
               active={item.href === activeHref}
               badge={item.href === "/notifications" ? unreadNotifications : undefined}
               collapsed={collapsed}
+              enterIndex={enter}
               item={item}
               key={item.href}
               labelDelay={labelDelay}
@@ -376,8 +416,9 @@ export function SidebarNav({ categories, currentMemberId, initialCollapsed, memb
             <DropdownMenuTrigger asChild>
               <button
                 aria-label={`Account menu for ${myName}`}
-                className={cn("mt-1.5 flex h-10 items-center gap-2.5 px-2.5 text-left hover:bg-ink/6", collapsed && "justify-center gap-0 px-0")}
+                className="mt-1.5 flex h-10 items-center gap-2.5 px-2.5 text-left hover:bg-ink/6"
                 data-enter=""
+                style={enterStyle(accountEnter)}
                 type="button"
               >
                 <Avatar className="size-5.5" size="sm">
@@ -385,10 +426,7 @@ export function SidebarNav({ categories, currentMemberId, initialCollapsed, memb
                   <AvatarFallback className="bg-ink text-[11px] font-semibold text-paper">{myName.charAt(0).toUpperCase() || "?"}</AvatarFallback>
                 </Avatar>
                 <span
-                  className={cn(
-                    "overflow-hidden whitespace-nowrap text-sm font-semibold",
-                    collapsed ? "w-0 flex-none opacity-0" : "min-w-0 flex-1 truncate opacity-100",
-                  )}
+                  className={cn("min-w-0 flex-1 truncate text-sm font-semibold", collapsed ? "opacity-0" : "opacity-100")}
                   style={{ transition: `opacity 150ms ease-out ${labelDelay}` }}
                 >
                   {myName}

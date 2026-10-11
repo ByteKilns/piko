@@ -81,12 +81,15 @@ export function groupByDay<T extends ExpenseItem>(rows: T[], ctx: { dateFormat: 
     .map(([date, dayRows]) => {
       const weekday = WEEKDAYS[utcDate(date).getUTCDay()];
       const short = formatShortDate(date, ctx.dateFormat);
+      // A Bikram Sambat household also sees the Gregorian date in brackets, so
+      // expenses can be lined up with bank or English-dated records.
+      const dated = ctx.dateFormat === "nepali" ? `${short} (${formatShortDate(date, "english")})` : short;
       const recent = date === ctx.today || date === yesterday;
       return {
         date,
         label: date === ctx.today ? "Today" : date === yesterday ? "Yesterday" : weekday,
         rows: dayRows,
-        sub: recent ? `${short}, ${weekday}` : short,
+        sub: recent ? `${dated}, ${weekday}` : dated,
         total: dayRows.reduce((sum, row) => sum + row.amount, 0),
       };
     });
