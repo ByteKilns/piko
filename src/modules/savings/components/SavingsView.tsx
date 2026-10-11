@@ -27,7 +27,16 @@ type Member = { id: string; name: string };
 type Category = { groupName: string; id: string; name: string };
 
 export type PotOwnerKey = "me" | "partner" | "shared";
-export type SavingsItemModel = { affordable: string; cost: number; id: string; name: string; neededBy: null | string; note: null | string };
+export type SavingsItemModel = {
+  affordable: string;
+  cost: number;
+  hint: null | string;
+  id: string;
+  name: string;
+  neededBy: null | string;
+  note: null | string;
+  warning: null | string;
+};
 export type SavingsDoneModel = { id: string; name: string; paid: number };
 export type SavingsDepositModel = { amount: number; byLabel: string; dateLabel: string; id: string };
 export type SavingsPotModel = {
@@ -184,6 +193,8 @@ export function SavingsView(props: Props) {
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <span className="truncate text-[15px]">{item.name}</span>
                     {item.note && <span className="truncate text-[13px] text-n-600">{item.note}</span>}
+                    {item.warning && <span className="text-[13px] text-signal-ink">{item.warning}</span>}
+                    {item.hint && <span className="text-[13px] text-n-600">{item.hint}</span>}
                   </div>
                   <span className="text-right text-[15px] font-semibold">
                     <Money value={item.cost} />

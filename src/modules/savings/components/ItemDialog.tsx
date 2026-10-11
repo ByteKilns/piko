@@ -8,8 +8,10 @@ import { toast } from "sonner";
 import { AmountInput } from "@/components/AmountInput";
 import { Modal } from "@/components/Modal";
 import { MoreDetails } from "@/components/MoreDetails";
+import { NepaliDateField } from "@/components/NepaliDateField";
 import { TextField } from "@/components/TextField";
 import { Button } from "@/components/ui/button";
+import { todayISO } from "@/lib/today";
 import { createSavingsItemAction, updateSavingsItemAction } from "@/modules/savings/api/savings.actions";
 import type { SavingsItemModel } from "@/modules/savings/components/SavingsView";
 
@@ -54,6 +56,8 @@ function ItemFields({ editing, onDone, onPendingChange, potId }: FieldsProps) {
   const [name, setName] = useState(editing?.name ?? "");
   const [cost, setCost] = useState(editing ? String(editing.cost) : "");
   const [note, setNote] = useState(editing?.note ?? "");
+  const [hasDeadline, setHasDeadline] = useState(editing?.neededBy != null);
+  const [neededBy, setNeededBy] = useState(editing?.neededBy ?? todayISO());
   const [error, setError] = useState<string | undefined>();
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -66,8 +70,7 @@ function ItemFields({ editing, onDone, onPendingChange, potId }: FieldsProps) {
       setError(COST_ERROR);
       return;
     }
-    // neededBy is kept as it is; Phase 6 adds a field for it.
-    const payload = { cost: Number(cost), name: name.trim(), neededBy: editing?.neededBy ?? null, note: note.trim() || undefined };
+    const payload = { cost: Number(cost), name: name.trim(), neededBy: hasDeadline ? neededBy : null, note: note.trim() || undefined };
     onPendingChange(true);
     try {
       if (editing) await updateSavingsItemAction(editing.id, payload);
@@ -105,6 +108,11 @@ function ItemFields({ editing, onDone, onPendingChange, potId }: FieldsProps) {
         size="xl"
         value={cost}
       />
+      <label className="flex items-center gap-2 text-sm text-n-800">
+        <input checked={hasDeadline} onChange={(event) => setHasDeadline(event.target.checked)} type="checkbox" />
+        It&apos;s needed by a certain date
+      </label>
+      {hasDeadline && <NepaliDateField label="Needed by" onChange={setNeededBy} value={neededBy} />}
       <MoreDetails>
         <TextField label="Note" onChange={(event) => setNote(event.target.value)} placeholder="Optional" value={note} />
       </MoreDetails>

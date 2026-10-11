@@ -12,7 +12,16 @@ import {
   listSavingsPots,
 } from "@/modules/savings/api/savings.actions";
 import { type PotOwnerKey, type SavingsPotModel, SavingsView } from "@/modules/savings/components/SavingsView";
-import { forecastPot, monthAfter } from "@/modules/savings/lib/savings-forecast";
+import {
+  forecastPot,
+  monthAfter,
+  monthsBetween,
+  type NeededByCheck,
+  neededByCheck,
+  periodOfDate,
+  type WhatIfFirst,
+  whatIfFirst,
+} from "@/modules/savings/lib/savings-forecast";
 import { potBalance, putInBetween } from "@/modules/savings/lib/savings-math";
 
 const DEPOSITS_SHOWN = 5;
@@ -63,12 +72,28 @@ export async function SavingsPage() {
       const planned = plans.reduce((sum, p) => sum + p.monthlyAmount, 0);
       const potItems = itemRows.filter((i) => i.potId === pot.id);
       const open = potItems.filter((i) => !paidByItem.has(i.id));
-      const forecast = forecastPot({
+      const forecastInput = {
         balance,
         items: open.map((i) => ({ cost: Number(i.cost), id: i.id })),
         monthlyInflow: planned,
         reserveMinimum,
-      });
+      };
+      const forecast = forecastPot(forecastInput);
+      const itemName = (id: string) => open.find((i) => i.id === id)?.name ?? "an item";
+
+      // "If you did this first: affordable in Baisakh 2084, pushing Surgery back 4 months."
+      const whatIfText = (ifFirst: WhatIfFirst): null | string => {
+        if (ifFirst.monthsFromNow === null) return null;
+        const when = ifFirst.monthsFromNow === 0 ? "now" : `in ${monthLabel(ifFirst.monthsFromNow)}`;
+        const pushes = ifFirst.delays.map((d) => `${itemName(d.id)} back ${d.months} ${d.months === 1 ? "month" : "months"}`).join(", ");
+        return `If you did this first: affordable ${when}${pushes ? `, pushing ${pushes}` : ""}.`;
+      };
+      // "Needed by Chaitra 2083: 2 months late. Add Rs 1,667 a month to make it, or move it up the list."
+      const lateText = (check: NeededByCheck, needed: { month: number; year: number }) => {
+        const how = check.monthsLate === null ? "not on the current plan" : `${check.monthsLate} ${check.monthsLate === 1 ? "month" : "months"} late`;
+        return `Needed by ${formatPeriodLabel(needed.year, needed.month, dateFormat)}: ${how}. Add ${formatMoney(check.extraPerMonth)} a month to make it, or move it up the list.`;
+      };
+
       const toGo = reserveMinimum - balance;
       const reserveNote =
         reserveMinimum <= 0
@@ -92,14 +117,31 @@ export async function SavingsPage() {
         done: potItems.filter((i) => paidByItem.has(i.id)).map((i) => ({ id: i.id, name: i.name, paid: paidByItem.get(i.id) ?? 0 })),
         heldByMemberId: pot.heldByMemberId,
         id: pot.id,
-        items: open.map((i, index) => ({
-          affordable: affordableText(forecast.items[index].monthsFromNow),
-          cost: Number(i.cost),
-          id: i.id,
-          name: i.name,
-          neededBy: i.neededBy,
-          note: i.note,
-        })),
+        items: open.map((i, index) => {
+          const itemForecast = forecast.items[index];
+          const neededPeriod = i.neededBy ? periodOfDate(i.neededBy, dateFormat) : null;
+          const late = neededPeriod
+            ? neededByCheck({
+                balance,
+                cumulativeCost: itemForecast.cumulativeCost,
+                monthlyInflow: planned,
+                monthsFromNow: itemForecast.monthsFromNow,
+                monthsUntilNeeded: monthsBetween(current, neededPeriod),
+                reserveMinimum,
+              })
+            : null;
+          const ifFirst = whatIfFirst(forecastInput, i.id);
+          return {
+            affordable: affordableText(itemForecast.monthsFromNow),
+            cost: Number(i.cost),
+            hint: ifFirst ? whatIfText(ifFirst) : null,
+            id: i.id,
+            name: i.name,
+            neededBy: i.neededBy,
+            note: i.note,
+            warning: late && neededPeriod ? lateText(late, neededPeriod) : null,
+          };
+        }),
         name: pot.name,
         ownerKey: ownerKeyOf(pot.ownerMemberId),
         ownerMemberId: pot.ownerMemberId,

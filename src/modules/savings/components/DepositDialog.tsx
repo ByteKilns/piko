@@ -16,6 +16,7 @@ import { addSavingsDepositAction } from "@/modules/savings/api/savings.actions";
 import type { SavingsPotModel } from "@/modules/savings/components/SavingsView";
 
 type Member = { id: string; name: string };
+type Kind = "deposit" | "interest";
 
 type Props = {
   currentMemberId: string;
@@ -61,6 +62,7 @@ type FieldsProps = {
 
 function DepositFields({ currentMemberId, members, onDone, onPendingChange, pot }: FieldsProps) {
   const router = useRouter();
+  const [kind, setKind] = useState<Kind>("deposit");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(todayISO());
   const [memberId, setMemberId] = useState(pot.ownerMemberId ?? currentMemberId);
@@ -75,8 +77,9 @@ function DepositFields({ currentMemberId, members, onDone, onPendingChange, pot 
     }
     onPendingChange(true);
     try {
-      await addSavingsDepositAction(pot.id, { amount: Number(amount), date, kind: "deposit", memberId });
-      toast.success("Money added");
+      // Bank interest has no member; the bank put it in.
+      await addSavingsDepositAction(pot.id, { amount: Number(amount), date, kind, memberId: kind === "deposit" ? memberId : null });
+      toast.success(kind === "deposit" ? "Money added" : "Interest added");
       onDone();
       router.refresh();
     } catch (err) {
@@ -88,6 +91,15 @@ function DepositFields({ currentMemberId, members, onDone, onPendingChange, pot 
 
   return (
     <form className="flex flex-col gap-5.5" id={FORM_ID} noValidate onSubmit={onSubmit}>
+      <Segmented
+        label="What is it"
+        onChange={setKind}
+        options={[
+          { label: "Money in", value: "deposit" },
+          { label: "Bank interest", value: "interest" },
+        ]}
+        value={kind}
+      />
       <AmountInput
         data-autofocus
         error={error}
@@ -101,7 +113,7 @@ function DepositFields({ currentMemberId, members, onDone, onPendingChange, pot 
       />
       <MoreDetails>
         <NepaliDateField label="Date" onChange={setDate} value={date} />
-        {pot.ownerMemberId === null && (
+        {kind === "deposit" && pot.ownerMemberId === null && (
           <Segmented label="Put in by" onChange={setMemberId} options={members.map((m) => ({ label: label(m), value: m.id }))} value={memberId} />
         )}
       </MoreDetails>
