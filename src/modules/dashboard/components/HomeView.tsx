@@ -4,6 +4,8 @@ import { Fragment, useState } from "react";
 
 import { ArrowUpRight, ChevronDown, Plus } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { ArrowLink } from "@/components/ArrowLink";
 import { EmptyState } from "@/components/EmptyState";
@@ -20,6 +22,9 @@ import type { MonthNavModel } from "@/lib/month-nav";
 import { cn } from "@/lib/utils";
 import { SetIncomeDialog } from "@/modules/budget/components/SetIncomeDialog";
 import { CategoryIcon } from "@/modules/categories/components/CategoryIcon";
+import { deletePaybackAction } from "@/modules/paybacks/api/paybacks.actions";
+import { PaybackDialog } from "@/modules/paybacks/components/PaybackDialog";
+import type { PaybackBalance } from "@/modules/paybacks/lib/payback-balance";
 
 export type HomeOwnerRow = {
   income: null | number;
@@ -57,6 +62,8 @@ export type HomePacing = {
   weeklyAllowance: number;
 };
 
+export type HomePaybackRow = { amount: number; dateLabel: string; fromName: string; id: string; toName: string };
+
 type Props = {
   currentMemberId: string;
   daysLeft: number;
@@ -78,8 +85,10 @@ type Props = {
   monthNav: MonthNavModel;
   owners: HomeOwnerRow[];
   pacing: HomePacing | null;
+  payback: null | PaybackBalance;
   prevMonthName: string;
   recent: HomeRecentGroup[];
+  recentPaybacks: HomePaybackRow[];
   savingsBudgetAmount: null | number;
   spentMonthName: string;
   year: number;
@@ -101,6 +110,19 @@ export function HomeView(props: Props) {
   const { ledger, pacing } = props;
   const [explain, setExplain] = useState(false);
   const [incomeOpen, setIncomeOpen] = useState(false);
+  const [paybackOpen, setPaybackOpen] = useState(false);
+  const router = useRouter();
+  const nameOf = (id: string) => props.members.find((m) => m.id === id)?.name ?? "Partner";
+
+  async function removePayback(id: string) {
+    try {
+      await deletePaybackAction(id);
+      toast.success("Payback deleted");
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
+    }
+  }
 
   const spentTrend = trendText(ledger.spentTrendPct, props.prevMonthName);
   const incomeTrend = trendText(ledger.incomeTrendPct, props.prevMonthName);
@@ -227,10 +249,61 @@ export function HomeView(props: Props) {
         </LedgerCell>
       </Ledger>
 
+      {props.members.length === 2 && (props.payback !== null || props.recentPaybacks.length > 0) && (
+        <section className="mt-9 border-t border-n-300 pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[15px]">
+              {props.payback === null ? (
+                "You're square. Nobody owes anything."
+              ) : props.payback.debtorId === props.currentMemberId ? (
+                <>
+                  You owe {nameOf(props.payback.creditorId)} <strong className="font-semibold">{formatMoney(props.payback.amount)}</strong>
+                </>
+              ) : (
+                <>
+                  {nameOf(props.payback.debtorId)} owes you <strong className="font-semibold">{formatMoney(props.payback.amount)}</strong>
+                </>
+              )}
+            </p>
+            {props.payback !== null && (
+              <Button className="h-9.5" onClick={() => setPaybackOpen(true)} type="button" variant="outline">
+                Record a payback
+              </Button>
+            )}
+          </div>
+          {props.recentPaybacks.length > 0 && (
+            <div className="mt-3 flex flex-col">
+              {props.recentPaybacks.map((row) => (
+                <div
+                  className="grid grid-cols-[90px_minmax(0,1fr)_auto_auto] items-center gap-4 border-b border-n-200 py-1.5 last:border-0"
+                  key={row.id}
+                >
+                  <span className="text-[13px] text-n-600">{row.dateLabel}</span>
+                  <span className="truncate text-sm">
+                    {row.fromName} paid back {row.toName}
+                  </span>
+                  <span className="text-sm font-semibold">
+                    <Money value={row.amount} />
+                  </span>
+                  <Button
+                    className="h-auto px-1.5 py-0.5 text-[13px]"
+                    onClick={() => void removePayback(row.id)}
+                    type="button"
+                    variant="ghost"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       <section className="mt-13">
         <div className="mb-3.5 flex items-baseline justify-between gap-4">
           <h2 className="text-xl leading-tight font-extrabold tracking-[-0.01em]">By person</h2>
-          <span className="text-[13px] text-n-600">Shared costs are paid from both incomes</span>
+          <span className="text-[13px] text-n-600">Spent is what came out of each person&apos;s own money</span>
         </div>
         <RowsHeader columns={PEOPLE_COLUMNS}>
           <span>Person</span>
@@ -276,7 +349,7 @@ export function HomeView(props: Props) {
               </div>
               <div className="flex min-w-0 items-center gap-2.5">
                 {owner.key === "shared" ? (
-                  <span className="text-[13px] text-n-600">Split between both</span>
+                  <span className="text-[13px] text-n-600">Already counted under whoever paid</span>
                 ) : (
                   <>
                     <Meter className="flex-1" ratio={owner.incomeUsedRatio ?? 0} />
@@ -386,6 +459,14 @@ export function HomeView(props: Props) {
         onOpenChange={setIncomeOpen}
         open={incomeOpen}
         year={props.year}
+      />
+
+      <PaybackDialog
+        currentMemberId={props.currentMemberId}
+        defaults={props.payback ? { amount: props.payback.amount, fromMemberId: props.payback.debtorId } : null}
+        members={props.members}
+        onOpenChange={setPaybackOpen}
+        open={paybackOpen}
       />
     </div>
   );

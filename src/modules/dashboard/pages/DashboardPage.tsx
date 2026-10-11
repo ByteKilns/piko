@@ -1,3 +1,4 @@
+import { formatShortDate } from "@/lib/date-format";
 import { getDateFormatPref } from "@/lib/date-format-cookie";
 import { buildMonthNav, parseMonthParam, previousMonth } from "@/lib/month-nav";
 import {
@@ -17,14 +18,18 @@ import { type HomeGoal, type HomeOwnerRow, type HomePacing, type HomeRecentGroup
 import { allowanceSpentByDay, daysLeftInMonth } from "@/modules/dashboard/lib/cash-flow";
 import { toExpenseInputs, toIncomeInputs } from "@/modules/dashboard/lib/map-rows";
 import { buildPacingSchedule, currentWeekPacing } from "@/modules/dashboard/lib/pacing";
+import { walletSpentByMember } from "@/modules/dashboard/lib/wallet";
 import { listExpensesForMonth, listRecentExpenses } from "@/modules/expenses/api/expenses.actions";
 import { groupByDay } from "@/modules/expenses/lib/expense-view";
 import { checkBudgetReminder } from "@/modules/notifications/api/notifications.actions";
+import { listPayBackExpenses, listPaybacks } from "@/modules/paybacks/api/paybacks.actions";
+import { paybackBalance } from "@/modules/paybacks/lib/payback-balance";
 import { listSavingsContributions, listSavingsGoals } from "@/modules/savings-goals/api/savings-goals.actions";
 import { savedAmountForGoal, savingsOverviewStats } from "@/modules/savings-goals/lib/savings-stats";
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const GOALS_SHOWN = 3;
+const PAYBACKS_SHOWN = 3;
 
 function trendPct(current: number, previous: number): number | null {
   if (previous <= 0) return null;
@@ -63,6 +68,8 @@ export async function DashboardPage({ searchParams }: Props) {
     recentExpenseRows,
     goalRows,
     contributionRows,
+    paybackRows,
+    payBackExpenseRows,
   ] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
@@ -74,6 +81,8 @@ export async function DashboardPage({ searchParams }: Props) {
     listRecentExpenses(5),
     listSavingsGoals(householdId),
     listSavingsContributions(householdId),
+    listPaybacks(householdId),
+    listPayBackExpenses(householdId),
   ]);
 
   if (isCurrentMonth) {
@@ -91,8 +100,19 @@ export async function DashboardPage({ searchParams }: Props) {
   const category = (id: string) => categories.find((c) => c.id === id);
   const memberName = (id: string) => members.find((m) => m.id === id)?.user.name ?? "Member";
 
+  // Each person's Spent is what left their own wallet: counted by who paid,
+  // with any "to be paid back" part moved onto the other person. Shared
+  // expenses get their own row, for information only.
+  const wallet = walletSpentByMember(
+    expenseRows.map((e) => ({
+      amount: Number(e.amount),
+      paidByMemberId: e.paidByMemberId,
+      payBackAmount: e.payBackAmount === null ? null : Number(e.payBackAmount),
+    })),
+    members.map((m) => m.id),
+  );
   const ownerSpent = (ownerId: null | string) =>
-    expenses.filter((e) => e.ownerMemberId === ownerId).reduce((s, e) => s + e.amount, 0);
+    ownerId === null ? expenses.filter((e) => e.ownerMemberId === null).reduce((s, e) => s + e.amount, 0) : (wallet.get(ownerId) ?? 0);
   const ownerIncome = (id: string) => incomes.find((i) => i.memberId === id)?.amount ?? 0;
   const prevOwnerIncome = (id: string) => prevIncomes.find((i) => i.memberId === id)?.amount ?? 0;
 
@@ -142,7 +162,7 @@ export async function DashboardPage({ searchParams }: Props) {
       incomeUsedPct: null,
       incomeUsedRatio: null,
       key: "shared",
-      label: "Shared",
+      label: "Spent on us",
       left: null,
       leftNote: null,
       monogram: partnerMonogram ? [meMonogram, partnerMonogram] : [meMonogram],
@@ -174,6 +194,26 @@ export async function DashboardPage({ searchParams }: Props) {
         weeklyAllowance: weekPacing.allowance,
       }
     : null;
+
+  // The "pay back later" balance between the two members, across all months.
+  const payback = partner
+    ? paybackBalance(
+        payBackExpenseRows.flatMap((e) =>
+          e.payBackAmount === null
+            ? []
+            : [{ amount: Number(e.amount), paidByMemberId: e.paidByMemberId, payBackAmount: Number(e.payBackAmount) }],
+        ),
+        paybackRows.map((p) => ({ amount: Number(p.amount), fromMemberId: p.fromMemberId, toMemberId: p.toMemberId })),
+        [memberId, partner.id],
+      )
+    : null;
+  const recentPaybacks = paybackRows.slice(0, PAYBACKS_SHOWN).map((p) => ({
+    amount: Number(p.amount),
+    dateLabel: formatShortDate(p.date, dateFormat),
+    fromName: memberName(p.fromMemberId),
+    id: p.id,
+    toName: memberName(p.toMemberId),
+  }));
 
   const savingsStats = savingsOverviewStats(
     goalRows.map((g) => ({
@@ -257,8 +297,10 @@ export async function DashboardPage({ searchParams }: Props) {
       monthNav={buildMonthNav({ basePath: "/dashboard", current: { month: currentMonth, year: currentYear }, dateFormat, selected: { month, year } })}
       owners={owners}
       pacing={pacing}
+      payback={payback}
       prevMonthName={formatPeriodLabel(prev.year, prev.month, dateFormat).split(" ")[0]}
       recent={recent}
+      recentPaybacks={recentPaybacks}
       savingsBudgetAmount={savingsBudgetAmount > 0 ? savingsBudgetAmount : null}
       spentMonthName={monthLabel.split(" ")[0]}
       year={year}
