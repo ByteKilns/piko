@@ -4,12 +4,15 @@ import { and, eq, isNull, ne, not, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db/client";
-import { budgetItems, incomes, monthlyBudgets } from "@/db/schema";
+import { budgetItems, incomes, monthlyBudgets, recurringExpenses } from "@/db/schema";
+import { getDateFormatPref } from "@/lib/date-format-cookie";
+import { resolvePeriod } from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { activityActor, loadActivityFormatters, logActivities, logActivity } from "@/modules/activity/api/activity";
 import { listCategories } from "@/modules/categories/api/categories";
 
 import { budgetItemChanges, budgetItemSummary, incomeChanges, incomeSummary } from "../lib/budget-activity";
+import { recurringBudgetLines } from "../lib/recurring-budget";
 import { type RemoveBudgetItemInput, removeBudgetItemSchema, type SetBudgetItemInput, setBudgetItemSchema } from "../schemas/budget-item.schema";
 import { type SetIncomeInput, setIncomeSchema } from "../schemas/income.schema";
 
@@ -248,6 +251,61 @@ export async function copyPreviousMonthBudgetAction(year: number, month: number)
 
   revalidatePath("/budget");
   revalidatePath("/dashboard");
+}
+
+// Adds a budget line for each category and owner with recurring bills due this
+// month. Lines that already exist are left alone, the same as copying last
+// month. Returns how many lines it added.
+export async function fillBudgetFromRecurringAction(year: number, month: number): Promise<number> {
+  const member = await getCurrentMember();
+  const { householdId } = member;
+  const dateFormat = await getDateFormatPref(householdId);
+  const period = resolvePeriod(year, month, dateFormat);
+
+  const bills = await db.select().from(recurringExpenses).where(eq(recurringExpenses.householdId, householdId));
+  const lines = recurringBudgetLines(
+    bills.map((b) => ({
+      amount: Number(b.amount),
+      categoryId: b.categoryId,
+      frequency: b.frequency,
+      nextDueDate: b.nextDueDate,
+      ownerMemberId: b.ownerMemberId,
+      status: b.status,
+    })),
+    period,
+  );
+  if (lines.length === 0) return 0;
+
+  const budget = await getOrCreateMonthlyBudget(householdId, year, month);
+  const existingItems = await db.select().from(budgetItems).where(eq(budgetItems.monthlyBudgetId, budget.id));
+  const existingKeys = new Set(existingItems.map((i) => `${i.categoryId}::${i.ownerMemberId ?? "shared"}`));
+  const toInsert = lines
+    .filter((line) => !existingKeys.has(`${line.categoryId}::${line.ownerMemberId ?? "shared"}`))
+    .map((line) => ({
+      categoryId: line.categoryId,
+      monthlyBudgetId: budget.id,
+      ownerMemberId: line.ownerMemberId,
+      plannedAmount: String(line.plannedAmount),
+    }));
+
+  if (toInsert.length > 0) {
+    const inserted = await db.insert(budgetItems).values(toInsert).returning();
+    const f = await loadActivityFormatters(householdId);
+    await logActivities(
+      activityActor(member),
+      inserted.map((item) => ({
+        action: "created" as const,
+        after: item,
+        entityId: item.id,
+        entityType: "budget_item" as const,
+        summary: budgetItemSummary(f, item, { month, year }),
+      })),
+    );
+  }
+
+  revalidatePath("/budget");
+  revalidatePath("/dashboard");
+  return toInsert.length;
 }
 
 export async function getIncomesForMonth(year: number, month: number) {

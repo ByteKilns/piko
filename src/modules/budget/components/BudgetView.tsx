@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from "react";
 
-import { ChevronRight, Copy, Plus } from "lucide-react";
+import { ChevronRight, Copy, Plus, Repeat } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
 import type { MonthNavModel } from "@/lib/month-nav";
 import { cn } from "@/lib/utils";
-import { copyPreviousMonthBudgetAction } from "@/modules/budget/api/budget.actions";
+import { copyPreviousMonthBudgetAction, fillBudgetFromRecurringAction } from "@/modules/budget/api/budget.actions";
 import { BudgetDialog, type BudgetDraft, type BudgetOwnerKey } from "@/modules/budget/components/BudgetDialog";
 import { SetIncomeDialog } from "@/modules/budget/components/SetIncomeDialog";
 import type { BudgetLead, BudgetOwnerGroup } from "@/modules/budget/lib/budget-view";
@@ -79,6 +79,7 @@ export function BudgetView(props: Props) {
   });
   const [incomeOpen, setIncomeOpen] = useState(false);
   const [copyPending, setCopyPending] = useState(false);
+  const [fillPending, setFillPending] = useState(false);
 
   const me = members.find((m) => m.id === currentMemberId);
   const partner = members.find((m) => m.id !== currentMemberId) ?? null;
@@ -122,11 +123,28 @@ export function BudgetView(props: Props) {
     }
   }
 
+  async function fillFromRecurring() {
+    setFillPending(true);
+    try {
+      const added = await fillBudgetFromRecurringAction(props.year, props.month);
+      toast.success(added > 0 ? `Added ${added} ${added === 1 ? "line" : "lines"} from recurring bills` : "Nothing new to add from recurring bills");
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to fill");
+    } finally {
+      setFillPending(false);
+    }
+  }
+
   return (
     <div>
       <PageHeader
         actions={
           <>
+            <Button disabled={fillPending} onClick={() => void fillFromRecurring()} variant="ghost">
+              <Repeat />
+              Fill from recurring
+            </Button>
             <Button disabled={!props.canCopy || copyPending} onClick={() => void copy()} variant="ghost">
               <Copy />
               Copy {props.prevMonthName}&apos;s budget
