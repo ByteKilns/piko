@@ -9,7 +9,7 @@ A household expense tracker for a small two-person household:
 
 - **Web app** (`src/`) — Next.js 16 (App Router, Turbopack), React 19, TypeScript,
   Tailwind v4, shadcn/radix UI. Dashboard, expenses, budgets, income, loans, savings
-  goals, dhukus, recurring bills, reports, notifications.
+  pots, paybacks, dhukus, recurring bills, reports, notifications.
 - **Mobile app** (`mobile/`) — Flutter companion for capturing expenses by voice.
   Talks to the same Next.js backend over a small JSON API. See `mobile/README.md`.
 
@@ -21,6 +21,9 @@ Domain conventions that shape everything:
   are scoped by it, and writes derive it from the session — never from client input.
 - **Nepali (BS) calendar.** "Months" can be Bikram Sambat or Gregorian per household
   (`households.dateFormat`), resolved through `resolvePeriod` (`src/lib/month-period.ts`).
+- **Spending vs transfers.** Only money that's gone counts as *Spent*. Money moved into
+  savings, dhuku or loan repayments, and paybacks between members, are transfers. See
+  [Money model](#money-model).
 
 ## Stack
 
@@ -133,14 +136,20 @@ put the tenancy-agnostic logic in a `...ForHousehold` function so web and mobile
   the source of `householdId`/`memberId` for a session).
 - **Money in/out** — `categories` (per household, `budgetType` fixed/flexible, optional
   `icon` key, archivable), `expenses` (`paidByMemberId` required, `ownerMemberId` null=shared,
-  optional `recurringExpenseId`), `incomes` (per member/month), `recurring_expenses` (bills
-  with `nextDueDate`, `frequency` monthly/quarterly/yearly), `monthly_budgets` +
+  optional `recurringExpenseId`; `payBackAmount` = the part the other member will pay
+  back; `savingsPotId` + optional `savingsItemId` = paid from a savings pot — an expense
+  can't be both), `paybacks` (`fromMemberId` → `toMemberId`, any amount, not matched to
+  expenses), `incomes` (per member/month), `recurring_expenses` (bills with
+  `nextDueDate`, `frequency` monthly/quarterly/yearly), `monthly_budgets` +
   `budget_items` (planned amount per category/owner).
-- **Goals & obligations** — `savings_pots` (shared or per member, with an
-  emergency reserve) + `savings_pot_plans` + `savings_items` (the priority list) +
-  `savings_deposits`; an expense can be paid from a pot (`expenses.savingsPotId`),
+- **Goals & obligations** — `savings_pots` (at most one shared + one per member, with a
+  `reserveMinimum`; `heldByMemberId` is a label only) + `savings_pot_plans` (monthly
+  amount per member) + `savings_items` (the ordered priority list, optional `neededBy`;
+  done once an expense links to it) + `savings_deposits` (`kind` deposit/opening/interest);
   `loans` + `loan_payments` (`direction` given/taken), `dhukus` + `dhuku_entries`
-  (rotating savings group: contribution/payout; `completedAt` set when marked complete,
+  (rotating savings group: entry `type` contribution/payout/fine — a fine never counts
+  as a month paid; `potDeduction` = taken from each pot, e.g. the meeting's food;
+  `interestPerMonth` paid after taking the pot; `completedAt` set when marked complete,
   otherwise derived from the logged months).
 - **System** — `notifications` (deduped via unique `(householdId, dedupeKey)`),
   `activity_logs` (append-only audit trail: actor, entity, action, display-ready
@@ -155,6 +164,45 @@ Conventions to keep when adding columns/tables:
 - `ownerMemberId` nullable means *shared*.
 - Notifications are deduped by `dedupeKey` so generating code can re-run safely.
 
+## Money model
+
+How Piko counts money. The agreed design and its reasons are in the "Design (agreed)"
+section of `docs/superpowers/plans/2026-10-11-money-model.md`; read it before changing
+any of these numbers. The maths lives in pure, tested helpers under each module's `lib/`.
+
+- **Spent** — the same number on Home, Reports and Budget: expenses paid from pay. Each
+  page drops rows with a `savingsPotId` and shows them separately as "Paid from
+  savings". Savings deposits, dhuku payments, loan repayments and paybacks are never Spent.
+- **Who it counts against** — Home's per-person Spent and Left count by who paid
+  (`walletSpentByMember`, `dashboard/lib/wallet.ts`). Budget counts by who it was for
+  (`ownerMemberId`), because it's for planning. Home's shared row is "Spent on us", for
+  information only and not taken from anyone's Left. The two members keep separate
+  money, so paying for each other isn't debt.
+- **Pay back later** — the ticked `payBackAmount` counts as the *other* member's
+  spending. `paybackBalance` (`paybacks/lib/payback-balance.ts`) keeps one running net
+  balance, like a shop's credit book: ticked amounts add to it, paybacks take it down,
+  and amounts owed both ways cancel. It needs exactly two household members.
+- **Moved this month** (`dashboard/lib/moved.ts`) — savings deposits (not opening
+  balances or bank interest), dhuku contributions and fines in full, and repayments on
+  loans you took. Money coming back isn't subtracted. Home: Unallocated = income − Spent
+  − Moved.
+- **Balances** (Home) — each pot's balance, each active dhuku's position (`dhukuPosition`:
+  + the group owes you, − you owe the group), loans owed to you and loans you owe, and
+  the pay-back balance.
+- **Savings pots** (`savings/lib/`) — `potBalance` = opening + deposits + interest −
+  expenses paid from the pot. `forecastPot` fills the reserve first, then items in strict
+  order: months = ⌈(reserve + cumulative cost − balance) ÷ planned monthly total⌉, `null`
+  when nothing is planned. `neededByCheck` and `whatIfFirst` drive the deadline warnings
+  and the "doing this first" hints. Budget shows a Savings line from the pot plans, and
+  Left to plan = income − budgeted − planned savings.
+- **Dhuku cost** (`dhuku/lib/dhuku-money.ts`) — `expectedPot` at meeting *k* = members ×
+  contribution − pot deduction + interest × (*k* − 1). `dhukuRealCost` (food share +
+  interest + fines − what came back inside your pot) is shown on the Dhuku page only.
+- **Fill from recurring** (`budget/lib/recurring-budget.ts`,
+  `fillBudgetFromRecurringAction`) — a budget line per category + owner from the bills
+  due that month (every active monthly bill; quarterly/yearly only when `nextDueDate`
+  falls in it). Lines that already exist are left alone.
+
 ## Cross-cutting concerns
 
 - **Migrations** live in `drizzle/` (generated by `drizzle-kit generate`, applied by
@@ -167,8 +215,9 @@ Conventions to keep when adding columns/tables:
 - **Safe-to-spend pacing** (`src/modules/dashboard/lib/pacing.ts`): splits the
   month's flexible budget into a weekly release with a last-week buffer, carries
   unspent allowance forward between weeks, and surfaces `safeToday` (remaining ÷
-  days left in the week) on the dashboard hero. Fixed-category expenses don't
-  count against the allowance (`allowanceSpentByDay` in `dashboard/lib/cash-flow.ts`).
+  days left in the week) on the dashboard hero. Fixed-category expenses and
+  expenses paid from savings don't count against the allowance (`allowanceSpentByDay`
+  in `dashboard/lib/cash-flow.ts`); ones in archived or unknown categories still do.
 - **App releases**: publishing is gated by `APP_RELEASE_ADMIN_EMAILS`
   (`src/lib/release-admin.ts`); APKs are uploaded to Vercel Blob via a client-token
   flow (`src/app/api/app-releases/upload/route.ts`). `handleUpload` requires
@@ -184,7 +233,10 @@ Conventions to keep when adding columns/tables:
   Entries also store raw `before`/`after` snapshots (and cascaded `related` rows on
   deletes); `src/modules/activity/lib/revert/` plans a revert (pure, per-entity
   registry in `entities.ts`) and `api/revert.actions.ts` applies it — household-scoped,
-  re-planned at apply time, and logged with `revertOfId`.
+  re-planned at apply time, and logged with `revertOfId`. Paybacks and the savings
+  entities (`savings_pot`, `savings_item`, `savings_deposit`) are logged but not
+  revertible, because they aren't in `ENTITY_REVERT`. `savings_goal` and
+  `savings_contribution` are still in the enum, though their tables were dropped.
 
 ## Task playbooks
 
