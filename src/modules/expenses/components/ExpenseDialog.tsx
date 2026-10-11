@@ -29,6 +29,7 @@ export type ExpenseDraft = {
   note: null | string;
   ownerMemberId: null | string;
   paidByMemberId: string;
+  payBackAmount?: null | number;
 };
 
 type Props = {
@@ -78,6 +79,8 @@ type FieldsProps = Omit<Props, "onOpenChange" | "open"> & { onDone: () => void; 
 function ExpenseFields({ categories, currentMemberId, expenseId, initial, members, onDone, onPendingChange, quickCategoryIds = [] }: FieldsProps) {
   const router = useRouter();
   const [categoryOptions, setCategoryOptions] = useState(categories);
+  const [payBack, setPayBack] = useState(initial?.payBackAmount != null);
+  const [payBackText, setPayBackText] = useState(initial?.payBackAmount != null ? String(initial.payBackAmount) : "");
   const {
     control,
     formState: { errors },
@@ -103,6 +106,12 @@ function ExpenseFields({ categories, currentMemberId, expenseId, initial, member
   const label = (m: Member) => (m.id === currentMemberId ? "Me" : m.name);
   const people = [...members.filter((m) => m.id === currentMemberId), ...members.filter((m) => m.id !== currentMemberId)];
 
+  // "Pay back later" needs exactly two people: the one who paid, and the
+  // other one, who owes it.
+  const payer = members.find((m) => m.id === paidByMemberId);
+  const other = members.length === 2 ? (members.find((m) => m.id !== paidByMemberId) ?? null) : null;
+  const payBackLabel = paidByMemberId === currentMemberId ? `${other?.name ?? "They"} will pay me back` : `I'll pay ${payer?.name ?? "them"} back`;
+
   const quick = (quickCategoryIds.length > 0 ? quickCategoryIds : categories.map((c) => c.id))
     .map((id) => categoryOptions.find((c) => c.id === id))
     .filter((c): c is Category => c !== undefined)
@@ -115,8 +124,16 @@ function ExpenseFields({ categories, currentMemberId, expenseId, initial, member
   }
 
   const onSubmit = handleSubmit(async (values) => {
+    let payBackAmount: null | number = null;
+    if (other && payBack) {
+      payBackAmount = payBackText.trim() === "" ? values.amount : Number(payBackText);
+      if (!(payBackAmount > 0) || payBackAmount > values.amount) {
+        toast.error("The amount to pay back must be above 0 and no more than the expense");
+        return;
+      }
+    }
     onPendingChange(true);
-    const payload = { ...values, note: values.note?.trim() || undefined };
+    const payload = { ...values, note: values.note?.trim() || undefined, payBackAmount };
     try {
       if (expenseId) {
         await updateExpenseAction(expenseId, payload);
@@ -193,6 +210,23 @@ function ExpenseFields({ categories, currentMemberId, expenseId, initial, member
           value={paidByMemberId}
         />
       </div>
+
+      {other && (
+        <div className="flex flex-col gap-3">
+          <label className="flex items-center gap-2 text-sm text-n-800">
+            <input checked={payBack} onChange={(event) => setPayBack(event.target.checked)} type="checkbox" />
+            {payBackLabel}
+          </label>
+          {payBack && (
+            <AmountInput
+              label="Amount to pay back"
+              onChange={(event) => setPayBackText(event.target.value)}
+              placeholder="Leave empty for the full amount"
+              value={payBackText}
+            />
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <Controller

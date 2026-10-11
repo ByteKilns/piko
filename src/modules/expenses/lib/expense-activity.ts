@@ -8,6 +8,7 @@ export type ExpenseSnapshot = {
   note?: null | string;
   ownerMemberId: null | string;
   paidByMemberId: string;
+  payBackAmount?: null | number | string;
 };
 
 export function expenseFields(f: ActivityFormatters): FieldSpec<ExpenseSnapshot>[] {
@@ -16,6 +17,7 @@ export function expenseFields(f: ActivityFormatters): FieldSpec<ExpenseSnapshot>
     { format: f.category, key: "categoryId", label: "Category" },
     { format: f.owner, key: "ownerMemberId", label: "For" },
     { format: f.member, key: "paidByMemberId", label: "Paid by" },
+    { format: f.money, key: "payBackAmount", label: "To be paid back" },
     { format: f.date, key: "date", label: "Date" },
     { format: f.text, key: "note", label: "Note" },
   ];

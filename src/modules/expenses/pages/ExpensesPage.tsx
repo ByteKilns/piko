@@ -41,6 +41,7 @@ export async function ExpensesPage({ searchParams }: Props) {
     note: e.note,
     ownerMemberId: e.ownerMemberId,
     paidByMemberId: e.paidByMemberId,
+    payBackAmount: e.payBackAmount === null ? null : Number(e.payBackAmount),
     recurringExpenseId: e.recurringExpenseId,
   }));
 

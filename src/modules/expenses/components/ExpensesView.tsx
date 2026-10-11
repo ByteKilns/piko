@@ -43,7 +43,7 @@ import { markRecurringExpensePaidAction } from "@/modules/recurring/api/recurrin
 type Category = { groupName: string; icon?: null | string; id: string; name: string };
 type Member = { id: string; name: string };
 
-export type ExpenseRecord = Omit<ExpenseItem, "categoryName"> & { recurringExpenseId: null | string };
+export type ExpenseRecord = Omit<ExpenseItem, "categoryName"> & { payBackAmount: null | number; recurringExpenseId: null | string };
 
 export type UpcomingBill = {
   amount: number;
@@ -467,6 +467,7 @@ export function ExpensesView(props: Props) {
                 note: editing.note,
                 ownerMemberId: editing.ownerMemberId,
                 paidByMemberId: editing.paidByMemberId,
+                payBackAmount: editing.payBackAmount,
               }
             : undefined
         }

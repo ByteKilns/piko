@@ -31,6 +31,16 @@ async function assertCategoryInHousehold(householdId: string, categoryId: string
   }
 }
 
+// "Pay back later" moves part of an expense onto the other member, so it
+// only makes sense in a two-person household.
+async function assertCanPayBack(householdId: string, payBackAmount: null | number | undefined) {
+  if (payBackAmount == null) return;
+  const members = await getHouseholdMembers(householdId);
+  if (members.length !== 2) {
+    throw new ExpenseValidationError("Pay back later needs exactly two people in the household");
+  }
+}
+
 async function findExpenseInHousehold(householdId: string, id: string) {
   const [row] = await db
     .select()
@@ -50,6 +60,7 @@ export async function createExpenseForHousehold(input: ExpenseInput, actor: Acti
   if (parsed.ownerMemberId) {
     await assertMemberInHousehold(householdId, parsed.ownerMemberId);
   }
+  await assertCanPayBack(householdId, parsed.payBackAmount);
 
   const [created] = await db
     .insert(expenses)
@@ -61,6 +72,7 @@ export async function createExpenseForHousehold(input: ExpenseInput, actor: Acti
       paidByMemberId: parsed.paidByMemberId,
       date: parsed.date,
       note: parsed.note,
+      payBackAmount: parsed.payBackAmount == null ? null : String(parsed.payBackAmount),
     })
     .returning();
 
@@ -190,6 +202,15 @@ export async function updateExpenseAction(id: string, input: ExpenseInput) {
   const before = await findExpenseInHousehold(householdId, id);
   if (!before) return;
 
+  // Omitted means "leave it as it is", so a caller that doesn't know about
+  // pay back later can never clear it by accident.
+  const payBackAmount =
+    parsed.payBackAmount === undefined ? (before.payBackAmount === null ? null : Number(before.payBackAmount)) : parsed.payBackAmount;
+  if (payBackAmount !== null && payBackAmount > parsed.amount) {
+    throw new ExpenseValidationError("The amount to pay back can't be more than the expense");
+  }
+  await assertCanPayBack(householdId, payBackAmount);
+
   const [updated] = await db
     .update(expenses)
     .set({
@@ -199,6 +220,7 @@ export async function updateExpenseAction(id: string, input: ExpenseInput) {
       paidByMemberId: parsed.paidByMemberId,
       date: parsed.date,
       note: parsed.note ?? null,
+      payBackAmount: payBackAmount === null ? null : String(payBackAmount),
       updatedAt: new Date(),
     })
     .where(and(eq(expenses.id, id), eq(expenses.householdId, householdId)))
@@ -209,7 +231,7 @@ export async function updateExpenseAction(id: string, input: ExpenseInput) {
     action: "updated",
     after: updated,
     before,
-    changes: expenseChanges(f, before, parsed),
+    changes: expenseChanges(f, before, { ...parsed, payBackAmount }),
     entityId: id,
     entityType: "expense",
     summary: expenseSummary(f, parsed),
