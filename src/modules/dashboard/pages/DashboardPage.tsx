@@ -14,7 +14,13 @@ import { todayISO } from "@/lib/today";
 import { getBudgetItemsForMonth, getIncomesForMonth } from "@/modules/budget/api/budget.actions";
 import { dashboardSummary } from "@/modules/budget/lib/calculations";
 import { listCategories } from "@/modules/categories/api/categories";
-import { type HomeGoal, type HomeOwnerRow, type HomePacing, type HomeRecentGroup, HomeView } from "@/modules/dashboard/components/HomeView";
+import {
+  type HomeOwnerRow,
+  type HomePacing,
+  type HomeRecentGroup,
+  type HomeSavingsPot,
+  HomeView,
+} from "@/modules/dashboard/components/HomeView";
 import { allowanceSpentByDay, daysLeftInMonth } from "@/modules/dashboard/lib/cash-flow";
 import { toExpenseInputs, toIncomeInputs } from "@/modules/dashboard/lib/map-rows";
 import { buildPacingSchedule, currentWeekPacing } from "@/modules/dashboard/lib/pacing";
@@ -24,11 +30,17 @@ import { groupByDay } from "@/modules/expenses/lib/expense-view";
 import { checkBudgetReminder } from "@/modules/notifications/api/notifications.actions";
 import { listPayBackExpenses, listPaybacks } from "@/modules/paybacks/api/paybacks.actions";
 import { paybackBalance } from "@/modules/paybacks/lib/payback-balance";
-import { listSavingsContributions, listSavingsGoals } from "@/modules/savings-goals/api/savings-goals.actions";
-import { savedAmountForGoal, savingsOverviewStats } from "@/modules/savings-goals/lib/savings-stats";
+import {
+  listSavingsDeposits,
+  listSavingsExpenses,
+  listSavingsItems,
+  listSavingsPotPlans,
+  listSavingsPots,
+} from "@/modules/savings/api/savings.actions";
+import { forecastPot, monthAfter } from "@/modules/savings/lib/savings-forecast";
+import { potBalance, putInBetween } from "@/modules/savings/lib/savings-math";
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const GOALS_SHOWN = 3;
 const PAYBACKS_SHOWN = 3;
 
 function trendPct(current: number, previous: number): number | null {
@@ -66,10 +78,13 @@ export async function DashboardPage({ searchParams }: Props) {
     prevIncomeRows,
     prevExpenseRows,
     recentExpenseRows,
-    goalRows,
-    contributionRows,
     paybackRows,
     payBackExpenseRows,
+    potRows,
+    planRows,
+    itemRows,
+    depositRows,
+    savingsSpendRows,
   ] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
@@ -79,22 +94,31 @@ export async function DashboardPage({ searchParams }: Props) {
     getIncomesForMonth(prev.year, prev.month),
     listExpensesForMonth(prev.year, prev.month, dateFormat),
     listRecentExpenses(5),
-    listSavingsGoals(householdId),
-    listSavingsContributions(householdId),
     listPaybacks(householdId),
     listPayBackExpenses(householdId),
+    listSavingsPots(householdId),
+    listSavingsPotPlans(householdId),
+    listSavingsItems(householdId),
+    listSavingsDeposits(householdId),
+    listSavingsExpenses(householdId),
   ]);
 
   if (isCurrentMonth) {
     await checkBudgetReminder(householdId, year, month, budgetItemRows.length);
   }
 
+  // Expenses paid from a savings pot came out of money set aside over many
+  // months, not this month's pay. Spent, Left and the weekly allowance leave
+  // them out; Home shows them on their own.
+  const payExpenseRows = expenseRows.filter((e) => e.savingsPotId === null);
+  const paidFromSavings = expenseRows.filter((e) => e.savingsPotId !== null).reduce((s, e) => s + Number(e.amount), 0);
+
   const incomes = toIncomeInputs(incomeRows);
-  const expenses = toExpenseInputs(expenseRows);
+  const expenses = toExpenseInputs(payExpenseRows);
   const summary = dashboardSummary(incomes, expenses);
 
   const prevIncomes = toIncomeInputs(prevIncomeRows);
-  const prevExpensesList = toExpenseInputs(prevExpenseRows);
+  const prevExpensesList = toExpenseInputs(prevExpenseRows.filter((e) => e.savingsPotId === null));
   const prevSummary = dashboardSummary(prevIncomes, prevExpensesList);
 
   const category = (id: string) => categories.find((c) => c.id === id);
@@ -104,7 +128,7 @@ export async function DashboardPage({ searchParams }: Props) {
   // with any "to be paid back" part moved onto the other person. Shared
   // expenses get their own row, for information only.
   const wallet = walletSpentByMember(
-    expenseRows.map((e) => ({
+    payExpenseRows.map((e) => ({
       amount: Number(e.amount),
       paidByMemberId: e.paidByMemberId,
       payBackAmount: e.payBackAmount === null ? null : Number(e.payBackAmount),
@@ -181,7 +205,7 @@ export async function DashboardPage({ searchParams }: Props) {
     flexiblePlanned > 0 ? buildPacingSchedule({ daysInPeriod: period.daysInPeriod, flexibleTotal: flexiblePlanned }) : null;
   const dayOfPeriod = isCurrentMonth ? daysElapsedInPeriod(period) : period.daysInPeriod;
   const fixedCategoryIds = new Set(categories.filter((c) => c.budgetType === "fixed").map((c) => c.id));
-  const spentByDay = allowanceSpentByDay(expenseRows, fixedCategoryIds, year, month, dateFormat);
+  const spentByDay = allowanceSpentByDay(payExpenseRows, fixedCategoryIds, year, month, dateFormat);
   const weekPacing = pacingSchedule ? currentWeekPacing(pacingSchedule, dayOfPeriod, spentByDay) : null;
   const pacing: HomePacing | null = weekPacing
     ? {
@@ -215,34 +239,34 @@ export async function DashboardPage({ searchParams }: Props) {
     toName: memberName(p.toMemberId),
   }));
 
-  const savingsStats = savingsOverviewStats(
-    goalRows.map((g) => ({
-      createdAt: g.createdAt,
-      id: g.id,
-      targetAmount: g.targetAmount === null ? null : Number(g.targetAmount),
-      targetDate: g.targetDate,
-    })),
-    contributionRows.map((c) => ({ amount: Number(c.amount), date: c.date, goalId: c.goalId })),
-    year,
-    month,
+  // Savings pots: balance, whether the reserve is full, and the next thing on
+  // the list with when it becomes affordable (counted from this month).
+  const deposits = depositRows.map((d) => ({ amount: Number(d.amount), date: d.date, kind: d.kind, memberId: d.memberId, potId: d.potId }));
+  const spends = savingsSpendRows.flatMap((e) =>
+    e.savingsPotId ? [{ amount: Number(e.amount), savingsItemId: e.savingsItemId, savingsPotId: e.savingsPotId }] : [],
   );
-
-  const contributions = contributionRows.map((c) => ({ amount: Number(c.amount), date: c.date, goalId: c.goalId }));
-  const goals: HomeGoal[] = goalRows.slice(0, GOALS_SHOWN).map((g) => {
-    const targetAmount = g.targetAmount === null ? null : Number(g.targetAmount);
-    const saved = savedAmountForGoal(g.id, contributions);
+  const doneItemIds = new Set(spends.flatMap((s) => (s.savingsItemId ? [s.savingsItemId] : [])));
+  const whenAffordable = (months: null | number) => {
+    if (months === null) return "not on the current plan";
+    if (months === 0) return "affordable now";
+    const when = monthAfter(currentYear, currentMonth, months);
+    return `in ${formatPeriodLabel(when.year, when.month, dateFormat)}`;
+  };
+  const savings: HomeSavingsPot[] = potRows.map((pot) => {
+    const balance = potBalance(pot.id, deposits, spends);
+    const reserveMinimum = Number(pot.reserveMinimum);
+    const planned = planRows.filter((p) => p.potId === pot.id).reduce((s, p) => s + Number(p.monthlyAmount), 0);
+    const open = itemRows.filter((i) => i.potId === pot.id && !doneItemIds.has(i.id));
+    const forecast = forecastPot({ balance, items: open.map((i) => ({ cost: Number(i.cost), id: i.id })), monthlyInflow: planned, reserveMinimum });
     return {
-      id: g.id,
-      name: g.name,
-      pct: targetAmount !== null && targetAmount > 0 ? Math.round((saved / targetAmount) * 100) : null,
-      saved,
-      targetAmount,
+      balance,
+      id: pot.id,
+      name: pot.name,
+      next: open.length > 0 ? `Next: ${open[0].name}, ${whenAffordable(forecast.items[0].monthsFromNow)}` : null,
+      reserveFull: balance >= reserveMinimum,
     };
   });
-
-  const savingsBudgetAmount = budgetItemRows
-    .filter((b) => category(b.categoryId)?.name === "Savings")
-    .reduce((s, b) => s + Number(b.plannedAmount), 0);
+  const saved = potRows.reduce((s, pot) => s + putInBetween(pot.id, deposits, period.startDate, period.endDate), 0);
 
   const categoryName = (id: string) => category(id)?.name ?? "Unknown";
   const recent: HomeRecentGroup[] = groupByDay(
@@ -273,19 +297,18 @@ export async function DashboardPage({ searchParams }: Props) {
   }));
 
   const monthLabel = formatPeriodLabel(year, month, dateFormat);
-  const saved = savingsStats.monthlyContribution;
 
   return (
     <HomeView
       currentMemberId={memberId}
       daysLeft={daysLeftInMonth(year, month, dateFormat)}
-      goals={goals}
       incomes={Object.fromEntries(incomes.map((i) => [i.memberId, i.amount]))}
       ledger={{
         income: summary.combinedIncome,
         incomeTrendPct: trendPct(summary.combinedIncome, prevSummary.combinedIncome),
+        paidFromSavings,
         saved,
-        savedNote: saved === 0 ? "Nothing set aside yet" : "Saved this month",
+        savedNote: saved === 0 ? "Nothing put in yet" : "Put into savings this month",
         spent: summary.totalExpenses,
         spentMeterRatio: summary.combinedIncome > 0 ? summary.totalExpenses / summary.combinedIncome : 0,
         spentPctOfIncome: percent(summary.totalExpenses, summary.combinedIncome),
@@ -301,7 +324,7 @@ export async function DashboardPage({ searchParams }: Props) {
       prevMonthName={formatPeriodLabel(prev.year, prev.month, dateFormat).split(" ")[0]}
       recent={recent}
       recentPaybacks={recentPaybacks}
-      savingsBudgetAmount={savingsBudgetAmount > 0 ? savingsBudgetAmount : null}
+      savings={savings}
       spentMonthName={monthLabel.split(" ")[0]}
       year={year}
     />

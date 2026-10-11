@@ -27,8 +27,8 @@ import {
   trendPct,
 } from "@/modules/reports/lib/reports-stats";
 import { expenseLead } from "@/modules/reports/lib/reports-view";
-import { listSavingsContributions, listSavingsGoals } from "@/modules/savings-goals/api/savings-goals.actions";
-import { buildGoalCards, savingsOverviewStats } from "@/modules/savings-goals/lib/savings-stats";
+import { listSavingsDeposits, listSavingsExpenses, listSavingsPots } from "@/modules/savings/api/savings.actions";
+import { potBalance, putInBetween } from "@/modules/savings/lib/savings-math";
 
 type Props = { searchParams: Promise<{ month?: string; year?: string }> };
 
@@ -57,8 +57,9 @@ export async function ReportsPage({ searchParams }: Props) {
     expenseRows,
     prevExpenseRows,
     rangeExpenseRows,
-    goalRows,
-    contributionRows,
+    potRows,
+    depositRows,
+    savingsSpendRows,
   ] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
@@ -69,19 +70,26 @@ export async function ReportsPage({ searchParams }: Props) {
     listExpensesForMonth(year, month, dateFormat),
     listExpensesForMonth(prev.year, prev.month, dateFormat),
     listExpensesForRange(rangeStart, period.endDate),
-    listSavingsGoals(householdId),
-    listSavingsContributions(householdId),
+    listSavingsPots(householdId),
+    listSavingsDeposits(householdId),
+    listSavingsExpenses(householdId),
   ]);
+
+  // Spending from pay only, the same Spent as Home and Budget. Expenses paid
+  // from savings are listed on the Savings tab instead.
+  const payExpenseRows = expenseRows.filter((e) => e.savingsPotId === null);
+  const payPrevExpenseRows = prevExpenseRows.filter((e) => e.savingsPotId === null);
+  const payRangeExpenseRows = rangeExpenseRows.filter((e) => e.savingsPotId === null);
 
   const memberById = new Map(members.map((m) => [m.id, m]));
   const category = (id: string) => categories.find((c) => c.id === id);
   const categoryName = (id: string) => category(id)?.name ?? "Unknown";
 
-  const expenses = expenseRows.map((e) => ({ amount: Number(e.amount), categoryId: e.categoryId, ownerMemberId: e.ownerMemberId }));
+  const expenses = payExpenseRows.map((e) => ({ amount: Number(e.amount), categoryId: e.categoryId, ownerMemberId: e.ownerMemberId }));
   const combinedIncome = incomeRows.reduce((s, i) => s + Number(i.amount), 0);
   const prevIncome = prevIncomeRows.reduce((s, i) => s + Number(i.amount), 0);
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
-  const prevTotalExpenses = prevExpenseRows.reduce((s, e) => s + Number(e.amount), 0);
+  const prevTotalExpenses = payPrevExpenseRows.reduce((s, e) => s + Number(e.amount), 0);
 
   const budgetLines = budgetVsActual(
     budgetItemRows.map((b) => ({ categoryId: b.categoryId, plannedAmount: Number(b.plannedAmount) })),
@@ -90,12 +98,12 @@ export async function ReportsPage({ searchParams }: Props) {
   );
   const changes = categoryChanges(
     expenses,
-    prevExpenseRows.map((e) => ({ amount: Number(e.amount), categoryId: e.categoryId })),
+    payPrevExpenseRows.map((e) => ({ amount: Number(e.amount), categoryId: e.categoryId })),
     categories,
   );
   const slices = categoryBreakdown(expenses, categories);
   const largest = topExpenses(
-    expenseRows.map((e) => ({
+    payExpenseRows.map((e) => ({
       amount: Number(e.amount),
       categoryName: categoryName(e.categoryId),
       date: e.date,
@@ -122,7 +130,7 @@ export async function ReportsPage({ searchParams }: Props) {
 
   const totalPlanned = budgetItemRows.reduce((s, b) => s + Number(b.plannedAmount), 0);
   const pacePoints = dailySpendingPace(
-    expenseRows.map((e) => ({ amount: Number(e.amount), date: e.date })),
+    payExpenseRows.map((e) => ({ amount: Number(e.amount), date: e.date })),
     year,
     month,
     totalPlanned,
@@ -131,7 +139,7 @@ export async function ReportsPage({ searchParams }: Props) {
   const daily = new Array<number>(period.daysInPeriod).fill(0);
   const topCategoryByDay = new Array<null | string>(period.daysInPeriod).fill(null);
   const topCountByDay = new Array<number>(period.daysInPeriod).fill(0);
-  for (const e of expenseRows) {
+  for (const e of payExpenseRows) {
     const day = dayNumberInPeriod(e.date, year, month, dateFormat);
     if (day === null) continue;
     daily[day - 1] += Number(e.amount);
@@ -156,7 +164,7 @@ export async function ReportsPage({ searchParams }: Props) {
 
   const trendPoints = monthlyIncomeExpenseTrend(
     allIncomeRows.map((i) => ({ amount: Number(i.amount), month: i.month, year: i.year })),
-    rangeExpenseRows.map((e) => ({ amount: Number(e.amount), date: e.date })),
+    payRangeExpenseRows.map((e) => ({ amount: Number(e.amount), date: e.date })),
     { month, year },
     6,
     dateFormat,
@@ -172,27 +180,12 @@ export async function ReportsPage({ searchParams }: Props) {
     trendPct: trendPct(member.amount, prevIncomeRows.filter((i) => i.memberId === (member.key === "me" ? memberId : partner?.id)).reduce((s, i) => s + Number(i.amount), 0)),
   }));
 
-  const contributions = contributionRows.map((c) => ({ amount: Number(c.amount), date: c.date, goalId: c.goalId }));
-  const { goals } = buildGoalCards(goalRows, contributions, memberById);
-  const savingsStats = savingsOverviewStats(
-    goalRows.map((g) => ({
-      createdAt: g.createdAt,
-      id: g.id,
-      targetAmount: g.targetAmount === null ? null : Number(g.targetAmount),
-      targetDate: g.targetDate,
-    })),
-    contributions,
-    year,
-    month,
-  );
-  const monthContributions = contributionRows
-    .filter((c) => dayNumberInPeriod(c.date, year, month, dateFormat) !== null)
-    .map((c) => ({
-      amount: Number(c.amount),
-      dateLabel: formatShortDate(c.date, dateFormat),
-      goalName: goalRows.find((g) => g.id === c.goalId)?.name ?? "Unknown goal",
-      id: c.id,
-    }));
+  // Savings tab: money put into each pot this month, and what was paid from savings.
+  const deposits = depositRows.map((d) => ({ amount: Number(d.amount), date: d.date, id: d.id, kind: d.kind, memberId: d.memberId, potId: d.potId }));
+  const spends = savingsSpendRows.flatMap((e) => (e.savingsPotId ? [{ amount: Number(e.amount), savingsPotId: e.savingsPotId }] : []));
+  const potName = (id: null | string) => potRows.find((p) => p.id === id)?.name ?? "Savings";
+  const monthDeposits = deposits.filter((d) => d.kind === "deposit" && d.date >= period.startDate && d.date <= period.endDate);
+  const putInBy = (id: string) => monthDeposits.filter((d) => d.memberId === id).reduce((s, d) => s + d.amount, 0);
 
   const monthLabel = formatPeriodLabel(year, month, dateFormat);
   const exportRows = expenseRows.map((e) => ({
@@ -239,12 +232,34 @@ export async function ReportsPage({ searchParams }: Props) {
       monthNav={buildMonthNav({ basePath: "/reports", current: { month: currentMonth, year: currentYear }, dateFormat, selected: { month, year } })}
       prevMonthName={prevMonthName}
       savings={{
-        averageProgress: savingsStats.averageProgress,
-        contributions: monthContributions,
-        goalCount: goals.length,
-        goals: goals.map((g) => ({ id: g.id, name: g.name, pct: g.pct ?? 0, saved: g.saved, target: g.targetAmount })),
-        monthlyContribution: savingsStats.monthlyContribution,
-        totalSaved: savingsStats.totalSaved,
+        deposits: monthDeposits.map((d) => ({
+          amount: d.amount,
+          byLabel: memberById.get(d.memberId ?? "")?.user.name ?? "Former member",
+          dateLabel: formatShortDate(d.date, dateFormat),
+          id: d.id,
+          potName: potName(d.potId),
+        })),
+        paidFromSavings: expenseRows
+          .filter((e) => e.savingsPotId !== null)
+          .map((e) => ({
+            amount: Number(e.amount),
+            categoryName: categoryName(e.categoryId),
+            dateLabel: formatShortDate(e.date, dateFormat),
+            id: e.id,
+            name: e.note ?? categoryName(e.categoryId),
+            potName: potName(e.savingsPotId),
+          })),
+        pots: potRows.map((pot) => ({
+          balance: potBalance(pot.id, deposits, spends),
+          id: pot.id,
+          name: pot.name,
+          putIn: putInBetween(pot.id, deposits, period.startDate, period.endDate),
+        })),
+        putIn: monthDeposits.reduce((s, d) => s + d.amount, 0),
+        putInByPerson: [
+          { amount: putInBy(memberId), label: "Me" },
+          ...(partner ? [{ amount: putInBy(partner.id), label: partner.user.name }] : []),
+        ],
       }}
     />
   );

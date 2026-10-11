@@ -22,6 +22,6 @@ test.describe("dashboard", () => {
   test("shows the person breakdown and side panels", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "By person" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Recent expenses" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Savings goals" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Savings", exact: true })).toBeVisible();
   });
 });

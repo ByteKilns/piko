@@ -50,7 +50,7 @@ export type HomeRecentRow = {
 
 export type HomeRecentGroup = { key: string; label: string; rows: HomeRecentRow[]; sub: string; total: number };
 
-export type HomeGoal = { id: string; name: string; pct: null | number; saved: number; targetAmount: null | number };
+export type HomeSavingsPot = { balance: number; id: string; name: string; next: null | string; reserveFull: boolean };
 
 export type HomePacing = {
   carryIn: number;
@@ -67,11 +67,11 @@ export type HomePaybackRow = { amount: number; dateLabel: string; fromName: stri
 type Props = {
   currentMemberId: string;
   daysLeft: number;
-  goals: HomeGoal[];
   incomes: Record<string, number>;
   ledger: {
     income: number;
     incomeTrendPct: null | number;
+    paidFromSavings: number;
     saved: number;
     savedNote: string;
     spent: number;
@@ -89,7 +89,7 @@ type Props = {
   prevMonthName: string;
   recent: HomeRecentGroup[];
   recentPaybacks: HomePaybackRow[];
-  savingsBudgetAmount: null | number;
+  savings: HomeSavingsPot[];
   spentMonthName: string;
   year: number;
 };
@@ -233,6 +233,7 @@ export function HomeView(props: Props) {
                 </span>
               )}
               {spentTrend && <span>{spentTrend}</span>}
+              {ledger.paidFromSavings > 0 && <span>{formatMoney(ledger.paidFromSavings)} paid from savings</span>}
             </>
           }
         >
@@ -408,41 +409,34 @@ export function HomeView(props: Props) {
         </section>
 
         <section className="min-w-0">
-          <SectionHeading aside={<ArrowLink href="/savings-goals">All goals</ArrowLink>}>Savings goals</SectionHeading>
-          {props.goals.length === 0 ? (
+          <SectionHeading aside={<ArrowLink href="/savings">All savings</ArrowLink>}>Savings</SectionHeading>
+          {props.savings.length === 0 ? (
             <EmptyState
               action={
                 <Button asChild variant="outline">
-                  <Link href="/savings-goals">
+                  <Link href="/savings">
                     <Plus />
-                    Create a goal
+                    Set up savings
                   </Link>
                 </Button>
               }
-              body={
-                props.savingsBudgetAmount !== null
-                  ? `Your budget sets aside ${formatMoney(props.savingsBudgetAmount)} for savings this month. Give it a target and you'll see how close you are each month.`
-                  : "Set a savings target and you'll see how close you are each month."
-              }
-              title="No goals yet"
+              body="Set up a pot for your savings account and list what you're saving for. Piko shows when each one becomes affordable."
+              title="No savings set up yet"
             />
           ) : (
             <div className="flex flex-col">
-              {props.goals.map((goal) => (
-                <div className="flex flex-col gap-2 border-b border-n-300 py-4" key={goal.id}>
+              {props.savings.map((pot) => (
+                <div className="flex flex-col gap-1 border-b border-n-300 py-4" key={pot.id}>
                   <div className="flex items-baseline justify-between gap-4">
-                    <span className="text-[15px] font-semibold">{goal.name}</span>
+                    <span className="text-[15px] font-semibold">{pot.name}</span>
                     <span className="text-[15px] font-semibold">
-                      <Money value={goal.saved} />
+                      <Money value={pot.balance} />
                     </span>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <Meter
-                      className="flex-1"
-                      ratio={goal.targetAmount !== null && goal.targetAmount > 0 ? goal.saved / goal.targetAmount : 0}
-                    />
-                    <span className="w-10 text-right text-[13px] font-semibold">{goal.pct ?? 0}%</span>
-                  </div>
+                  <span className="text-[13px] text-n-600">
+                    {pot.reserveFull ? "Reserve full" : "Filling the reserve first"}
+                    {pot.next ? ` · ${pot.next}` : ""}
+                  </span>
                 </div>
               ))}
             </div>

@@ -20,6 +20,6 @@ test.describe("reports", () => {
     await expect(page.getByText("Last 6 months")).toBeVisible();
 
     await page.getByRole("tab", { name: "Savings" }).click();
-    await expect(page.getByText("Goal progress")).toBeVisible();
+    await expect(page.getByText("Money in this month")).toBeVisible();
   });
 });

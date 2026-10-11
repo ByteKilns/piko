@@ -50,6 +50,7 @@ type Props = {
   month: number;
   monthNav: MonthNavModel;
   prevMonthName: string;
+  savings: { planned: number; pots: { id: string; name: string; planned: number; putIn: number }[]; putIn: number };
   spentByKey: Record<string, number>;
   year: number;
 };
@@ -327,6 +328,50 @@ export function BudgetView(props: Props) {
           </Fragment>
         );
       })}
+
+      {tab === "all" && props.savings.pots.length > 0 && (
+        <>
+          <RowGroupHead columns={COLUMNS}>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="text-[15px] font-semibold whitespace-nowrap">Savings</span>
+              <span className="truncate text-[13px] text-n-600">Planned against put in this month</span>
+            </div>
+            <div className="text-right text-[15px] font-semibold">
+              <Money value={props.savings.planned} />
+            </div>
+            <div className="text-right text-[15px] font-semibold">
+              <Money value={props.savings.putIn} />
+            </div>
+            <div className="text-right text-[15px] font-semibold">
+              <Money value={Math.max(0, props.savings.planned - props.savings.putIn)} />
+            </div>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <Meter className="flex-1" ratio={props.savings.planned > 0 ? Math.min(1, props.savings.putIn / props.savings.planned) : 0} />
+              <span className="w-10.5 text-right text-[13px] font-semibold text-ink">
+                {pct(props.savings.planned > 0 ? props.savings.putIn / props.savings.planned : 0)}
+              </span>
+            </div>
+          </RowGroupHead>
+          {props.savings.pots.map((pot) => (
+            <Row columns={COLUMNS} key={pot.id}>
+              <span className="truncate text-[15px] whitespace-nowrap">{pot.name}</span>
+              <div className="text-right text-[15px]">
+                <Money value={pot.planned} />
+              </div>
+              <div className="text-right text-[15px]">
+                <Money value={pot.putIn} />
+              </div>
+              <div className="text-right text-[15px]">
+                <Money value={Math.max(0, pot.planned - pot.putIn)} />
+              </div>
+              <div className="flex min-w-0 items-center gap-2.5">
+                <Meter className="flex-1" ratio={pot.planned > 0 ? Math.min(1, pot.putIn / pot.planned) : 0} />
+                <span className="w-10.5 text-right text-[13px] text-n-700">{pct(pot.planned > 0 ? pot.putIn / pot.planned : 0)}</span>
+              </div>
+            </Row>
+          ))}
+        </>
+      )}
 
       <BudgetDialog
         categories={props.categories}

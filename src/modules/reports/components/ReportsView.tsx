@@ -24,8 +24,9 @@ type OwnerSlice = { amount: number; key: "me" | "partner" | "shared"; label: str
 type ChangeRow = CategoryChange;
 type LargestRow = { amount: number; categoryName: string; dateLabel: string; id: string; name: string };
 type MonthRow = { income: number; label: string; left: number; spent: number };
-type GoalRow = { id: string; name: string; pct: number; saved: number; target: null | number };
-type ContributionRow = { amount: number; dateLabel: string; goalName: string; id: string };
+type DepositRow = { amount: number; byLabel: string; dateLabel: string; id: string; potName: string };
+type SavingsPaidRow = { amount: number; categoryName: string; dateLabel: string; id: string; name: string; potName: string };
+type PotRow = { balance: number; id: string; name: string; putIn: number };
 
 type PaceData = {
   annotation: null | { amount: number; day: number; label: string };
@@ -64,12 +65,11 @@ type Props = {
   monthNav: MonthNavModel;
   prevMonthName: string;
   savings: {
-    averageProgress: number;
-    contributions: ContributionRow[];
-    goalCount: number;
-    goals: GoalRow[];
-    monthlyContribution: number;
-    totalSaved: number;
+    deposits: DepositRow[];
+    paidFromSavings: SavingsPaidRow[];
+    pots: PotRow[];
+    putIn: number;
+    putInByPerson: { amount: number; label: string }[];
   };
 };
 
@@ -448,16 +448,16 @@ function IncomeReport({ members, months, overspend, spentPct, total, trendPct, m
   );
 }
 
-function SavingsReport({ averageProgress, contributions, goalCount, goals, monthlyContribution, totalSaved }: Props["savings"]) {
-  if (contributions.length === 0) {
+function SavingsReport({ deposits, paidFromSavings, pots, putIn, putInByPerson }: Props["savings"]) {
+  if (pots.length === 0) {
     return (
       <div className="flex flex-col items-start gap-3 border-t-2 border-ink pt-6">
-        <h2 className="text-[28px] leading-[1.1] font-extrabold tracking-[-0.02em]">No savings recorded this month.</h2>
+        <h2 className="text-[28px] leading-[1.1] font-extrabold tracking-[-0.02em]">No savings set up yet.</h2>
         <p className="max-w-[52ch] text-[15px] leading-[1.55] text-n-800 text-pretty">
-          Once money goes toward a savings goal, this report shows how much you set aside each month and how close each goal is.
+          Once you set up a savings pot, this report shows how much you put in each month and what you paid for from savings.
         </p>
         <Button asChild className="mt-1.5 h-9.5" variant="outline">
-          <Link href="/savings-goals">Go to Savings goals</Link>
+          <Link href="/savings">Go to Savings</Link>
         </Button>
       </div>
     );
@@ -466,44 +466,50 @@ function SavingsReport({ averageProgress, contributions, goalCount, goals, month
   return (
     <>
       <Ledger>
-        <LedgerCell label="Saved this month" lead note={`Across ${goalCount} ${goalCount === 1 ? "goal" : "goals"}`}>
-          <Money size="lead" value={monthlyContribution} />
+        <LedgerCell label="Put in this month" lead note={putInByPerson.map((p) => `${p.label} ${formatMoney(p.amount)}`).join(" · ")}>
+          <Money size="lead" value={putIn} />
         </LedgerCell>
-        <LedgerCell label="Saved all-time" note="Every contribution">
-          <Money size="cell" value={totalSaved} />
-        </LedgerCell>
-        <LedgerCell label="Goals" note="All active">
-          <span className="text-2xl leading-none font-semibold tabular-nums">{goalCount}</span>
-        </LedgerCell>
-        <LedgerCell label="Average progress" note="Toward each target">
-          <span className="text-2xl leading-none font-semibold tabular-nums">{averageProgress}%</span>
-        </LedgerCell>
+        {pots.slice(0, 3).map((pot) => (
+          <LedgerCell key={pot.id} label={pot.name} note={`${formatMoney(pot.putIn)} put in this month`}>
+            <Money size="cell" value={pot.balance} />
+          </LedgerCell>
+        ))}
       </Ledger>
 
       <div className="mt-13 grid grid-cols-[repeat(auto-fit,minmax(340px,1fr))] gap-x-14 gap-y-13">
         <section className="min-w-0">
-          <SectionHeading>Goal progress</SectionHeading>
-          {goals.map((goal) => (
-            <div className="flex flex-col gap-2 border-b border-n-300 py-3.5" key={goal.id}>
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="text-[15px]">{goal.name}</span>
-                <span className="text-[13px] text-n-600">
-                  {goal.target !== null ? `${Math.round(goal.saved).toLocaleString("en-US")} of ${Math.round(goal.target).toLocaleString("en-US")}` : "Ongoing"}
+          <SectionHeading>Money in this month</SectionHeading>
+          {deposits.length === 0 ? (
+            <p className="py-3 text-sm text-n-700">Nothing put in yet this month.</p>
+          ) : (
+            deposits.map((deposit) => (
+              <div className="grid grid-cols-[90px_minmax(0,1fr)_auto] items-baseline gap-4 border-b border-n-300 py-2.75" key={deposit.id}>
+                <span className="text-[13px] text-n-600">{deposit.dateLabel}</span>
+                <span className="truncate text-[15px]">
+                  {deposit.byLabel} · {deposit.potName}
                 </span>
+                <span className="text-[15px] font-semibold tabular-nums">+{Math.round(deposit.amount).toLocaleString("en-US")}</span>
               </div>
-              {goal.target !== null && <Meter ratio={goal.pct / 100} />}
-            </div>
-          ))}
+            ))
+          )}
         </section>
         <section className="min-w-0">
-          <SectionHeading>This month&apos;s contributions</SectionHeading>
-          {contributions.map((contribution) => (
-            <div className="grid grid-cols-[90px_minmax(0,1fr)_auto] items-baseline gap-4 border-b border-n-300 py-2.75" key={contribution.id}>
-              <span className="text-[13px] text-n-600">{contribution.dateLabel}</span>
-              <span className="truncate text-[15px]">{contribution.goalName}</span>
-              <span className="text-[15px] font-semibold tabular-nums">+{Math.round(contribution.amount).toLocaleString("en-US")}</span>
-            </div>
-          ))}
+          <SectionHeading>Paid from savings</SectionHeading>
+          {paidFromSavings.length === 0 ? (
+            <p className="py-3 text-sm text-n-700">Nothing paid from savings this month.</p>
+          ) : (
+            paidFromSavings.map((row) => (
+              <div className="grid grid-cols-[90px_minmax(0,1fr)_auto] items-baseline gap-4 border-b border-n-300 py-2.75" key={row.id}>
+                <span className="text-[13px] text-n-600">{row.dateLabel}</span>
+                <span className="truncate text-[15px]">
+                  {row.name} · {row.categoryName} · {row.potName}
+                </span>
+                <span className="text-[15px] font-semibold tabular-nums">
+                  <Money value={row.amount} />
+                </span>
+              </div>
+            ))
+          )}
         </section>
       </div>
     </>
