@@ -14,6 +14,7 @@ export const activityEntityTypeEnum = pgEnum("activity_entity_type", [
   "income",
   "loan",
   "loan_payment",
+  "payback",
   "recurring_expense",
   "savings_contribution",
   "savings_goal",

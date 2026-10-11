@@ -22,6 +22,7 @@ const ENTITY_NOUNS: Record<ActivityEntityType, string> = {
   income: "income",
   loan: "a loan",
   loan_payment: "a loan payment",
+  payback: "a payback",
   recurring_expense: "a recurring bill",
   savings_contribution: "a savings contribution",
   savings_goal: "a savings goal",

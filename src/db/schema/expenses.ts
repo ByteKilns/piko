@@ -29,6 +29,9 @@ export const expenses = pgTable("expenses", {
   recurringExpenseId: uuid("recurring_expense_id").references(() => recurringExpenses.id, {
     onDelete: "set null",
   }),
+  // The part of `amount` the other household member will pay back (the
+  // "pay back later" tick). null = nothing to pay back.
+  payBackAmount: numeric("pay_back_amount", { precision: 12, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
