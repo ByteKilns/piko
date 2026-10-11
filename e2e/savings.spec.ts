@@ -11,7 +11,7 @@ test.describe("savings", () => {
     await expect(page.getByRole("heading", { name: "Savings", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Shared savings" })).toBeVisible();
     await expect(page.getByText("Emergency reserve").first()).toBeVisible();
-    await expect(page.getByText("Surgery")).toBeVisible();
+    await expect(page.getByText("Surgery", { exact: true })).toBeVisible();
   });
 
   test("opens the add-money dialog", async ({ page }) => {
