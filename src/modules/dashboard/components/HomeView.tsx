@@ -52,6 +52,8 @@ export type HomeRecentGroup = { key: string; label: string; rows: HomeRecentRow[
 
 export type HomeSavingsPot = { balance: number; id: string; name: string; next: null | string; reserveFull: boolean };
 
+export type HomeBalanceRow = { amount: number; id: string; label: string; sub: string };
+
 export type HomePacing = {
   carryIn: number;
   nextWeekAllowance: number;
@@ -65,15 +67,15 @@ export type HomePacing = {
 export type HomePaybackRow = { amount: number; dateLabel: string; fromName: string; id: string; toName: string };
 
 type Props = {
+  balances: HomeBalanceRow[];
   currentMemberId: string;
   daysLeft: number;
   incomes: Record<string, number>;
   ledger: {
     income: number;
     incomeTrendPct: null | number;
+    moved: { dhuku: number; loans: number; savings: number; total: number };
     paidFromSavings: number;
-    saved: number;
-    savedNote: string;
     spent: number;
     spentMeterRatio: number;
     spentPctOfIncome: null | number;
@@ -242,10 +244,17 @@ export function HomeView(props: Props) {
         <LedgerCell label="Income" note={incomeTrend} onSelect={() => setIncomeOpen(true)}>
           <Money size="cell" value={ledger.income} />
         </LedgerCell>
-        <LedgerCell label="Saved" note={ledger.savedNote}>
-          <Money size="cell" value={ledger.saved} />
+        <LedgerCell
+          label="Moved this month"
+          note={
+            ledger.moved.total > 0
+              ? `Savings ${formatMoney(ledger.moved.savings)} · Dhuku ${formatMoney(ledger.moved.dhuku)} · Loans ${formatMoney(ledger.moved.loans)}`
+              : "Nothing moved yet"
+          }
+        >
+          <Money size="cell" value={ledger.moved.total} />
         </LedgerCell>
-        <LedgerCell label="Unallocated" note={ledger.unallocated < 0 ? "Spending is above income" : "Ready to assign"}>
+        <LedgerCell label="Unallocated" note={ledger.unallocated < 0 ? "Spent and moved more than income" : "Ready to assign"}>
           <Money size="cell" tone={ledger.unallocated < 0 ? "negative" : "default"} value={ledger.unallocated} />
         </LedgerCell>
       </Ledger>
@@ -369,6 +378,23 @@ export function HomeView(props: Props) {
           );
         })}
       </section>
+
+      {props.balances.length > 0 && (
+        <section className="mt-13 max-w-160">
+          <SectionHeading sub="Where your money stands, apart from this month's spending">Balances</SectionHeading>
+          {props.balances.map((row) => (
+            <div className="flex items-baseline justify-between gap-4 border-b border-n-300 py-3" key={row.id}>
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="truncate text-[15px]">{row.label}</span>
+                <span className="text-[13px] text-n-600">{row.sub}</span>
+              </span>
+              <span className={cn("text-[15px] font-semibold", row.amount < 0 && "text-signal-ink")}>
+                <Money tone={row.amount < 0 ? "negative" : "default"} value={row.amount} />
+              </span>
+            </div>
+          ))}
+        </section>
+      )}
 
       <div className="mt-13 grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-12">
         <section className="min-w-0">

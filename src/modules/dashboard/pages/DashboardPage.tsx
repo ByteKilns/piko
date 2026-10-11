@@ -15,6 +15,7 @@ import { getBudgetItemsForMonth, getIncomesForMonth } from "@/modules/budget/api
 import { dashboardSummary } from "@/modules/budget/lib/calculations";
 import { listCategories } from "@/modules/categories/api/categories";
 import {
+  type HomeBalanceRow,
   type HomeOwnerRow,
   type HomePacing,
   type HomeRecentGroup,
@@ -23,10 +24,15 @@ import {
 } from "@/modules/dashboard/components/HomeView";
 import { allowanceSpentByDay, daysLeftInMonth } from "@/modules/dashboard/lib/cash-flow";
 import { toExpenseInputs, toIncomeInputs } from "@/modules/dashboard/lib/map-rows";
+import { movedThisMonth } from "@/modules/dashboard/lib/moved";
 import { buildPacingSchedule, currentWeekPacing } from "@/modules/dashboard/lib/pacing";
 import { walletSpentByMember } from "@/modules/dashboard/lib/wallet";
+import { listDhukuEntries, listDhukus } from "@/modules/dhuku/api/dhuku.actions";
+import { dhukuPosition } from "@/modules/dhuku/lib/dhuku-money";
 import { listExpensesForMonth, listRecentExpenses } from "@/modules/expenses/api/expenses.actions";
 import { groupByDay } from "@/modules/expenses/lib/expense-view";
+import { listLoanPayments, listLoans } from "@/modules/loans/api/loans.actions";
+import { buildLoanCards, loanOverviewStats } from "@/modules/loans/lib/loan-stats";
 import { checkBudgetReminder } from "@/modules/notifications/api/notifications.actions";
 import { listPayBackExpenses, listPaybacks } from "@/modules/paybacks/api/paybacks.actions";
 import { paybackBalance } from "@/modules/paybacks/lib/payback-balance";
@@ -38,7 +44,7 @@ import {
   listSavingsPots,
 } from "@/modules/savings/api/savings.actions";
 import { forecastPot, monthAfter } from "@/modules/savings/lib/savings-forecast";
-import { potBalance, putInBetween } from "@/modules/savings/lib/savings-math";
+import { potBalance } from "@/modules/savings/lib/savings-math";
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const PAYBACKS_SHOWN = 3;
@@ -85,6 +91,10 @@ export async function DashboardPage({ searchParams }: Props) {
     itemRows,
     depositRows,
     savingsSpendRows,
+    dhukuRows,
+    dhukuEntryRows,
+    loanRows,
+    loanPaymentRows,
   ] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
@@ -101,6 +111,10 @@ export async function DashboardPage({ searchParams }: Props) {
     listSavingsItems(householdId),
     listSavingsDeposits(householdId),
     listSavingsExpenses(householdId),
+    listDhukus(householdId),
+    listDhukuEntries(householdId),
+    listLoans(householdId),
+    listLoanPayments(householdId),
   ]);
 
   if (isCurrentMonth) {
@@ -266,7 +280,58 @@ export async function DashboardPage({ searchParams }: Props) {
       reserveFull: balance >= reserveMinimum,
     };
   });
-  const saved = potRows.reduce((s, pot) => s + putInBetween(pot.id, deposits, period.startDate, period.endDate), 0);
+  // Money moved into your own piles this month. Unallocated takes it off too,
+  // since it's no longer free to spend.
+  const moved = movedThisMonth({
+    deposits,
+    dhukuEntries: dhukuEntryRows.map((e) => ({ amount: Number(e.amount), date: e.date, type: e.type })),
+    endDate: period.endDate,
+    loanPayments: loanPaymentRows.flatMap((p) => {
+      const loan = loanRows.find((l) => l.id === p.loanId);
+      return loan ? [{ amount: Number(p.amount), date: p.date, direction: loan.direction }] : [];
+    }),
+    startDate: period.startDate,
+  });
+  const unallocated = summary.combinedIncome - summary.totalExpenses - moved.total;
+
+  // Balances: where each pile stands, apart from this month's spending.
+  // Positive = yours, or owed to you; negative = you owe it.
+  const loanStats = loanOverviewStats(
+    buildLoanCards(
+      loanRows,
+      loanPaymentRows.map((p) => ({ amount: Number(p.amount), loanId: p.loanId })),
+      new Map(members.map((m) => [m.id, m])),
+    ),
+  );
+  const dhukuBalances: HomeBalanceRow[] = dhukuRows.flatMap((dhuku) => {
+    const entries = dhukuEntryRows.filter((e) => e.dhukuId === dhuku.id).map((e) => ({ amount: Number(e.amount), type: e.type }));
+    const contributions = entries.filter((e) => e.type === "contribution").length;
+    if (dhuku.completedAt !== null || contributions >= dhuku.totalMembers) return [];
+    const position = dhukuPosition(
+      {
+        monthlyContribution: Number(dhuku.monthlyContribution),
+        potDeduction: dhuku.potDeduction === null ? null : Number(dhuku.potDeduction),
+        totalMembers: dhuku.totalMembers,
+      },
+      entries,
+    );
+    return [{ amount: position, id: `dhuku:${dhuku.id}`, label: dhuku.name, sub: position >= 0 ? "Dhuku · the group owes you" : "Dhuku · you owe the group" }];
+  });
+  const balances: HomeBalanceRow[] = [
+    ...savings.map((pot) => ({ amount: pot.balance, id: `pot:${pot.id}`, label: pot.name, sub: "Savings" })),
+    ...dhukuBalances,
+    ...(loanStats.outstandingToReceive > 0
+      ? [{ amount: loanStats.outstandingToReceive, id: "loans:owed", label: "Loans owed to you", sub: "Still to be paid back" }]
+      : []),
+    ...(loanStats.outstandingToPay > 0 ? [{ amount: -loanStats.outstandingToPay, id: "loans:owe", label: "Loans you owe", sub: "Still to pay" }] : []),
+    ...(payback
+      ? [
+          payback.debtorId === memberId
+            ? { amount: -payback.amount, id: "payback", label: `You owe ${memberName(payback.creditorId)}`, sub: "Pay back later" }
+            : { amount: payback.amount, id: "payback", label: `${memberName(payback.debtorId)} owes you`, sub: "Pay back later" },
+        ]
+      : []),
+  ];
 
   const categoryName = (id: string) => category(id)?.name ?? "Unknown";
   const recent: HomeRecentGroup[] = groupByDay(
@@ -300,20 +365,20 @@ export async function DashboardPage({ searchParams }: Props) {
 
   return (
     <HomeView
+      balances={balances}
       currentMemberId={memberId}
       daysLeft={daysLeftInMonth(year, month, dateFormat)}
       incomes={Object.fromEntries(incomes.map((i) => [i.memberId, i.amount]))}
       ledger={{
         income: summary.combinedIncome,
         incomeTrendPct: trendPct(summary.combinedIncome, prevSummary.combinedIncome),
+        moved,
         paidFromSavings,
-        saved,
-        savedNote: saved === 0 ? "Nothing put in yet" : "Put into savings this month",
         spent: summary.totalExpenses,
         spentMeterRatio: summary.combinedIncome > 0 ? summary.totalExpenses / summary.combinedIncome : 0,
         spentPctOfIncome: percent(summary.totalExpenses, summary.combinedIncome),
         spentTrendPct: trendPct(summary.totalExpenses, prevSummary.totalExpenses),
-        unallocated: summary.unallocated,
+        unallocated,
       }}
       members={members.map((m) => ({ id: m.id, name: m.user.name }))}
       month={month}
