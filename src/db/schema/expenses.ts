@@ -4,6 +4,7 @@ import { categories } from "./categories";
 import { householdMembers } from "./householdMembers";
 import { households } from "./households";
 import { recurringExpenses } from "./recurringExpenses";
+import { savingsItems, savingsPots } from "./savings";
 
 export const expenses = pgTable("expenses", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -32,6 +33,10 @@ export const expenses = pgTable("expenses", {
   // The part of `amount` the other household member will pay back (the
   // "pay back later" tick). null = nothing to pay back.
   payBackAmount: numeric("pay_back_amount", { precision: 12, scale: 2 }),
+  // Set when this expense was paid from a savings pot instead of from pay.
+  savingsPotId: uuid("savings_pot_id").references(() => savingsPots.id, { onDelete: "set null" }),
+  // The priority-list item this expense paid for, if any.
+  savingsItemId: uuid("savings_item_id").references(() => savingsItems.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

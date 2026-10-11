@@ -20,7 +20,7 @@ describe("activity sections", () => {
   });
 
   it("maps sections and groups to their members", () => {
-    expect(entityTypesForSection("savings")).toEqual(["savings_goal", "savings_contribution"]);
+    expect(entityTypesForSection("savings")).toEqual(["savings_pot", "savings_item", "savings_deposit", "savings_goal", "savings_contribution"]);
     expect(actionsForGroup("updated")).toEqual(["updated"]);
     expect(sectionForEntityType("loan_payment")).toBe("loans");
   });

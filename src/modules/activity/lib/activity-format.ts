@@ -25,7 +25,10 @@ const ENTITY_NOUNS: Record<ActivityEntityType, string> = {
   payback: "a payback",
   recurring_expense: "a recurring bill",
   savings_contribution: "a savings contribution",
+  savings_deposit: "money in savings",
   savings_goal: "a savings goal",
+  savings_item: "a savings list item",
+  savings_pot: "a savings pot",
 };
 
 const ACTION_VERBS: Record<Exclude<ActivityAction, "paid">, string> = {

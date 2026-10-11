@@ -4,7 +4,11 @@ import type { ActivityAction, ActivityEntityType } from "@/db/schema";
 export const ACTIVITY_SECTIONS = [
   { entityTypes: ["expense", "payback"], label: "Expenses", value: "expenses" },
   { entityTypes: ["budget_item", "income"], label: "Income & budget", value: "budget" },
-  { entityTypes: ["savings_goal", "savings_contribution"], label: "Savings", value: "savings" },
+  {
+    entityTypes: ["savings_pot", "savings_item", "savings_deposit", "savings_goal", "savings_contribution"],
+    label: "Savings",
+    value: "savings",
+  },
   { entityTypes: ["loan", "loan_payment"], label: "Loans", value: "loans" },
   { entityTypes: ["dhuku", "dhuku_entry"], label: "Dhuku", value: "dhuku" },
   { entityTypes: ["recurring_expense"], label: "Recurring", value: "recurring" },

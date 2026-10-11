@@ -17,7 +17,10 @@ export const activityEntityTypeEnum = pgEnum("activity_entity_type", [
   "payback",
   "recurring_expense",
   "savings_contribution",
+  "savings_deposit",
   "savings_goal",
+  "savings_item",
+  "savings_pot",
 ]);
 export const activityActionEnum = pgEnum("activity_action", [
   "archived",

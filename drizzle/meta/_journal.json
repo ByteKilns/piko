@@ -141,6 +141,13 @@
       "when": 1791719556925,
       "tag": "0019_married_tarot",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791720394974,
+      "tag": "0020_powerful_falcon",
+      "breakpoints": true
     }
   ]
 }
