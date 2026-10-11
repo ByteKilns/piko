@@ -4,7 +4,7 @@ import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db/client";
-import { expenses } from "@/db/schema";
+import { expenses, savingsItems, savingsPots } from "@/db/schema";
 import type { DateFormat } from "@/lib/date-format-cookie";
 import { resolvePeriod } from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
@@ -41,6 +41,22 @@ async function assertCanPayBack(householdId: string, payBackAmount: null | numbe
   }
 }
 
+// A pot must be this household's, and a list item must be on that pot.
+async function assertSavingsLink(householdId: string, savingsPotId: null | string, savingsItemId: null | string) {
+  if (savingsPotId === null) return;
+  const [pot] = await db
+    .select({ id: savingsPots.id })
+    .from(savingsPots)
+    .where(and(eq(savingsPots.id, savingsPotId), eq(savingsPots.householdId, householdId)));
+  if (!pot) throw new ExpenseValidationError("Savings pot does not belong to this household");
+  if (savingsItemId === null) return;
+  const [item] = await db
+    .select({ id: savingsItems.id })
+    .from(savingsItems)
+    .where(and(eq(savingsItems.id, savingsItemId), eq(savingsItems.potId, savingsPotId)));
+  if (!item) throw new ExpenseValidationError("That list item isn't in this savings pot");
+}
+
 async function findExpenseInHousehold(householdId: string, id: string) {
   const [row] = await db
     .select()
@@ -61,6 +77,9 @@ export async function createExpenseForHousehold(input: ExpenseInput, actor: Acti
     await assertMemberInHousehold(householdId, parsed.ownerMemberId);
   }
   await assertCanPayBack(householdId, parsed.payBackAmount);
+  const savingsPotId = parsed.savingsPotId ?? null;
+  const savingsItemId = savingsPotId === null ? null : (parsed.savingsItemId ?? null);
+  await assertSavingsLink(householdId, savingsPotId, savingsItemId);
 
   const [created] = await db
     .insert(expenses)
@@ -73,6 +92,8 @@ export async function createExpenseForHousehold(input: ExpenseInput, actor: Acti
       date: parsed.date,
       note: parsed.note,
       payBackAmount: parsed.payBackAmount == null ? null : String(parsed.payBackAmount),
+      savingsItemId,
+      savingsPotId,
     })
     .returning();
 
@@ -210,6 +231,13 @@ export async function updateExpenseAction(id: string, input: ExpenseInput) {
     throw new ExpenseValidationError("The amount to pay back can't be more than the expense");
   }
   await assertCanPayBack(householdId, payBackAmount);
+  // Same rule as pay back later: omitted means "leave it as it is".
+  const savingsPotId = parsed.savingsPotId === undefined ? before.savingsPotId : parsed.savingsPotId;
+  const savingsItemId = savingsPotId === null ? null : parsed.savingsItemId === undefined ? before.savingsItemId : parsed.savingsItemId;
+  if (savingsPotId !== null && payBackAmount !== null) {
+    throw new ExpenseValidationError("An expense paid from savings can't also be paid back");
+  }
+  await assertSavingsLink(householdId, savingsPotId, savingsItemId);
 
   const [updated] = await db
     .update(expenses)
@@ -221,6 +249,8 @@ export async function updateExpenseAction(id: string, input: ExpenseInput) {
       date: parsed.date,
       note: parsed.note ?? null,
       payBackAmount: payBackAmount === null ? null : String(payBackAmount),
+      savingsItemId,
+      savingsPotId,
       updatedAt: new Date(),
     })
     .where(and(eq(expenses.id, id), eq(expenses.householdId, householdId)))
@@ -231,7 +261,7 @@ export async function updateExpenseAction(id: string, input: ExpenseInput) {
     action: "updated",
     after: updated,
     before,
-    changes: expenseChanges(f, before, { ...parsed, payBackAmount }),
+    changes: expenseChanges(f, before, { ...parsed, payBackAmount, savingsPotId }),
     entityId: id,
     entityType: "expense",
     summary: expenseSummary(f, parsed),

@@ -19,6 +19,8 @@ import {
   recurringExpenses,
   savingsContributions,
   savingsGoals,
+  savingsItems,
+  savingsPots,
 } from "@/db/schema";
 
 import type { RevertContext, RevertOperation } from "../lib/revert/plan";
@@ -119,6 +121,22 @@ const expenseStore = tableStore({
         .from(recurringExpenses)
         .where(and(eq(recurringExpenses.id, values.recurringExpenseId), eq(recurringExpenses.householdId, h)));
       if (!bill) values.recurringExpenseId = null;
+    }
+    // Its savings pot or list item may have gone since; like those foreign
+    // keys' "set null", the expense then comes back without the link.
+    if (values.savingsPotId) {
+      const [pot] = await tx
+        .select({ id: savingsPots.id })
+        .from(savingsPots)
+        .where(and(eq(savingsPots.id, values.savingsPotId), eq(savingsPots.householdId, h)));
+      if (!pot) {
+        values.savingsPotId = null;
+        values.savingsItemId = null;
+      }
+    }
+    if (values.savingsItemId) {
+      const [item] = await tx.select({ id: savingsItems.id }).from(savingsItems).where(eq(savingsItems.id, values.savingsItemId));
+      if (!item) values.savingsItemId = null;
     }
     await tx.insert(expenses).values(values);
   },

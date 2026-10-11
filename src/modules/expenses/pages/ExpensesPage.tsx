@@ -11,6 +11,7 @@ import { ExpensesView, type UpcomingBill } from "@/modules/expenses/components/E
 import { topCategoryIds } from "@/modules/expenses/lib/expense-view";
 import { roleForOwner } from "@/modules/expenses/lib/member-tone";
 import { listRecurringExpenses } from "@/modules/recurring/api/recurring.actions";
+import { listSavingsPots } from "@/modules/savings/api/savings.actions";
 
 type Props = { searchParams: Promise<{ month?: string; year?: string }> };
 
@@ -24,12 +25,13 @@ export async function ExpensesPage({ searchParams }: Props) {
   const isCurrentMonth = year === current.year && month === current.month;
   const period = resolvePeriod(year, month, dateFormat);
 
-  const [members, categories, expenseRows, incomeRows, recurringItems] = await Promise.all([
+  const [members, categories, expenseRows, incomeRows, recurringItems, savingsPots] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
     listExpensesForMonth(year, month, dateFormat),
     getIncomesForMonth(year, month),
     listRecurringExpenses(householdId),
+    listSavingsPots(householdId),
   ]);
 
   const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? "Unknown";
@@ -43,6 +45,8 @@ export async function ExpensesPage({ searchParams }: Props) {
     paidByMemberId: e.paidByMemberId,
     payBackAmount: e.payBackAmount === null ? null : Number(e.payBackAmount),
     recurringExpenseId: e.recurringExpenseId,
+    savingsItemId: e.savingsItemId,
+    savingsPotId: e.savingsPotId,
   }));
 
   // Bills still to pay this month: active, not yet paid in this period, and
@@ -86,6 +90,7 @@ export async function ExpensesPage({ searchParams }: Props) {
       monthNav={buildMonthNav({ basePath: "/expenses", current, dateFormat, selected: { month, year } })}
       quickCategoryIds={topCategoryIds(expenses, 5)}
       recurringFrequencies={Object.fromEntries(recurringItems.map((r) => [r.id, r.frequency]))}
+      savingsPots={savingsPots.map((pot) => ({ id: pot.id, name: pot.name }))}
       today={todayISO()}
       upcoming={upcoming}
     />

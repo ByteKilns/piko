@@ -43,7 +43,12 @@ import { markRecurringExpensePaidAction } from "@/modules/recurring/api/recurrin
 type Category = { groupName: string; icon?: null | string; id: string; name: string };
 type Member = { id: string; name: string };
 
-export type ExpenseRecord = Omit<ExpenseItem, "categoryName"> & { payBackAmount: null | number; recurringExpenseId: null | string };
+export type ExpenseRecord = Omit<ExpenseItem, "categoryName"> & {
+  payBackAmount: null | number;
+  recurringExpenseId: null | string;
+  savingsItemId: null | string;
+  savingsPotId: null | string;
+};
 
 export type UpcomingBill = {
   amount: number;
@@ -68,6 +73,7 @@ type Props = {
   monthNav: MonthNavModel;
   quickCategoryIds: string[];
   recurringFrequencies: Record<string, "monthly" | "quarterly" | "yearly">;
+  savingsPots: { id: string; name: string }[];
   today: string;
   upcoming: UpcomingBill[];
 };
@@ -468,6 +474,8 @@ export function ExpensesView(props: Props) {
                 ownerMemberId: editing.ownerMemberId,
                 paidByMemberId: editing.paidByMemberId,
                 payBackAmount: editing.payBackAmount,
+                savingsItemId: editing.savingsItemId,
+                savingsPotId: editing.savingsPotId,
               }
             : undefined
         }
@@ -475,6 +483,7 @@ export function ExpensesView(props: Props) {
         onOpenChange={(open) => !open && setEditing(null)}
         open={editing !== null}
         quickCategoryIds={props.quickCategoryIds}
+        savingsPots={props.savingsPots}
       />
 
       {bulkKey !== null && (

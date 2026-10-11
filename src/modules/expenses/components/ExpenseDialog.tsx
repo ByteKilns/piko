@@ -30,6 +30,9 @@ export type ExpenseDraft = {
   ownerMemberId: null | string;
   paidByMemberId: string;
   payBackAmount?: null | number;
+  savingsItemId?: null | string;
+  savingsItemName?: null | string;
+  savingsPotId?: null | string;
 };
 
 type Props = {
@@ -43,10 +46,13 @@ type Props = {
   open: boolean;
   // Most-used categories, offered as one-tap chips under the picker.
   quickCategoryIds?: string[];
+  // Savings pots that can pay for this expense. Leave out to hide "Paid from".
+  savingsPots?: { id: string; name: string }[];
 };
 
 const FORM_ID = "expense-form";
 const SHARED = "shared";
+const PAY = "pay";
 const QUICK_CHIPS = 5;
 
 // The Add / Edit expense dialog from the Expenses mockup. Its fields unmount
@@ -76,11 +82,22 @@ export function ExpenseDialog({ expenseId, onOpenChange, open, ...rest }: Props)
 
 type FieldsProps = Omit<Props, "onOpenChange" | "open"> & { onDone: () => void; onPendingChange: (pending: boolean) => void };
 
-function ExpenseFields({ categories, currentMemberId, expenseId, initial, members, onDone, onPendingChange, quickCategoryIds = [] }: FieldsProps) {
+function ExpenseFields({
+  categories,
+  currentMemberId,
+  expenseId,
+  initial,
+  members,
+  onDone,
+  onPendingChange,
+  quickCategoryIds = [],
+  savingsPots = [],
+}: FieldsProps) {
   const router = useRouter();
   const [categoryOptions, setCategoryOptions] = useState(categories);
   const [payBack, setPayBack] = useState(initial?.payBackAmount != null);
   const [payBackText, setPayBackText] = useState(initial?.payBackAmount != null ? String(initial.payBackAmount) : "");
+  const [paidFrom, setPaidFrom] = useState<string>(initial?.savingsPotId ?? PAY);
   const {
     control,
     formState: { errors },
@@ -106,10 +123,14 @@ function ExpenseFields({ categories, currentMemberId, expenseId, initial, member
   const label = (m: Member) => (m.id === currentMemberId ? "Me" : m.name);
   const people = [...members.filter((m) => m.id === currentMemberId), ...members.filter((m) => m.id !== currentMemberId)];
 
+  const fromSavings = paidFrom !== PAY;
+  // The list item only stays linked while the expense stays on that item's pot.
+  const keepsItem = fromSavings && Boolean(initial?.savingsItemId) && paidFrom === initial?.savingsPotId;
+
   // "Pay back later" needs exactly two people: the one who paid, and the
-  // other one, who owes it.
+  // other one, who owes it. Money from savings is never paid back.
   const payer = members.find((m) => m.id === paidByMemberId);
-  const other = members.length === 2 ? (members.find((m) => m.id !== paidByMemberId) ?? null) : null;
+  const other = members.length === 2 && !fromSavings ? (members.find((m) => m.id !== paidByMemberId) ?? null) : null;
   const payBackLabel = paidByMemberId === currentMemberId ? `${other?.name ?? "They"} will pay me back` : `I'll pay ${payer?.name ?? "them"} back`;
 
   const quick = (quickCategoryIds.length > 0 ? quickCategoryIds : categories.map((c) => c.id))
@@ -133,7 +154,13 @@ function ExpenseFields({ categories, currentMemberId, expenseId, initial, member
       }
     }
     onPendingChange(true);
-    const payload = { ...values, note: values.note?.trim() || undefined, payBackAmount };
+    const payload = {
+      ...values,
+      note: values.note?.trim() || undefined,
+      payBackAmount,
+      savingsItemId: keepsItem ? (initial?.savingsItemId ?? null) : null,
+      savingsPotId: fromSavings ? paidFrom : null,
+    };
     try {
       if (expenseId) {
         await updateExpenseAction(expenseId, payload);
@@ -210,6 +237,18 @@ function ExpenseFields({ categories, currentMemberId, expenseId, initial, member
           value={paidByMemberId}
         />
       </div>
+
+      {savingsPots.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <Segmented
+            label="Paid from"
+            onChange={setPaidFrom}
+            options={[{ label: "Pay", value: PAY }, ...savingsPots.map((pot) => ({ label: pot.name, value: pot.id }))]}
+            value={paidFrom}
+          />
+          {keepsItem && <p className="text-[13px] text-n-700">For list item: {initial?.savingsItemName ?? "a savings item"}</p>}
+        </div>
+      )}
 
       {other && (
         <div className="flex flex-col gap-3">

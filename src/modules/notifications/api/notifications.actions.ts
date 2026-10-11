@@ -86,6 +86,8 @@ export async function checkBudgetThreshold(
         eq(expenses.householdId, householdId),
         eq(expenses.categoryId, categoryId),
         monthExpenseOwnerCondition,
+        // Paid from savings: saved for in earlier months, so not against this budget.
+        isNull(expenses.savingsPotId),
         gte(expenses.date, monthStart),
         lte(expenses.date, monthEnd),
       ),
