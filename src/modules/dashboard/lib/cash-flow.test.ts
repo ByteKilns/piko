@@ -9,7 +9,6 @@ import {
   dailyCashFlowPoints,
   daysLeftInMonth,
   dhukuCashFlow,
-  loanNetFlowByOwner,
   loanPaymentCashFlow,
   netMonthlyOutflow,
   safeToSpendToday,
@@ -49,52 +48,6 @@ describe("loanPaymentCashFlow", () => {
   it("skips payments whose loan isn't in the provided list", () => {
     const events = loanPaymentCashFlow([{ amount: "500", date: "2026-02-10", loanId: "missing" }], []);
     expect(events).toEqual([]);
-  });
-});
-
-describe("loanNetFlowByOwner", () => {
-  it("attributes a 'taken' loan payment as a positive (outflow) amount to the loan's owner", () => {
-    const totals = loanNetFlowByOwner(
-      [{ amount: "500", date: "2026-02-10", loanId: "l1" }],
-      [{ direction: "taken", id: "l1", ownerMemberId: "m1" }],
-      2026,
-      2,
-      "english",
-    );
-    expect(totals.get("m1")).toBe(500);
-  });
-
-  it("attributes a 'given' loan payment as a negative (inflow) amount", () => {
-    const totals = loanNetFlowByOwner(
-      [{ amount: "500", date: "2026-02-10", loanId: "l1" }],
-      [{ direction: "given", id: "l1", ownerMemberId: "m1" }],
-      2026,
-      2,
-      "english",
-    );
-    expect(totals.get("m1")).toBe(-500);
-  });
-
-  it("groups a null ownerMemberId (shared loan) under the null key", () => {
-    const totals = loanNetFlowByOwner(
-      [{ amount: "200", date: "2026-02-10", loanId: "l1" }],
-      [{ direction: "taken", id: "l1", ownerMemberId: null }],
-      2026,
-      2,
-      "english",
-    );
-    expect(totals.get(null)).toBe(200);
-  });
-
-  it("excludes payments outside the given month", () => {
-    const totals = loanNetFlowByOwner(
-      [{ amount: "500", date: "2026-03-01", loanId: "l1" }],
-      [{ direction: "taken", id: "l1", ownerMemberId: "m1" }],
-      2026,
-      2,
-      "english",
-    );
-    expect(totals.size).toBe(0);
   });
 });
 

@@ -14,12 +14,11 @@ import { getBudgetItemsForMonth, getIncomesForMonth } from "@/modules/budget/api
 import { dashboardSummary } from "@/modules/budget/lib/calculations";
 import { listCategories } from "@/modules/categories/api/categories";
 import { type HomeGoal, type HomeOwnerRow, type HomePacing, type HomeRecentGroup, HomeView } from "@/modules/dashboard/components/HomeView";
-import { allowanceSpentByDay, daysLeftInMonth, loanNetFlowByOwner } from "@/modules/dashboard/lib/cash-flow";
+import { allowanceSpentByDay, daysLeftInMonth } from "@/modules/dashboard/lib/cash-flow";
 import { toExpenseInputs, toIncomeInputs } from "@/modules/dashboard/lib/map-rows";
 import { buildPacingSchedule, currentWeekPacing } from "@/modules/dashboard/lib/pacing";
 import { listExpensesForMonth, listRecentExpenses } from "@/modules/expenses/api/expenses.actions";
 import { groupByDay } from "@/modules/expenses/lib/expense-view";
-import { listLoanPayments, listLoans } from "@/modules/loans/api/loans.actions";
 import { checkBudgetReminder } from "@/modules/notifications/api/notifications.actions";
 import { listSavingsContributions, listSavingsGoals } from "@/modules/savings-goals/api/savings-goals.actions";
 import { savedAmountForGoal, savingsOverviewStats } from "@/modules/savings-goals/lib/savings-stats";
@@ -64,8 +63,6 @@ export async function DashboardPage({ searchParams }: Props) {
     recentExpenseRows,
     goalRows,
     contributionRows,
-    loanRows,
-    loanPaymentRows,
   ] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
@@ -77,8 +74,6 @@ export async function DashboardPage({ searchParams }: Props) {
     listRecentExpenses(5),
     listSavingsGoals(householdId),
     listSavingsContributions(householdId),
-    listLoans(householdId),
-    listLoanPayments(householdId),
   ]);
 
   if (isCurrentMonth) {
@@ -93,23 +88,11 @@ export async function DashboardPage({ searchParams }: Props) {
   const prevExpensesList = toExpenseInputs(prevExpenseRows);
   const prevSummary = dashboardSummary(prevIncomes, prevExpensesList);
 
-  // Loan payments live in their own table, separate from `expenses`, so
-  // dashboardSummary never sees them. Fold their net cash flow into the
-  // spent figures the same way Safe to Spend's totalActual does, so a
-  // recorded loan payment actually shows up in what's been spent.
-  const loanFlowByOwner = loanNetFlowByOwner(loanPaymentRows, loanRows, year, month, dateFormat);
-  const prevLoanFlowByOwner = loanNetFlowByOwner(loanPaymentRows, loanRows, prev.year, prev.month, dateFormat);
-  const loanNetTotal = [...loanFlowByOwner.values()].reduce((s, v) => s + v, 0);
-  const prevLoanNetTotal = [...prevLoanFlowByOwner.values()].reduce((s, v) => s + v, 0);
-  const totalExpensesWithLoans = summary.totalExpenses + loanNetTotal;
-  const prevTotalExpensesWithLoans = prevSummary.totalExpenses + prevLoanNetTotal;
-  const unallocatedWithLoans = summary.combinedIncome - totalExpensesWithLoans;
-
   const category = (id: string) => categories.find((c) => c.id === id);
   const memberName = (id: string) => members.find((m) => m.id === id)?.user.name ?? "Member";
 
   const ownerSpent = (ownerId: null | string) =>
-    expenses.filter((e) => e.ownerMemberId === ownerId).reduce((s, e) => s + e.amount, 0) + (loanFlowByOwner.get(ownerId) ?? 0);
+    expenses.filter((e) => e.ownerMemberId === ownerId).reduce((s, e) => s + e.amount, 0);
   const ownerIncome = (id: string) => incomes.find((i) => i.memberId === id)?.amount ?? 0;
   const prevOwnerIncome = (id: string) => prevIncomes.find((i) => i.memberId === id)?.amount ?? 0;
 
@@ -263,11 +246,11 @@ export async function DashboardPage({ searchParams }: Props) {
         incomeTrendPct: trendPct(summary.combinedIncome, prevSummary.combinedIncome),
         saved,
         savedNote: saved === 0 ? "Nothing set aside yet" : "Saved this month",
-        spent: totalExpensesWithLoans,
-        spentMeterRatio: summary.combinedIncome > 0 ? totalExpensesWithLoans / summary.combinedIncome : 0,
-        spentPctOfIncome: percent(totalExpensesWithLoans, summary.combinedIncome),
-        spentTrendPct: trendPct(totalExpensesWithLoans, prevTotalExpensesWithLoans),
-        unallocated: unallocatedWithLoans,
+        spent: summary.totalExpenses,
+        spentMeterRatio: summary.combinedIncome > 0 ? summary.totalExpenses / summary.combinedIncome : 0,
+        spentPctOfIncome: percent(summary.totalExpenses, summary.combinedIncome),
+        spentTrendPct: trendPct(summary.totalExpenses, prevSummary.totalExpenses),
+        unallocated: summary.unallocated,
       }}
       members={members.map((m) => ({ id: m.id, name: m.user.name }))}
       month={month}
