@@ -6,6 +6,9 @@ export const setBudgetItemSchema = z.object({
   categoryId: z.string().uuid(),
   ownerMemberId: z.string().uuid().nullable(),
   plannedAmount: z.number().nonnegative(),
+  // When editing an existing line: whose line it was. If it differs from
+  // ownerMemberId, the line moves to the new owner.
+  replacesOwnerMemberId: z.string().uuid().nullable().optional(),
 });
 
 export type SetBudgetItemInput = z.infer<typeof setBudgetItemSchema>;

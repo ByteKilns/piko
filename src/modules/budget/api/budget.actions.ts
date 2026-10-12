@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, isNull, ne, not, or } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db/client";
@@ -32,6 +32,11 @@ async function getOrCreateMonthlyBudget(householdId: string, year: number, month
   return budget;
 }
 
+// null = shared. A plain eq() never matches NULL in SQL.
+function ownerIs(ownerMemberId: null | string) {
+  return ownerMemberId === null ? isNull(budgetItems.ownerMemberId) : eq(budgetItems.ownerMemberId, ownerMemberId);
+}
+
 export async function getBudgetItemsForMonth(year: number, month: number) {
   const { householdId } = await getCurrentMember();
   const budget = await getOrCreateMonthlyBudget(householdId, year, month);
@@ -57,34 +62,30 @@ export async function setBudgetItemAction(input: SetBudgetItemInput) {
 
   const budget = await getOrCreateMonthlyBudget(householdId, parsed.year, parsed.month);
 
-  // The current row for this category/month (any owner) — the transaction
-  // below collapses them to one, so this is what the log diffs against.
+  // Each person's line is their own, so a save only ever touches this owner's
+  // line. The one exception is moving a line: editing it with a different
+  // "For" removes the old owner's line in the same transaction.
+  const movedFrom =
+    parsed.replacesOwnerMemberId !== undefined && parsed.replacesOwnerMemberId !== parsed.ownerMemberId ? parsed.replacesOwnerMemberId : undefined;
+
+  // What the log diffs against: the line being moved, or this owner's line.
   const [before] = await db
     .select()
     .from(budgetItems)
-    .where(and(eq(budgetItems.monthlyBudgetId, budget.id), eq(budgetItems.categoryId, parsed.categoryId)));
+    .where(
+      and(
+        eq(budgetItems.monthlyBudgetId, budget.id),
+        eq(budgetItems.categoryId, parsed.categoryId),
+        ownerIs(movedFrom === undefined ? parsed.ownerMemberId : movedFrom),
+      ),
+    );
 
-  // The UI shows exactly one row per category (with an owner dropdown), which
-  // implies "each category has at most one current owner/allocation per
-  // month." Enforce that invariant here: before writing the row for the
-  // owner being saved, remove any other row for this category/month whose
-  // owner differs — otherwise switching a category's owner (e.g. Shared ->
-  // a specific member) would leave the old row behind as an orphaned,
-  // hidden duplicate that `budgetItems.find()` on the page may or may not
-  // surface. Wrapped in the same transaction as the upsert so the
-  // delete+write is atomic.
   const item = await db.transaction(async (tx) => {
-    await tx
-      .delete(budgetItems)
-      .where(
-        and(
-          eq(budgetItems.monthlyBudgetId, budget.id),
-          eq(budgetItems.categoryId, parsed.categoryId),
-          parsed.ownerMemberId === null
-            ? not(isNull(budgetItems.ownerMemberId))
-            : or(isNull(budgetItems.ownerMemberId), ne(budgetItems.ownerMemberId, parsed.ownerMemberId)),
-        ),
-      );
+    if (movedFrom !== undefined) {
+      await tx
+        .delete(budgetItems)
+        .where(and(eq(budgetItems.monthlyBudgetId, budget.id), eq(budgetItems.categoryId, parsed.categoryId), ownerIs(movedFrom)));
+    }
 
     if (parsed.ownerMemberId === null) {
       // The unique constraint on budget_items is a plain multi-column UNIQUE
@@ -174,7 +175,7 @@ export async function removeBudgetItemAction(input: RemoveBudgetItemInput) {
       and(
         eq(budgetItems.monthlyBudgetId, budget.id),
         eq(budgetItems.categoryId, parsed.categoryId),
-        parsed.ownerMemberId === null ? isNull(budgetItems.ownerMemberId) : eq(budgetItems.ownerMemberId, parsed.ownerMemberId),
+        ownerIs(parsed.ownerMemberId),
       ),
     );
   if (!before) return;

@@ -135,7 +135,15 @@ function BudgetFields({ categories, currentMemberId, defaultCategoryId, initial,
           name: selectedCategory.name,
         });
       }
-      await setBudgetItemAction({ categoryId: selectedCategory.id, month, ownerMemberId: memberIdFor(owner), plannedAmount: value, year });
+      await setBudgetItemAction({
+        categoryId: selectedCategory.id,
+        month,
+        ownerMemberId: memberIdFor(owner),
+        plannedAmount: value,
+        // Only a line kept in the same category can move to another owner.
+        replacesOwnerMemberId: initial?.categoryId === selectedCategory.id ? memberIdFor(initial.ownerKey) : undefined,
+        year,
+      });
       toast.success("Budget saved");
       onDone();
       router.refresh();
