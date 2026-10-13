@@ -18,6 +18,8 @@ const ENTITY_NOUNS: Record<ActivityEntityType, string> = {
   dhuku: "a dhuku",
   dhuku_entry: "a dhuku entry",
   expense: "an expense",
+  fund: "a fund",
+  fund_top_up: "money in a fund",
   household_settings: "household settings",
   income: "income",
   loan: "a loan",

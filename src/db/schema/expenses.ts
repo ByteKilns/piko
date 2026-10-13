@@ -1,6 +1,7 @@
 import { date, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 import { categories } from "./categories";
+import { funds } from "./funds";
 import { householdMembers } from "./householdMembers";
 import { households } from "./households";
 import { recurringExpenses } from "./recurringExpenses";
@@ -37,6 +38,10 @@ export const expenses = pgTable("expenses", {
   savingsPotId: uuid("savings_pot_id").references(() => savingsPots.id, { onDelete: "set null" }),
   // The priority-list item this expense paid for, if any.
   savingsItemId: uuid("savings_item_id").references(() => savingsItems.id, { onDelete: "set null" }),
+  // Set when a fund paid for this expense. fundAmount is the part it paid (up
+  // to its balance); the rest counts as the month's normal spending.
+  fundId: uuid("fund_id").references(() => funds.id, { onDelete: "set null" }),
+  fundAmount: numeric("fund_amount", { precision: 12, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

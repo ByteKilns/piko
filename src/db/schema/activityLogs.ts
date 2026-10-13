@@ -10,6 +10,8 @@ export const activityEntityTypeEnum = pgEnum("activity_entity_type", [
   "dhuku",
   "dhuku_entry",
   "expense",
+  "fund",
+  "fund_top_up",
   "household_settings",
   "income",
   "loan",

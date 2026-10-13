@@ -3,7 +3,7 @@ import type { ActivityAction, ActivityEntityType } from "@/db/schema";
 // How the Activity page groups entity types into its "Section" filter.
 export const ACTIVITY_SECTIONS = [
   { entityTypes: ["expense", "payback"], label: "Expenses", value: "expenses" },
-  { entityTypes: ["budget_item", "income"], label: "Income & budget", value: "budget" },
+  { entityTypes: ["budget_item", "income", "fund", "fund_top_up"], label: "Income & budget", value: "budget" },
   {
     entityTypes: ["savings_pot", "savings_item", "savings_deposit", "savings_goal", "savings_contribution"],
     label: "Savings",
