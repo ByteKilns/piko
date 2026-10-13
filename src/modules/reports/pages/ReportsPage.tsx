@@ -11,7 +11,8 @@ import {
   resolvePeriod,
 } from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
-import { getBudgetItemsForMonth, getIncomesForMonth, listAllIncomes } from "@/modules/budget/api/budget.actions";
+import { listPlanLines } from "@/modules/budget/api/budget";
+import { getIncomesForMonth, listAllIncomes } from "@/modules/budget/api/budget.actions";
 import { listCategories } from "@/modules/categories/api/categories";
 import { pctOfIncome } from "@/modules/dashboard/lib/format";
 import { listExpensesForMonth, listExpensesForRange } from "@/modules/expenses/api/expenses.actions";
@@ -66,7 +67,7 @@ export async function ReportsPage({ searchParams }: Props) {
     getIncomesForMonth(year, month),
     getIncomesForMonth(prev.year, prev.month),
     listAllIncomes(),
-    getBudgetItemsForMonth(year, month),
+    listPlanLines(householdId, year, month),
     listExpensesForMonth(year, month, dateFormat),
     listExpensesForMonth(prev.year, prev.month, dateFormat),
     listExpensesForRange(rangeStart, period.endDate),

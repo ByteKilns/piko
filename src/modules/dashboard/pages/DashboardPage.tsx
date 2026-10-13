@@ -11,8 +11,10 @@ import {
 } from "@/lib/month-period";
 import { getEffectiveMember, getHouseholdMembers } from "@/lib/session";
 import { todayISO } from "@/lib/today";
-import { getBudgetItemsForMonth, getIncomesForMonth } from "@/modules/budget/api/budget.actions";
+import { listPlanLines } from "@/modules/budget/api/budget";
+import { getIncomesForMonth } from "@/modules/budget/api/budget.actions";
 import { dashboardSummary } from "@/modules/budget/lib/calculations";
+import { kindOf } from "@/modules/budget/lib/plan-lines";
 import { listCategories } from "@/modules/categories/api/categories";
 import {
   type HomeBalanceRow,
@@ -79,7 +81,7 @@ export async function DashboardPage({ searchParams }: Props) {
     members,
     categories,
     incomeRows,
-    budgetItemRows,
+    planLines,
     expenseRows,
     prevIncomeRows,
     prevExpenseRows,
@@ -99,7 +101,7 @@ export async function DashboardPage({ searchParams }: Props) {
     getHouseholdMembers(householdId),
     listCategories(householdId),
     getIncomesForMonth(year, month),
-    getBudgetItemsForMonth(year, month),
+    listPlanLines(householdId, year, month),
     listExpensesForMonth(year, month, dateFormat),
     getIncomesForMonth(prev.year, prev.month),
     listExpensesForMonth(prev.year, prev.month, dateFormat),
@@ -118,7 +120,7 @@ export async function DashboardPage({ searchParams }: Props) {
   ]);
 
   if (isCurrentMonth) {
-    await checkBudgetReminder(householdId, year, month, budgetItemRows.length);
+    await checkBudgetReminder(householdId, year, month, planLines.length);
   }
 
   // Expenses paid from a savings pot came out of money set aside over many
@@ -212,9 +214,9 @@ export async function DashboardPage({ searchParams }: Props) {
   // already spoken for): the hero's safe-to-spend figure and its carry-over.
   // Fixed-category expenses don't count against it, for the same reason.
   const period = resolvePeriod(year, month, dateFormat);
-  const flexiblePlanned = budgetItemRows
-    .filter((b) => category(b.categoryId)?.budgetType === "flexible")
-    .reduce((s, b) => s + Number(b.plannedAmount), 0);
+  const flexiblePlanned = planLines
+    .filter((l) => kindOf(l.kind, category(l.categoryId)?.budgetType) !== "fixed")
+    .reduce((s, l) => s + l.plannedAmount, 0);
   const pacingSchedule =
     flexiblePlanned > 0 ? buildPacingSchedule({ daysInPeriod: period.daysInPeriod, flexibleTotal: flexiblePlanned }) : null;
   const dayOfPeriod = isCurrentMonth ? daysElapsedInPeriod(period) : period.daysInPeriod;
