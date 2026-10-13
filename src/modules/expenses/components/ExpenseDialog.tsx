@@ -12,8 +12,10 @@ import { CategoryComboboxField } from "@/components/CategoryComboboxField";
 import { Modal } from "@/components/Modal";
 import { NepaliDateField } from "@/components/NepaliDateField";
 import { Segmented } from "@/components/Segmented";
+import { SelectField } from "@/components/SelectField";
 import { TextField } from "@/components/TextField";
 import { Button } from "@/components/ui/button";
+import { formatMoney } from "@/lib/money";
 import { todayISO } from "@/lib/today";
 import { cn } from "@/lib/utils";
 import { createExpenseAction, updateExpenseAction } from "@/modules/expenses/api/expenses.actions";
@@ -26,6 +28,8 @@ export type ExpenseDraft = {
   amount: number;
   categoryId: string;
   date: string;
+  fundAmount?: null | number;
+  fundId?: null | string;
   note: null | string;
   ownerMemberId: null | string;
   paidByMemberId: string;
@@ -40,6 +44,8 @@ type Props = {
   currentMemberId: string;
   // Edit mode when set; otherwise the dialog adds a new expense.
   expenseId?: string;
+  // Funds that can pay, with what each holds now. Only the payer's own show.
+  funds?: { balance: number; id: string; name: string; ownerMemberId: string }[];
   initial?: ExpenseDraft;
   members: Member[];
   onOpenChange: (open: boolean) => void;
@@ -86,6 +92,7 @@ function ExpenseFields({
   categories,
   currentMemberId,
   expenseId,
+  funds = [],
   initial,
   members,
   onDone,
@@ -97,7 +104,9 @@ function ExpenseFields({
   const [categoryOptions, setCategoryOptions] = useState(categories);
   const [payBack, setPayBack] = useState(initial?.payBackAmount != null);
   const [payBackText, setPayBackText] = useState(initial?.payBackAmount != null ? String(initial.payBackAmount) : "");
-  const [paidFrom, setPaidFrom] = useState<string>(initial?.savingsPotId ?? PAY);
+  const [paidFrom, setPaidFrom] = useState<string>(
+    initial?.savingsPotId ? `pot:${initial.savingsPotId}` : initial?.fundId ? `fund:${initial.fundId}` : PAY,
+  );
   const {
     control,
     formState: { errors },
@@ -120,17 +129,31 @@ function ExpenseFields({
   const ownerMemberId = watch("ownerMemberId");
   const paidByMemberId = watch("paidByMemberId");
   const categoryId = watch("categoryId");
+  const amount = Number(watch("amount")) || 0;
   const label = (m: Member) => (m.id === currentMemberId ? "Me" : m.name);
   const people = [...members.filter((m) => m.id === currentMemberId), ...members.filter((m) => m.id !== currentMemberId)];
 
-  const fromSavings = paidFrom !== PAY;
+  // Only the payer's own funds can pay, so switching who paid drops a fund
+  // that isn't theirs back to pay.
+  const payerFunds = funds.filter((fund) => fund.ownerMemberId === paidByMemberId);
+  const source = paidFrom.startsWith("fund:") && !payerFunds.some((fund) => `fund:${fund.id}` === paidFrom) ? PAY : paidFrom;
+  const potId = source.startsWith("pot:") ? source.slice(4) : null;
+  const fund = payerFunds.find((f) => `fund:${f.id}` === source) ?? null;
+  // An edited expense's own earlier share comes back to the fund first.
+  const available = fund ? fund.balance + (initial?.fundId === fund.id ? (initial.fundAmount ?? 0) : 0) : 0;
+  const paidFromOptions = [
+    { label: "Pay", value: PAY },
+    ...savingsPots.map((pot) => ({ label: `${pot.name} (savings)`, value: `pot:${pot.id}` })),
+    ...payerFunds.map((f) => ({ label: `${f.name} (fund)`, value: `fund:${f.id}` })),
+  ];
+
   // The list item only stays linked while the expense stays on that item's pot.
-  const keepsItem = fromSavings && Boolean(initial?.savingsItemId) && paidFrom === initial?.savingsPotId;
+  const keepsItem = potId !== null && Boolean(initial?.savingsItemId) && potId === initial?.savingsPotId;
 
   // "Pay back later" needs exactly two people: the one who paid, and the
-  // other one, who owes it. Money from savings is never paid back.
+  // other one, who owes it. Money from savings or a fund is never paid back.
   const payer = members.find((m) => m.id === paidByMemberId);
-  const other = members.length === 2 && !fromSavings ? (members.find((m) => m.id !== paidByMemberId) ?? null) : null;
+  const other = members.length === 2 && source === PAY ? (members.find((m) => m.id !== paidByMemberId) ?? null) : null;
   const payBackLabel = paidByMemberId === currentMemberId ? `${other?.name ?? "They"} will pay me back` : `I'll pay ${payer?.name ?? "them"} back`;
 
   const quick = (quickCategoryIds.length > 0 ? quickCategoryIds : categories.map((c) => c.id))
@@ -156,10 +179,11 @@ function ExpenseFields({
     onPendingChange(true);
     const payload = {
       ...values,
+      fundId: fund?.id ?? null,
       note: values.note?.trim() || undefined,
       payBackAmount,
       savingsItemId: keepsItem ? (initial?.savingsItemId ?? null) : null,
-      savingsPotId: fromSavings ? paidFrom : null,
+      savingsPotId: potId,
     };
     try {
       if (expenseId) {
@@ -238,15 +262,16 @@ function ExpenseFields({
         />
       </div>
 
-      {savingsPots.length > 0 && (
+      {paidFromOptions.length > 1 && (
         <div className="flex flex-col gap-2">
-          <Segmented
-            label="Paid from"
-            onChange={setPaidFrom}
-            options={[{ label: "Pay", value: PAY }, ...savingsPots.map((pot) => ({ label: pot.name, value: pot.id }))]}
-            value={paidFrom}
-          />
+          <SelectField label="Paid from" onValueChange={setPaidFrom} options={paidFromOptions} value={source} />
           {keepsItem && <p className="text-[13px] text-n-700">For list item: {initial?.savingsItemName ?? "a savings item"}</p>}
+          {fund && amount > available && (
+            <p className="text-[13px] text-n-700">
+              {fund.name} has {formatMoney(Math.max(0, available))}. The other {formatMoney(amount - Math.max(0, available))} counts as this
+              month&apos;s spending.
+            </p>
+          )}
         </div>
       )}
 

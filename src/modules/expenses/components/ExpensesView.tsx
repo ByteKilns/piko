@@ -44,6 +44,8 @@ type Category = { groupName: string; icon?: null | string; id: string; name: str
 type Member = { id: string; name: string };
 
 export type ExpenseRecord = Omit<ExpenseItem, "categoryName"> & {
+  fundAmount: null | number;
+  fundId: null | string;
   payBackAmount: null | number;
   recurringExpenseId: null | string;
   savingsItemId: null | string;
@@ -67,6 +69,7 @@ type Props = {
   daysLeft: null | number;
   expenses: ExpenseRecord[];
   exportRows: ExpenseExportRow[];
+  funds: { balance: number; id: string; name: string; ownerMemberId: string }[];
   income: number;
   members: Member[];
   monthLabel: string;
@@ -464,12 +467,15 @@ export function ExpensesView(props: Props) {
         categories={categories}
         currentMemberId={currentMemberId}
         expenseId={editing?.id}
+        funds={props.funds}
         initial={
           editing
             ? {
                 amount: editing.amount,
                 categoryId: editing.categoryId,
                 date: editing.date,
+                fundAmount: editing.fundAmount,
+                fundId: editing.fundId,
                 note: editing.note,
                 ownerMemberId: editing.ownerMemberId,
                 paidByMemberId: editing.paidByMemberId,

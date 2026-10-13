@@ -17,6 +17,7 @@ import { listCategories } from "@/modules/categories/api/categories";
 import { pctOfIncome } from "@/modules/dashboard/lib/format";
 import { listExpensesForMonth, listExpensesForRange } from "@/modules/expenses/api/expenses.actions";
 import { roleForOwner } from "@/modules/expenses/lib/member-tone";
+import { payRows } from "@/modules/expenses/lib/pay-amount";
 import { ReportsView } from "@/modules/reports/components/ReportsView";
 import {
   budgetVsActual,
@@ -73,11 +74,12 @@ export async function ReportsPage({ searchParams }: Props) {
     listSavingsExpenses(householdId),
   ]);
 
-  // Spending from pay only, the same Spent as Home and Budget. Expenses paid
-  // from savings are listed on the Savings tab instead.
-  const payExpenseRows = expenseRows.filter((e) => e.savingsPotId === null);
-  const payPrevExpenseRows = prevExpenseRows.filter((e) => e.savingsPotId === null);
-  const payRangeExpenseRows = rangeExpenseRows.filter((e) => e.savingsPotId === null);
+  // Spending from pay only, the same Spent as Home and Budget: the part a
+  // fund paid is left out. Expenses paid from savings are listed on the
+  // Savings tab instead.
+  const payExpenseRows = payRows(expenseRows);
+  const payPrevExpenseRows = payRows(prevExpenseRows);
+  const payRangeExpenseRows = payRows(rangeExpenseRows);
 
   const memberById = new Map(members.map((m) => [m.id, m]));
   const category = (id: string) => categories.find((c) => c.id === id);

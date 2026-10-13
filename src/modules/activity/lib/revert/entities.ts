@@ -84,9 +84,11 @@ export const ENTITY_REVERT: Partial<Record<ActivityEntityType, EntityRevert>> = 
   },
   expense: {
     children: [],
-    editable: ["amount", "categoryId", "date", "note", "ownerMemberId", "paidByMemberId", "payBackAmount", "savingsPotId"],
+    editable: ["amount", "categoryId", "date", "fundAmount", "fundId", "note", "ownerMemberId", "paidByMemberId", "payBackAmount", "savingsPotId"],
     fields: (f) => rowFields(expenseFields(f)),
     noun: "expense",
+    // Any fund shows as "A fund", so moving between funds compares the raw id.
+    opaque: ["fundId"],
     references: (r) => ({ categoryIds: ids(r.categoryId), memberIds: ids(r.ownerMemberId, r.paidByMemberId) }),
     summary: (f, r) => expenseSummary(f, r as ExpenseSnapshot),
   },

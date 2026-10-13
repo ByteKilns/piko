@@ -24,6 +24,7 @@ import { listPlanLines } from "@/modules/budget/api/budget";
 import { formatNPR } from "@/modules/dashboard/lib/format";
 import { walletShares } from "@/modules/dashboard/lib/wallet";
 import { cycleStatus, expectedNextAmount, nextEntryDueDate } from "@/modules/dhuku/lib/dhuku-stats";
+import { payRows } from "@/modules/expenses/lib/pay-amount";
 import { formatDueDate } from "@/modules/recurring/lib/recurring-stats";
 import { periodOfDate } from "@/modules/savings/lib/savings-forecast";
 
@@ -78,9 +79,10 @@ export async function checkBudgetThreshold(householdId: string, categoryId: stri
         lte(expenses.date, period.endDate),
       ),
     );
-  // What came out of this person's own wallet, the same as the Budget page.
+  // What came out of this person's own wallet, the same as the Budget page
+  // (leaving out any part a fund paid).
   const memberIds = members.map((m) => m.id);
-  const spent = monthExpenses
+  const spent = payRows(monthExpenses)
     .flatMap((e) =>
       walletShares(
         { amount: Number(e.amount), paidByMemberId: e.paidByMemberId, payBackAmount: e.payBackAmount === null ? null : Number(e.payBackAmount) },

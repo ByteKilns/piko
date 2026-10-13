@@ -5,12 +5,14 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/db/client";
 import { expenses, savingsItems, savingsPots } from "@/db/schema";
-import type { DateFormat } from "@/lib/date-format-cookie";
-import { resolvePeriod } from "@/lib/month-period";
+import { type DateFormat, getDateFormatPref } from "@/lib/date-format-cookie";
+import { currentPeriodYearMonth, resolvePeriod } from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { type ActivityActor, activityActor, loadActivityFormatters, logActivities, logActivity } from "@/modules/activity/api/activity";
 import { listCategories } from "@/modules/categories/api/categories";
 import { formatNPR } from "@/modules/dashboard/lib/format";
+import { listFundData } from "@/modules/funds/api/funds";
+import { fundBalances, fundShare } from "@/modules/funds/lib/fund-math";
 import { checkBudgetThreshold, insertNotification } from "@/modules/notifications/api/notifications.actions";
 
 import { expenseChanges, expenseSummary } from "../lib/expense-activity";
@@ -57,6 +59,30 @@ async function assertSavingsLink(householdId: string, savingsPotId: null | strin
   if (!item) throw new ExpenseValidationError("That list item isn't in this savings pot");
 }
 
+// What a fund pays towards an expense: up to its balance today (leaving out
+// this expense's own earlier share when it's being edited). The rest counts as
+// the month's normal spending. A fund only pays for its owner's expenses.
+async function fundPayment(
+  householdId: string,
+  fundId: null | string,
+  paidByMemberId: string,
+  amount: number,
+  editingId?: string,
+): Promise<{ fundAmount: null | string; fundId: null | string }> {
+  if (fundId === null) return { fundAmount: null, fundId: null };
+  const data = await listFundData(householdId);
+  const fund = data.funds.find((f) => f.id === fundId);
+  if (!fund || fund.archived) throw new ExpenseValidationError("That fund isn't available");
+  if (fund.ownerMemberId !== paidByMemberId) throw new ExpenseValidationError("A fund can only pay for its owner's expenses");
+
+  const now = currentPeriodYearMonth(await getDateFormatPref(householdId));
+  const balance =
+    fundBalances({ ...data, funds: [fund], spends: data.spends.filter((s) => s.expenseId !== editingId), through: now }).get(fund.id) ?? 0;
+  const share = fundShare(amount, balance);
+  if (share <= 0) throw new ExpenseValidationError("That fund is empty");
+  return { fundAmount: String(share), fundId };
+}
+
 async function findExpenseInHousehold(householdId: string, id: string) {
   const [row] = await db
     .select()
@@ -80,12 +106,15 @@ export async function createExpenseForHousehold(input: ExpenseInput, actor: Acti
   const savingsPotId = parsed.savingsPotId ?? null;
   const savingsItemId = savingsPotId === null ? null : (parsed.savingsItemId ?? null);
   await assertSavingsLink(householdId, savingsPotId, savingsItemId);
+  const fund = await fundPayment(householdId, parsed.fundId ?? null, parsed.paidByMemberId, parsed.amount);
 
   const [created] = await db
     .insert(expenses)
     .values({
       householdId,
       amount: String(parsed.amount),
+      fundAmount: fund.fundAmount,
+      fundId: fund.fundId,
       categoryId: parsed.categoryId,
       ownerMemberId: parsed.ownerMemberId,
       paidByMemberId: parsed.paidByMemberId,
@@ -238,6 +267,13 @@ export async function updateExpenseAction(id: string, input: ExpenseInput) {
     throw new ExpenseValidationError("An expense paid from savings can't also be paid back");
   }
   await assertSavingsLink(householdId, savingsPotId, savingsItemId);
+  // Same rule again: omitted means "leave it as it is". The fund's share is
+  // worked out afresh, since the amount may have changed.
+  const fundId = parsed.fundId === undefined ? before.fundId : parsed.fundId;
+  if (fundId !== null && (payBackAmount !== null || savingsPotId !== null)) {
+    throw new ExpenseValidationError("An expense paid from a fund can't also be paid back or paid from savings");
+  }
+  const fund = await fundPayment(householdId, fundId, parsed.paidByMemberId, parsed.amount, id);
 
   const [updated] = await db
     .update(expenses)
@@ -247,6 +283,8 @@ export async function updateExpenseAction(id: string, input: ExpenseInput) {
       ownerMemberId: parsed.ownerMemberId,
       paidByMemberId: parsed.paidByMemberId,
       date: parsed.date,
+      fundAmount: fund.fundAmount,
+      fundId: fund.fundId,
       note: parsed.note ?? null,
       payBackAmount: payBackAmount === null ? null : String(payBackAmount),
       savingsItemId,
@@ -261,7 +299,7 @@ export async function updateExpenseAction(id: string, input: ExpenseInput) {
     action: "updated",
     after: updated,
     before,
-    changes: expenseChanges(f, before, { ...parsed, payBackAmount, savingsPotId }),
+    changes: expenseChanges(f, before, { ...parsed, fundAmount: fund.fundAmount, fundId: fund.fundId, payBackAmount, savingsPotId }),
     entityId: id,
     entityType: "expense",
     summary: expenseSummary(f, parsed),

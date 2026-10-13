@@ -5,6 +5,8 @@ export type ExpenseSnapshot = {
   amount: number | string;
   categoryId: string;
   date: string;
+  fundAmount?: null | number | string;
+  fundId?: null | string;
   note?: null | string;
   ownerMemberId: null | string;
   paidByMemberId: string;
@@ -20,6 +22,8 @@ export function expenseFields(f: ActivityFormatters): FieldSpec<ExpenseSnapshot>
     { format: f.member, key: "paidByMemberId", label: "Paid by" },
     { format: f.money, key: "payBackAmount", label: "To be paid back" },
     { format: (value) => (value ? "Savings" : "Pay"), key: "savingsPotId", label: "Paid from" },
+    { format: (value) => (value ? "A fund" : null), key: "fundId", label: "Fund" },
+    { format: f.money, key: "fundAmount", label: "From a fund" },
     { format: f.date, key: "date", label: "Date" },
     { format: f.text, key: "note", label: "Note" },
   ];

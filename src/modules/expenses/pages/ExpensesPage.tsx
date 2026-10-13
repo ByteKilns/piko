@@ -10,6 +10,8 @@ import { listExpensesForMonth } from "@/modules/expenses/api/expenses.actions";
 import { ExpensesView, type UpcomingBill } from "@/modules/expenses/components/ExpensesView";
 import { topCategoryIds } from "@/modules/expenses/lib/expense-view";
 import { roleForOwner } from "@/modules/expenses/lib/member-tone";
+import { listFundData } from "@/modules/funds/api/funds";
+import { fundBalances } from "@/modules/funds/lib/fund-math";
 import { listRecurringExpenses } from "@/modules/recurring/api/recurring.actions";
 import { listSavingsPots } from "@/modules/savings/api/savings.actions";
 
@@ -25,20 +27,27 @@ export async function ExpensesPage({ searchParams }: Props) {
   const isCurrentMonth = year === current.year && month === current.month;
   const period = resolvePeriod(year, month, dateFormat);
 
-  const [members, categories, expenseRows, income, recurringItems, savingsPots] = await Promise.all([
+  const [members, categories, expenseRows, income, recurringItems, savingsPots, fundData] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
     listExpensesForMonth(year, month, dateFormat),
     householdIncome(householdId, year, month),
     listRecurringExpenses(householdId),
     listSavingsPots(householdId),
+    listFundData(householdId),
   ]);
+
+  // Funds that can pay for an expense, with what each holds today.
+  const activeFunds = fundData.funds.filter((f) => !f.archived);
+  const balances = fundBalances({ ...fundData, funds: activeFunds, through: current });
 
   const categoryName = (id: string) => categories.find((c) => c.id === id)?.name ?? "Unknown";
   const expenses = expenseRows.map((e) => ({
     amount: Number(e.amount),
     categoryId: e.categoryId,
     date: e.date,
+    fundAmount: e.fundAmount === null ? null : Number(e.fundAmount),
+    fundId: e.fundId,
     id: e.id,
     note: e.note,
     ownerMemberId: e.ownerMemberId,
@@ -84,6 +93,7 @@ export async function ExpensesPage({ searchParams }: Props) {
       daysLeft={isCurrentMonth ? daysLeftInMonth(year, month, dateFormat) : null}
       expenses={expenses}
       exportRows={exportRows}
+      funds={activeFunds.map((f) => ({ balance: balances.get(f.id) ?? 0, id: f.id, name: f.name, ownerMemberId: f.ownerMemberId }))}
       income={income}
       members={members.map((m) => ({ id: m.id, name: m.user.name }))}
       monthLabel={monthLabel}
