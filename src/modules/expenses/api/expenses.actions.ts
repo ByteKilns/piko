@@ -109,7 +109,7 @@ export async function createExpenseForHousehold(input: ExpenseInput, actor: Acti
       title: "New shared expense added",
     });
   }
-  await checkBudgetThreshold(householdId, parsed.categoryId, parsed.ownerMemberId, parsed.date);
+  await checkBudgetThreshold(householdId, parsed.categoryId, parsed.paidByMemberId, parsed.date);
 
   const f = await loadActivityFormatters(householdId);
   await logActivity(actor, {
@@ -182,16 +182,16 @@ export async function createExpensesBulkAction(inputs: ExpenseInput[]) {
     });
   }
 
-  // One threshold check per distinct category+owner+month combo touched by
+  // One threshold check per distinct category+payer+month combo touched by
   // this batch, rather than one per row — checkBudgetThreshold recomputes
   // the whole month's spend anyway, so repeating it per row would just be
   // redundant work for the same dedupeKey.
   const seenBudgetKeys = new Set<string>();
   for (const parsed of parsedList) {
-    const key = `${parsed.categoryId}:${parsed.ownerMemberId ?? "shared"}:${parsed.date.slice(0, 7)}`;
+    const key = `${parsed.categoryId}:${parsed.paidByMemberId}:${parsed.date.slice(0, 7)}`;
     if (seenBudgetKeys.has(key)) continue;
     seenBudgetKeys.add(key);
-    await checkBudgetThreshold(householdId, parsed.categoryId, parsed.ownerMemberId, parsed.date);
+    await checkBudgetThreshold(householdId, parsed.categoryId, parsed.paidByMemberId, parsed.date);
   }
 
   const f = await loadActivityFormatters(householdId);

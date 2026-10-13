@@ -6,24 +6,26 @@ import { cookies } from "next/headers";
 
 import { db } from "@/db/client";
 import {
-  budgetItems,
   categories,
   dhukuEntries,
   dhukus,
   expenses,
+  householdMembers,
   loanPayments,
   loans,
-  monthlyBudgets,
   notifications,
   recurringExpenses,
 } from "@/db/schema";
 import { getDateFormatPref } from "@/lib/date-format-cookie";
-import { formatPeriodLabel } from "@/lib/month-period";
+import { formatPeriodLabel, resolvePeriod } from "@/lib/month-period";
 import { NOTIFICATION_PREFS_COOKIE_NAME, type NotificationPreferences } from "@/lib/notification-preferences-cookie";
 import { getCurrentMember } from "@/lib/session";
+import { listPlanLines } from "@/modules/budget/api/budget";
 import { formatNPR } from "@/modules/dashboard/lib/format";
+import { walletShares } from "@/modules/dashboard/lib/wallet";
 import { cycleStatus, expectedNextAmount, nextEntryDueDate } from "@/modules/dhuku/lib/dhuku-stats";
 import { formatDueDate } from "@/modules/recurring/lib/recurring-stats";
+import { periodOfDate } from "@/modules/savings/lib/savings-forecast";
 
 type NotificationInput = {
   body: string;
@@ -45,39 +47,24 @@ export async function insertNotification(input: NotificationInput) {
     .onConflictDoNothing({ target: [notifications.householdId, notifications.dedupeKey] });
 }
 
-// Called after an expense is created/updated. Compares spend-so-far for the
-// affected category+owner+month against its planned budget and fires a
+// Called after an expense is saved. Compares what the payer has spent so far
+// in that category this month against their own plan line and fires a
 // one-time "80% reached" and/or "budget exceeded" notification — dedupeKey
-// ensures each threshold only ever fires once per category/owner/month, no
+// ensures each threshold only ever fires once per category/person/month, no
 // matter how many further expenses land in the same bucket afterward.
-export async function checkBudgetThreshold(
-  householdId: string,
-  categoryId: string,
-  ownerMemberId: null | string,
-  dateStr: string,
-) {
-  const [year, month] = dateStr.split("-").map(Number);
-
-  const [budget] = await db
-    .select()
-    .from(monthlyBudgets)
-    .where(and(eq(monthlyBudgets.householdId, householdId), eq(monthlyBudgets.year, year), eq(monthlyBudgets.month, month)));
-  if (!budget) return;
-
-  const ownerCondition = ownerMemberId === null ? isNull(budgetItems.ownerMemberId) : eq(budgetItems.ownerMemberId, ownerMemberId);
-  const [item] = await db
-    .select()
-    .from(budgetItems)
-    .where(and(eq(budgetItems.monthlyBudgetId, budget.id), eq(budgetItems.categoryId, categoryId), ownerCondition));
-  const planned = Number(item?.plannedAmount ?? 0);
+export async function checkBudgetThreshold(householdId: string, categoryId: string, paidByMemberId: string, dateStr: string) {
+  // Budgets are kept in the household's own calendar months.
+  const dateFormat = await getDateFormatPref(householdId);
+  const { month, year } = periodOfDate(dateStr, dateFormat);
+  const lines = await listPlanLines(householdId, year, month);
+  const planned = lines.find((l) => l.categoryId === categoryId && l.ownerMemberId === paidByMemberId)?.plannedAmount ?? 0;
   if (planned <= 0) return;
 
   const [category] = await db.select().from(categories).where(eq(categories.id, categoryId));
   if (!category) return;
 
-  const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
-  const monthEnd = `${year}-${String(month).padStart(2, "0")}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`;
-  const monthExpenseOwnerCondition = ownerMemberId === null ? isNull(expenses.ownerMemberId) : eq(expenses.ownerMemberId, ownerMemberId);
+  const period = resolvePeriod(year, month, dateFormat);
+  const members = await db.select({ id: householdMembers.id }).from(householdMembers).where(eq(householdMembers.householdId, householdId));
   const monthExpenses = await db
     .select()
     .from(expenses)
@@ -85,23 +72,31 @@ export async function checkBudgetThreshold(
       and(
         eq(expenses.householdId, householdId),
         eq(expenses.categoryId, categoryId),
-        monthExpenseOwnerCondition,
         // Paid from savings: saved for in earlier months, so not against this budget.
         isNull(expenses.savingsPotId),
-        gte(expenses.date, monthStart),
-        lte(expenses.date, monthEnd),
+        gte(expenses.date, period.startDate),
+        lte(expenses.date, period.endDate),
       ),
     );
-  const spent = monthExpenses.reduce((s, e) => s + Number(e.amount), 0);
+  // What came out of this person's own wallet, the same as the Budget page.
+  const memberIds = members.map((m) => m.id);
+  const spent = monthExpenses
+    .flatMap((e) =>
+      walletShares(
+        { amount: Number(e.amount), paidByMemberId: e.paidByMemberId, payBackAmount: e.payBackAmount === null ? null : Number(e.payBackAmount) },
+        memberIds,
+      ),
+    )
+    .filter((share) => share.memberId === paidByMemberId)
+    .reduce((s, share) => s + share.amount, 0);
 
   const pct = spent / planned;
-  const ownerKey = ownerMemberId ?? "shared";
 
   if (pct >= 1) {
     await insertNotification({
       body: `You've spent ${formatNPR(spent)} of your ${formatNPR(planned)} ${category.name.toLowerCase()} budget.`,
       category: "budget",
-      dedupeKey: `budget:${categoryId}:${ownerKey}:${year}:${month}:100`,
+      dedupeKey: `budget:${categoryId}:${paidByMemberId}:${year}:${month}:100`,
       householdId,
       severity: "danger",
       title: `${category.name} budget exceeded`,
@@ -110,7 +105,7 @@ export async function checkBudgetThreshold(
     await insertNotification({
       body: `You've spent ${formatNPR(spent)} of your ${formatNPR(planned)} ${category.name.toLowerCase()} budget.`,
       category: "budget",
-      dedupeKey: `budget:${categoryId}:${ownerKey}:${year}:${month}:80`,
+      dedupeKey: `budget:${categoryId}:${paidByMemberId}:${year}:${month}:80`,
       householdId,
       severity: "warning",
       title: `${category.name} is at 80%`,
