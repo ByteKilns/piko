@@ -3,7 +3,7 @@ import { buildMonthNav, parseMonthParam } from "@/lib/month-nav";
 import { currentPeriodYearMonth, formatPeriodLabel, MAX_NAVIGABLE_YEAR, MIN_NAVIGABLE_YEAR, resolvePeriod } from "@/lib/month-period";
 import { getEffectiveMember, getHouseholdMembers } from "@/lib/session";
 import { todayISO } from "@/lib/today";
-import { getIncomesForMonth } from "@/modules/budget/api/budget.actions";
+import { householdIncome } from "@/modules/budget/api/budget";
 import { listCategories } from "@/modules/categories/api/categories";
 import { daysLeftInMonth } from "@/modules/dashboard/lib/cash-flow";
 import { listExpensesForMonth } from "@/modules/expenses/api/expenses.actions";
@@ -25,11 +25,11 @@ export async function ExpensesPage({ searchParams }: Props) {
   const isCurrentMonth = year === current.year && month === current.month;
   const period = resolvePeriod(year, month, dateFormat);
 
-  const [members, categories, expenseRows, incomeRows, recurringItems, savingsPots] = await Promise.all([
+  const [members, categories, expenseRows, income, recurringItems, savingsPots] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
     listExpensesForMonth(year, month, dateFormat),
-    getIncomesForMonth(year, month),
+    householdIncome(householdId, year, month),
     listRecurringExpenses(householdId),
     listSavingsPots(householdId),
   ]);
@@ -84,7 +84,7 @@ export async function ExpensesPage({ searchParams }: Props) {
       daysLeft={isCurrentMonth ? daysLeftInMonth(year, month, dateFormat) : null}
       expenses={expenses}
       exportRows={exportRows}
-      income={incomeRows.reduce((sum, i) => sum + Number(i.amount), 0)}
+      income={income}
       members={members.map((m) => ({ id: m.id, name: m.user.name }))}
       monthLabel={monthLabel}
       monthNav={buildMonthNav({ basePath: "/expenses", current, dateFormat, selected: { month, year } })}

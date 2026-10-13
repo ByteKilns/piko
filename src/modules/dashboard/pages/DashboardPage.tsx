@@ -11,9 +11,9 @@ import {
 } from "@/lib/month-period";
 import { getEffectiveMember, getHouseholdMembers } from "@/lib/session";
 import { todayISO } from "@/lib/today";
-import { listPlanLines } from "@/modules/budget/api/budget";
-import { getIncomesForMonth } from "@/modules/budget/api/budget.actions";
+import { listIncomeRows, listPlanLines } from "@/modules/budget/api/budget";
 import { dashboardSummary } from "@/modules/budget/lib/calculations";
+import { monthIncome } from "@/modules/budget/lib/income";
 import { kindOf } from "@/modules/budget/lib/plan-lines";
 import { listCategories } from "@/modules/categories/api/categories";
 import {
@@ -25,7 +25,7 @@ import {
   HomeView,
 } from "@/modules/dashboard/components/HomeView";
 import { allowanceSpentByDay, daysLeftInMonth } from "@/modules/dashboard/lib/cash-flow";
-import { toExpenseInputs, toIncomeInputs } from "@/modules/dashboard/lib/map-rows";
+import { toExpenseInputs } from "@/modules/dashboard/lib/map-rows";
 import { movedThisMonth } from "@/modules/dashboard/lib/moved";
 import { buildPacingSchedule, currentWeekPacing } from "@/modules/dashboard/lib/pacing";
 import { walletSpentByMember } from "@/modules/dashboard/lib/wallet";
@@ -83,7 +83,6 @@ export async function DashboardPage({ searchParams }: Props) {
     incomeRows,
     planLines,
     expenseRows,
-    prevIncomeRows,
     prevExpenseRows,
     recentExpenseRows,
     paybackRows,
@@ -100,10 +99,9 @@ export async function DashboardPage({ searchParams }: Props) {
   ] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
-    getIncomesForMonth(year, month),
+    listIncomeRows(householdId),
     listPlanLines(householdId, year, month),
     listExpensesForMonth(year, month, dateFormat),
-    getIncomesForMonth(prev.year, prev.month),
     listExpensesForMonth(prev.year, prev.month, dateFormat),
     listRecentExpenses(5),
     listPaybacks(householdId),
@@ -129,11 +127,12 @@ export async function DashboardPage({ searchParams }: Props) {
   const payExpenseRows = expenseRows.filter((e) => e.savingsPotId === null);
   const paidFromSavings = expenseRows.filter((e) => e.savingsPotId !== null).reduce((s, e) => s + Number(e.amount), 0);
 
-  const incomes = toIncomeInputs(incomeRows);
+  // Pay carries forward from earlier months; extra income counts in its own month.
+  const incomes = members.map((m) => ({ amount: monthIncome(incomeRows, m.id, { month, year }).total, memberId: m.id }));
   const expenses = toExpenseInputs(payExpenseRows);
   const summary = dashboardSummary(incomes, expenses);
 
-  const prevIncomes = toIncomeInputs(prevIncomeRows);
+  const prevIncomes = members.map((m) => ({ amount: monthIncome(incomeRows, m.id, prev).total, memberId: m.id }));
   const prevExpensesList = toExpenseInputs(prevExpenseRows.filter((e) => e.savingsPotId === null));
   const prevSummary = dashboardSummary(prevIncomes, prevExpensesList);
 
@@ -364,13 +363,14 @@ export async function DashboardPage({ searchParams }: Props) {
   }));
 
   const monthLabel = formatPeriodLabel(year, month, dateFormat);
+  const viewerIncome = monthIncome(incomeRows, memberId, { month, year });
 
   return (
     <HomeView
       balances={balances}
       currentMemberId={memberId}
       daysLeft={daysLeftInMonth(year, month, dateFormat)}
-      incomes={Object.fromEntries(incomes.map((i) => [i.memberId, i.amount]))}
+
       ledger={{
         income: summary.combinedIncome,
         incomeTrendPct: trendPct(summary.combinedIncome, prevSummary.combinedIncome),
@@ -387,6 +387,11 @@ export async function DashboardPage({ searchParams }: Props) {
       monthNav={buildMonthNav({ basePath: "/dashboard", current: { month: currentMonth, year: currentYear }, dateFormat, selected: { month, year } })}
       owners={owners}
       pacing={pacing}
+      pay={{
+        amount: viewerIncome.pay,
+        carriedFrom: viewerIncome.payCarriedFrom ? formatPeriodLabel(viewerIncome.payCarriedFrom.year, viewerIncome.payCarriedFrom.month, dateFormat) : null,
+        extras: viewerIncome.extras,
+      }}
       payback={payback}
       prevMonthName={formatPeriodLabel(prev.year, prev.month, dateFormat).split(" ")[0]}
       recent={recent}

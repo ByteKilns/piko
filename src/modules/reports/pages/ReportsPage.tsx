@@ -11,8 +11,8 @@ import {
   resolvePeriod,
 } from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
-import { listPlanLines } from "@/modules/budget/api/budget";
-import { getIncomesForMonth, listAllIncomes } from "@/modules/budget/api/budget.actions";
+import { listIncomeRows, listPlanLines } from "@/modules/budget/api/budget";
+import { incomeByMonth, monthIncome } from "@/modules/budget/lib/income";
 import { listCategories } from "@/modules/categories/api/categories";
 import { pctOfIncome } from "@/modules/dashboard/lib/format";
 import { listExpensesForMonth, listExpensesForRange } from "@/modules/expenses/api/expenses.actions";
@@ -44,16 +44,15 @@ export async function ReportsPage({ searchParams }: Props) {
   const period = resolvePeriod(year, month, dateFormat);
   const isCurrent = year === currentYear && month === currentMonth;
 
-  let rangeStartYm = { month, year };
-  for (let i = 0; i < 5; i++) rangeStartYm = previousMonth(rangeStartYm.year, rangeStartYm.month);
-  const rangeStart = resolvePeriod(rangeStartYm.year, rangeStartYm.month, dateFormat).startDate;
+  // The six months the trend chart covers, oldest first.
+  const trendMonths = [{ month, year }];
+  for (let i = 0; i < 5; i++) trendMonths.unshift(previousMonth(trendMonths[0].year, trendMonths[0].month));
+  const rangeStart = resolvePeriod(trendMonths[0].year, trendMonths[0].month, dateFormat).startDate;
 
   const [
     members,
     categories,
     incomeRows,
-    prevIncomeRows,
-    allIncomeRows,
     budgetItemRows,
     expenseRows,
     prevExpenseRows,
@@ -64,9 +63,7 @@ export async function ReportsPage({ searchParams }: Props) {
   ] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
-    getIncomesForMonth(year, month),
-    getIncomesForMonth(prev.year, prev.month),
-    listAllIncomes(),
+    listIncomeRows(householdId),
     listPlanLines(householdId, year, month),
     listExpensesForMonth(year, month, dateFormat),
     listExpensesForMonth(prev.year, prev.month, dateFormat),
@@ -87,8 +84,10 @@ export async function ReportsPage({ searchParams }: Props) {
   const categoryName = (id: string) => category(id)?.name ?? "Unknown";
 
   const expenses = payExpenseRows.map((e) => ({ amount: Number(e.amount), categoryId: e.categoryId, ownerMemberId: e.ownerMemberId }));
-  const combinedIncome = incomeRows.reduce((s, i) => s + Number(i.amount), 0);
-  const prevIncome = prevIncomeRows.reduce((s, i) => s + Number(i.amount), 0);
+  // Pay carries forward from earlier months; extra income counts in its own month.
+  const memberIncome = (id: string, ym: { month: number; year: number }) => monthIncome(incomeRows, id, ym).total;
+  const combinedIncome = members.reduce((s, m) => s + memberIncome(m.id, { month, year }), 0);
+  const prevIncome = members.reduce((s, m) => s + memberIncome(m.id, prev), 0);
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
   const prevTotalExpenses = payPrevExpenseRows.reduce((s, e) => s + Number(e.amount), 0);
 
@@ -164,7 +163,11 @@ export async function ReportsPage({ searchParams }: Props) {
   const lead = expenseLead({ budgetLines, changes, current: totalExpenses, prevMonthName, previous: prevTotalExpenses });
 
   const trendPoints = monthlyIncomeExpenseTrend(
-    allIncomeRows.map((i) => ({ amount: Number(i.amount), month: i.month, year: i.year })),
+    incomeByMonth(
+      incomeRows,
+      members.map((m) => m.id),
+      trendMonths,
+    ),
     payRangeExpenseRows.map((e) => ({ amount: Number(e.amount), date: e.date })),
     { month, year },
     6,
@@ -172,14 +175,9 @@ export async function ReportsPage({ searchParams }: Props) {
   );
 
   const incomeMembers = [
-    { amount: incomeRows.filter((i) => i.memberId === memberId).reduce((s, i) => s + Number(i.amount), 0), key: "me" as const, label: "Me" },
-    ...(partner
-      ? [{ amount: incomeRows.filter((i) => i.memberId === partner.id).reduce((s, i) => s + Number(i.amount), 0), key: "partner" as const, label: partner.user.name }]
-      : []),
-  ].map((member) => ({
-    ...member,
-    trendPct: trendPct(member.amount, prevIncomeRows.filter((i) => i.memberId === (member.key === "me" ? memberId : partner?.id)).reduce((s, i) => s + Number(i.amount), 0)),
-  }));
+    { amount: memberIncome(memberId, { month, year }), id: memberId, key: "me" as const, label: "Me" },
+    ...(partner ? [{ amount: memberIncome(partner.id, { month, year }), id: partner.id, key: "partner" as const, label: partner.user.name }] : []),
+  ].map(({ id, ...member }) => ({ ...member, trendPct: trendPct(member.amount, memberIncome(id, prev)) }));
 
   // Savings tab: money put into each pot this month, and what was paid from savings.
   const deposits = depositRows.map((d) => ({ amount: Number(d.amount), date: d.date, id: d.id, kind: d.kind, memberId: d.memberId, potId: d.potId }));

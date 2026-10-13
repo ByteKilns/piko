@@ -11,7 +11,7 @@ import {
   resolvePeriod,
 } from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
-import { getIncomesForMonth } from "@/modules/budget/api/budget.actions";
+import { householdIncome } from "@/modules/budget/api/budget";
 import { listCategories } from "@/modules/categories/api/categories";
 import { listExpensesForMonth } from "@/modules/expenses/api/expenses.actions";
 import { listRecurringExpenses } from "@/modules/recurring/api/recurring.actions";
@@ -45,12 +45,12 @@ export async function RecurringPage({ searchParams }: Props) {
   const month = parseMonthParam(params.month, currentMonth, 12);
   const isCurrentMonth = year === currentYear && month === currentMonth;
 
-  const [members, categories, recurringItems, monthExpenses, incomes] = await Promise.all([
+  const [members, categories, recurringItems, monthExpenses, income] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
     listRecurringExpenses(householdId),
     listExpensesForMonth(year, month, dateFormat),
-    getIncomesForMonth(year, month),
+    householdIncome(householdId, year, month),
   ]);
 
   const period = resolvePeriod(year, month, dateFormat);
@@ -118,7 +118,6 @@ export async function RecurringPage({ searchParams }: Props) {
 
   const activeItems = recurringItems.filter((i) => i.status === "active");
   const monthly = activeItems.reduce((sum, i) => sum + Number(i.amount) * monthlyEquivalent(i.frequency), 0);
-  const income = incomes.reduce((sum, i) => sum + Number(i.amount), 0);
   const paidTotal = paidExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const dueItems = activeItems.filter((i) => !paidIds.has(i.id) && dayNumberInPeriod(i.nextDueDate, year, month, dateFormat) !== null);
   const dueTotal = dueItems.reduce((sum, i) => sum + Number(i.amount), 0);

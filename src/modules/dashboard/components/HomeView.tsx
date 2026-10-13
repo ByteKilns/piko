@@ -20,7 +20,8 @@ import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
 import type { MonthNavModel } from "@/lib/month-nav";
 import { cn } from "@/lib/utils";
-import { SetIncomeDialog } from "@/modules/budget/components/SetIncomeDialog";
+import { PayDialog } from "@/modules/budget/components/PayDialog";
+import type { ExtraIncome } from "@/modules/budget/lib/income";
 import { CategoryIcon } from "@/modules/categories/components/CategoryIcon";
 import { deletePaybackAction } from "@/modules/paybacks/api/paybacks.actions";
 import { PaybackDialog } from "@/modules/paybacks/components/PaybackDialog";
@@ -70,7 +71,6 @@ type Props = {
   balances: HomeBalanceRow[];
   currentMemberId: string;
   daysLeft: number;
-  incomes: Record<string, number>;
   ledger: {
     income: number;
     incomeTrendPct: null | number;
@@ -87,6 +87,8 @@ type Props = {
   monthNav: MonthNavModel;
   owners: HomeOwnerRow[];
   pacing: HomePacing | null;
+  // The pay of the person viewing Home, for the Pay & extra dialog.
+  pay: { amount: number; carriedFrom: null | string; extras: ExtraIncome[] };
   payback: null | PaybackBalance;
   prevMonthName: string;
   recent: HomeRecentGroup[];
@@ -470,14 +472,16 @@ export function HomeView(props: Props) {
         </section>
       </div>
 
-      <SetIncomeDialog
-        currentMemberId={props.currentMemberId}
-        incomes={props.incomes}
-        members={props.members}
+      <PayDialog
+        extras={props.pay.extras}
+        memberId={props.currentMemberId}
         month={props.month}
         monthLabel={props.monthNav.label}
         onOpenChange={setIncomeOpen}
         open={incomeOpen}
+        pay={props.pay.amount}
+        payCarriedFrom={props.pay.carriedFrom}
+        title="Pay & extra"
         year={props.year}
       />
 
