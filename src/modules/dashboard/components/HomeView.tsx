@@ -55,11 +55,16 @@ export type HomeSavingsPot = { balance: number; id: string; name: string; next: 
 
 export type HomeBalanceRow = { amount: number; id: string; label: string; sub: string };
 
+export type HomeEssential = { categoryName: string; planned: number; spent: number };
+
 export type HomePacing = {
   carryIn: number;
   nextWeekAllowance: number;
   nextWeekday: null | string;
   over: boolean;
+  // Set when another line went over (or money went outside a budget) and was
+  // taken from the can-cut money.
+  overrunNote: null | string;
   safeToday: number;
   weekLeft: number;
   weeklyAllowance: number;
@@ -71,14 +76,17 @@ type Props = {
   balances: HomeBalanceRow[];
   currentMemberId: string;
   daysLeft: number;
+  // The essential lines of the person viewing Home.
+  essentials: HomeEssential[];
+  // The figures of the person viewing Home.
   ledger: {
-    income: number;
-    incomeTrendPct: null | number;
     moved: { dhuku: number; loans: number; savings: number; total: number };
     paidFromSavings: number;
+    pay: number;
+    payNote: null | string;
     spent: number;
     spentMeterRatio: number;
-    spentPctOfIncome: null | number;
+    spentPctOfPay: null | number;
     spentTrendPct: null | number;
     unallocated: number;
   };
@@ -129,7 +137,6 @@ export function HomeView(props: Props) {
   }
 
   const spentTrend = trendText(ledger.spentTrendPct, props.prevMonthName);
-  const incomeTrend = trendText(ledger.incomeTrendPct, props.prevMonthName);
 
   return (
     <div>
@@ -169,8 +176,9 @@ export function HomeView(props: Props) {
               <p className="max-w-[46ch] text-[15px] leading-normal text-n-800 text-pretty">
                 {pacing.over
                   ? `This week's allowance is fully spent. A new weekly allowance of ${formatMoney(pacing.nextWeekAllowance)} starts on ${pacing.nextWeekday ?? "the next week"}.`
-                  : "Spend up to this today and the week stays on plan. Anything you don't use carries into tomorrow."}
+                  : "Spend up to this today on things you can cut and the week stays on plan. Anything you don't use carries into tomorrow."}
               </p>
+              {pacing.overrunNote && <p className="max-w-[52ch] text-[13px] leading-normal text-signal-ink text-pretty">{pacing.overrunNote}</p>}
               <button
                 className="-ml-1.5 inline-flex items-center gap-1.5 self-start px-1.5 py-1 text-[13px] text-n-700 hover:bg-ink/6 hover:text-ink"
                 onClick={() => setExplain((value) => !value)}
@@ -182,7 +190,7 @@ export function HomeView(props: Props) {
               {explain && (
                 <p className="max-w-[52ch] text-[13px] leading-[1.55] text-n-700 text-pretty">
                   {
-                    "Your monthly plan is split into weekly allowances. Safe to spend is what's left of this week's allowance, divided by the days remaining in the week. Money you don't spend becomes next week's buffer."
+                    "Your can-cut lines (things like lunches out, shopping and dates) are split into weekly allowances. Safe to spend is what's left of this week's allowance, divided by the days remaining in the week. Money you don't spend becomes next week's buffer. When another line goes over, or money goes outside a budget, the difference comes out of what's left for the rest of the month."
                   }
                 </p>
               )}
@@ -194,8 +202,8 @@ export function HomeView(props: Props) {
                   <Link href="/budget">Go to Budget</Link>
                 </Button>
               }
-              body="Once you set a flexible budget, this page works out how much you can safely spend each day of the week."
-              title="No flexible budget yet"
+              body="Mark lines like lunch, shopping or dates as Can cut on Budget, and this works out how much you can safely spend on them each day."
+              title="No can-cut budget yet"
             />
           )}
         </div>
@@ -226,15 +234,13 @@ export function HomeView(props: Props) {
 
       <Ledger className="mt-9">
         <LedgerCell
-          bar={<Meter label={`Spent ${ledger.spentPctOfIncome ?? 0}% of income`} ratio={ledger.spentMeterRatio} />}
+          bar={<Meter label={`Spent ${ledger.spentPctOfPay ?? 0}% of pay`} ratio={ledger.spentMeterRatio} />}
           label={`Spent in ${props.spentMonthName}`}
           lead
           note={
             <>
-              {ledger.spentPctOfIncome !== null && (
-                <span className={ledger.spentPctOfIncome > 100 ? "text-signal-ink" : undefined}>
-                  {ledger.spentPctOfIncome}% of income
-                </span>
+              {ledger.spentPctOfPay !== null && (
+                <span className={ledger.spentPctOfPay > 100 ? "text-signal-ink" : undefined}>{ledger.spentPctOfPay}% of pay</span>
               )}
               {spentTrend && <span>{spentTrend}</span>}
               {ledger.paidFromSavings > 0 && <span>{formatMoney(ledger.paidFromSavings)} paid from savings</span>}
@@ -243,8 +249,8 @@ export function HomeView(props: Props) {
         >
           <Money size="lead" value={ledger.spent} />
         </LedgerCell>
-        <LedgerCell label="Income" note={incomeTrend} onSelect={() => setIncomeOpen(true)}>
-          <Money size="cell" value={ledger.income} />
+        <LedgerCell label="Pay" note={ledger.payNote} onSelect={() => setIncomeOpen(true)}>
+          <Money size="cell" value={ledger.pay} />
         </LedgerCell>
         <LedgerCell
           label="Moved this month"
@@ -256,10 +262,32 @@ export function HomeView(props: Props) {
         >
           <Money size="cell" value={ledger.moved.total} />
         </LedgerCell>
-        <LedgerCell label="Unallocated" note={ledger.unallocated < 0 ? "Spent and moved more than income" : "Ready to assign"}>
+        <LedgerCell label="Unallocated" note={ledger.unallocated < 0 ? "Spent and moved more than pay and extra" : "Ready to assign"}>
           <Money size="cell" tone={ledger.unallocated < 0 ? "negative" : "default"} value={ledger.unallocated} />
         </LedgerCell>
       </Ledger>
+
+      {props.essentials.length > 0 && (
+        <section className="mt-9 max-w-160">
+          <SectionHeading sub="Can't really be cut, so watch they stay within plan">Essentials</SectionHeading>
+          {props.essentials.map((row) => {
+            const over = row.spent - row.planned;
+            return (
+              <div className="flex items-baseline justify-between gap-4 border-b border-n-300 py-3" key={row.categoryName}>
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="truncate text-[15px]">{row.categoryName}</span>
+                  <span className="text-[13px] text-n-600">
+                    {formatMoney(row.spent)} of {formatMoney(row.planned)}
+                  </span>
+                </span>
+                <span className={cn("text-[13px] font-semibold", over > 0 ? "text-signal-ink" : "text-n-700")}>
+                  {over > 0 ? `${formatMoney(over)} over` : `${formatMoney(-over)} left`}
+                </span>
+              </div>
+            );
+          })}
+        </section>
+      )}
 
       {props.members.length === 2 && (props.payback !== null || props.recentPaybacks.length > 0) && (
         <section className="mt-9 border-t border-n-300 pt-4">

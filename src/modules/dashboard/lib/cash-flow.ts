@@ -9,16 +9,15 @@ export function daysLeftInMonth(year: number, month: number, dateFormat: DateFor
   return Math.max(0, period.daysInPeriod - daysElapsedInPeriod(period) + 1);
 }
 
-export type AllowanceExpenseRow = { amount: string; categoryId: string; date: string };
+export type AllowanceExpenseRow = { amount: number | string; categoryId: string; date: string };
 
-// Spending that counts against the weekly allowance, per day of the period
-// (index 0 = day 1). Fixed-category expenses (rent, EMI, bills) are left out:
-// the allowance is built from the flexible budget only, and fixed bills have
-// their own budget lines. An expense whose category isn't in
-// `fixedCategoryIds` (including an archived or unknown one) still counts.
-export function allowanceSpentByDay(
+// Spending in the given categories, per day of the period (index 0 = day 1).
+// The weekly allowance is built from a person's can-cut lines, so only
+// spending in those categories counts against it day by day; everything else
+// that goes over plan is taken off the allowance as a whole instead.
+export function spentByDayIn(
   expenseRows: AllowanceExpenseRow[],
-  fixedCategoryIds: ReadonlySet<string>,
+  categoryIds: ReadonlySet<string>,
   year: number,
   month: number,
   dateFormat: DateFormat,
@@ -26,7 +25,7 @@ export function allowanceSpentByDay(
   const period = resolvePeriod(year, month, dateFormat);
   const spent = new Array<number>(period.daysInPeriod).fill(0);
   for (const expense of expenseRows) {
-    if (fixedCategoryIds.has(expense.categoryId)) continue;
+    if (!categoryIds.has(expense.categoryId)) continue;
     const day = dayNumberInPeriod(expense.date, year, month, dateFormat);
     if (day !== null) spent[day - 1] += Number(expense.amount);
   }

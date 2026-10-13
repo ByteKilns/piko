@@ -1,5 +1,6 @@
 import { formatShortDate } from "@/lib/date-format";
 import { getDateFormatPref } from "@/lib/date-format-cookie";
+import { formatMoney } from "@/lib/money";
 import { buildMonthNav, parseMonthParam, previousMonth } from "@/lib/month-nav";
 import {
   currentPeriodYearMonth,
@@ -12,23 +13,23 @@ import {
 import { getEffectiveMember, getHouseholdMembers } from "@/lib/session";
 import { todayISO } from "@/lib/today";
 import { listIncomeRows, listPlanLines } from "@/modules/budget/api/budget";
-import { dashboardSummary } from "@/modules/budget/lib/calculations";
+import { buildPersonPlan, overrunFromPlan, overrunNote } from "@/modules/budget/lib/budget-view";
 import { monthIncome } from "@/modules/budget/lib/income";
-import { kindOf } from "@/modules/budget/lib/plan-lines";
 import { listCategories } from "@/modules/categories/api/categories";
 import {
   type HomeBalanceRow,
+  type HomeEssential,
   type HomeOwnerRow,
   type HomePacing,
   type HomeRecentGroup,
   type HomeSavingsPot,
   HomeView,
 } from "@/modules/dashboard/components/HomeView";
-import { allowanceSpentByDay, daysLeftInMonth } from "@/modules/dashboard/lib/cash-flow";
+import { daysLeftInMonth, spentByDayIn } from "@/modules/dashboard/lib/cash-flow";
 import { toExpenseInputs } from "@/modules/dashboard/lib/map-rows";
 import { movedThisMonth } from "@/modules/dashboard/lib/moved";
-import { buildPacingSchedule, currentWeekPacing } from "@/modules/dashboard/lib/pacing";
-import { walletSpentByMember } from "@/modules/dashboard/lib/wallet";
+import { buildPacingSchedule, currentWeekPacing, weekIndexOf, withOverrun } from "@/modules/dashboard/lib/pacing";
+import { walletShares, walletSpentByMember } from "@/modules/dashboard/lib/wallet";
 import { listDhukuEntries, listDhukus } from "@/modules/dhuku/api/dhuku.actions";
 import { dhukuPosition } from "@/modules/dhuku/lib/dhuku-money";
 import { listExpensesForMonth, listRecentExpenses } from "@/modules/expenses/api/expenses.actions";
@@ -123,18 +124,16 @@ export async function DashboardPage({ searchParams }: Props) {
 
   // Expenses paid from a savings pot came out of money set aside over many
   // months, not this month's pay. Spent, Left and the weekly allowance leave
-  // them out; Home shows them on their own.
+  // them out; Home shows the viewer's on their own.
   const payExpenseRows = expenseRows.filter((e) => e.savingsPotId === null);
-  const paidFromSavings = expenseRows.filter((e) => e.savingsPotId !== null).reduce((s, e) => s + Number(e.amount), 0);
+  const paidFromSavings = expenseRows
+    .filter((e) => e.savingsPotId !== null && e.paidByMemberId === memberId)
+    .reduce((s, e) => s + Number(e.amount), 0);
 
   // Pay carries forward from earlier months; extra income counts in its own month.
   const incomes = members.map((m) => ({ amount: monthIncome(incomeRows, m.id, { month, year }).total, memberId: m.id }));
   const expenses = toExpenseInputs(payExpenseRows);
-  const summary = dashboardSummary(incomes, expenses);
-
   const prevIncomes = members.map((m) => ({ amount: monthIncome(incomeRows, m.id, prev).total, memberId: m.id }));
-  const prevExpensesList = toExpenseInputs(prevExpenseRows.filter((e) => e.savingsPotId === null));
-  const prevSummary = dashboardSummary(prevIncomes, prevExpensesList);
 
   const category = (id: string) => categories.find((c) => c.id === id);
   const memberName = (id: string) => members.find((m) => m.id === id)?.user.name ?? "Member";
@@ -209,30 +208,60 @@ export async function DashboardPage({ searchParams }: Props) {
     },
   ];
 
-  // Weekly pacing over the flexible part of the budget (fixed commitments are
-  // already spoken for): the hero's safe-to-spend figure and its carry-over.
-  // Fixed-category expenses don't count against it, for the same reason.
+  // Home's figures and hero follow the person viewing it: their Spent is what
+  // left their own wallet, and their plan is their own lines.
   const period = resolvePeriod(year, month, dateFormat);
-  const flexiblePlanned = planLines
-    .filter((l) => kindOf(l.kind, category(l.categoryId)?.budgetType) !== "fixed")
-    .reduce((s, l) => s + l.plannedAmount, 0);
-  const pacingSchedule =
-    flexiblePlanned > 0 ? buildPacingSchedule({ daysInPeriod: period.daysInPeriod, flexibleTotal: flexiblePlanned }) : null;
-  const dayOfPeriod = isCurrentMonth ? daysElapsedInPeriod(period) : period.daysInPeriod;
-  const fixedCategoryIds = new Set(categories.filter((c) => c.budgetType === "fixed").map((c) => c.id));
-  const spentByDay = allowanceSpentByDay(payExpenseRows, fixedCategoryIds, year, month, dateFormat);
-  const weekPacing = pacingSchedule ? currentWeekPacing(pacingSchedule, dayOfPeriod, spentByDay) : null;
-  const pacing: HomePacing | null = weekPacing
-    ? {
-        carryIn: weekPacing.carryIn,
-        nextWeekAllowance: pacingSchedule!.weeks[weekPacing.index + 1]?.allowance ?? weekPacing.allowance,
-        nextWeekday: weekdayOf(period.startDate, weekPacing.nextWeekStartDay),
-        over: weekPacing.remaining <= 0,
-        safeToday: weekPacing.safeToday,
-        weekLeft: weekPacing.remaining,
-        weeklyAllowance: weekPacing.allowance,
-      }
+  const memberIds = members.map((m) => m.id);
+  const viewerShares = (rows: typeof expenseRows) =>
+    rows
+      .filter((e) => e.savingsPotId === null)
+      .flatMap((e) =>
+        walletShares(
+          { amount: Number(e.amount), paidByMemberId: e.paidByMemberId, payBackAmount: e.payBackAmount === null ? null : Number(e.payBackAmount) },
+          memberIds,
+        ).flatMap((share) => (share.memberId === memberId ? [{ amount: share.amount, categoryId: e.categoryId, date: e.date }] : [])),
+      );
+  const viewerSpending = viewerShares(expenseRows);
+  const viewerSpent = viewerSpending.reduce((s, e) => s + e.amount, 0);
+  const viewerPrevSpent = viewerShares(prevExpenseRows).reduce((s, e) => s + e.amount, 0);
+  const viewerIncome = monthIncome(incomeRows, memberId, { month, year });
+  const payCarriedFrom = viewerIncome.payCarriedFrom
+    ? formatPeriodLabel(viewerIncome.payCarriedFrom.year, viewerIncome.payCarriedFrom.month, dateFormat)
     : null;
+  const viewerPlan = buildPersonPlan({
+    categories: categories.map((c) => ({ budgetType: c.budgetType, id: c.id, name: c.name })),
+    lines: planLines.filter((l) => l.ownerMemberId === memberId),
+    spending: viewerSpending,
+  });
+
+  // Weekly pacing over the can-cut lines: the hero's safe-to-spend figure and
+  // its carry-over. Only can-cut spending counts against it, and whatever went
+  // over elsewhere comes out of what's left, from this week on.
+  const canCut = viewerPlan.groups.find((g) => g.kind === "can_cut");
+  const canCutIds = new Set(canCut?.rows.map((r) => r.categoryId) ?? []);
+  const overrun = overrunFromPlan(viewerPlan);
+  const dayOfPeriod = isCurrentMonth ? daysElapsedInPeriod(period) : period.daysInPeriod;
+  const baseSchedule = canCut ? buildPacingSchedule({ daysInPeriod: period.daysInPeriod, flexibleTotal: canCut.planned }) : null;
+  const pacingSchedule = baseSchedule ? withOverrun(baseSchedule, weekIndexOf(baseSchedule, dayOfPeriod), overrun.total) : null;
+  const spentByDay = spentByDayIn(viewerSpending, canCutIds, year, month, dateFormat);
+  const weekPacing = pacingSchedule ? currentWeekPacing(pacingSchedule, dayOfPeriod, spentByDay) : null;
+  const pacing: HomePacing | null =
+    pacingSchedule && weekPacing
+      ? {
+          carryIn: weekPacing.carryIn,
+          nextWeekAllowance: pacingSchedule.weeks[weekPacing.index + 1]?.allowance ?? weekPacing.allowance,
+          nextWeekday: weekdayOf(period.startDate, weekPacing.nextWeekStartDay),
+          over: weekPacing.remaining <= 0,
+          overrunNote: overrunNote(overrun),
+          safeToday: weekPacing.safeToday,
+          weekLeft: weekPacing.remaining,
+          weeklyAllowance: weekPacing.allowance,
+        }
+      : null;
+  const essentials: HomeEssential[] =
+    viewerPlan.groups
+      .find((g) => g.kind === "essential")
+      ?.rows.map((r) => ({ categoryName: r.categoryName, planned: r.planned, spent: r.spent })) ?? [];
 
   // The "pay back later" balance between the two members, across all months.
   const payback = partner
@@ -281,19 +310,23 @@ export async function DashboardPage({ searchParams }: Props) {
       reserveFull: balance >= reserveMinimum,
     };
   });
-  // Money moved into your own piles this month. Unallocated takes it off too,
-  // since it's no longer free to spend.
+  // Money the viewer moved into their own piles this month: their savings
+  // deposits, their dhukus' payments and their repayments on loans they took.
+  // Unallocated takes it off too, since it's no longer free to spend.
+  const viewerDhukuIds = new Set(dhukuRows.filter((d) => d.ownerMemberId === memberId).map((d) => d.id));
   const moved = movedThisMonth({
-    deposits,
-    dhukuEntries: dhukuEntryRows.map((e) => ({ amount: Number(e.amount), date: e.date, type: e.type })),
+    deposits: deposits.filter((d) => d.memberId === memberId),
+    dhukuEntries: dhukuEntryRows
+      .filter((e) => viewerDhukuIds.has(e.dhukuId))
+      .map((e) => ({ amount: Number(e.amount), date: e.date, type: e.type })),
     endDate: period.endDate,
     loanPayments: loanPaymentRows.flatMap((p) => {
       const loan = loanRows.find((l) => l.id === p.loanId);
-      return loan ? [{ amount: Number(p.amount), date: p.date, direction: loan.direction }] : [];
+      return loan && p.memberId === memberId ? [{ amount: Number(p.amount), date: p.date, direction: loan.direction }] : [];
     }),
     startDate: period.startDate,
   });
-  const unallocated = summary.combinedIncome - summary.totalExpenses - moved.total;
+  const unallocated = viewerIncome.pay + viewerIncome.extra - viewerSpent - moved.total;
 
   // Balances: where each pile stands, apart from this month's spending.
   // Positive = yours, or owed to you; negative = you owe it.
@@ -363,7 +396,6 @@ export async function DashboardPage({ searchParams }: Props) {
   }));
 
   const monthLabel = formatPeriodLabel(year, month, dateFormat);
-  const viewerIncome = monthIncome(incomeRows, memberId, { month, year });
 
   return (
     <HomeView
@@ -371,15 +403,16 @@ export async function DashboardPage({ searchParams }: Props) {
       currentMemberId={memberId}
       daysLeft={daysLeftInMonth(year, month, dateFormat)}
 
+      essentials={essentials}
       ledger={{
-        income: summary.combinedIncome,
-        incomeTrendPct: trendPct(summary.combinedIncome, prevSummary.combinedIncome),
         moved,
         paidFromSavings,
-        spent: summary.totalExpenses,
-        spentMeterRatio: summary.combinedIncome > 0 ? summary.totalExpenses / summary.combinedIncome : 0,
-        spentPctOfIncome: percent(summary.totalExpenses, summary.combinedIncome),
-        spentTrendPct: trendPct(summary.totalExpenses, prevSummary.totalExpenses),
+        pay: viewerIncome.pay,
+        payNote: viewerIncome.extra > 0 ? `+ ${formatMoney(viewerIncome.extra)} extra` : payCarriedFrom ? `Carried over from ${payCarriedFrom}` : null,
+        spent: viewerSpent,
+        spentMeterRatio: viewerIncome.pay > 0 ? viewerSpent / viewerIncome.pay : 0,
+        spentPctOfPay: percent(viewerSpent, viewerIncome.pay),
+        spentTrendPct: trendPct(viewerSpent, viewerPrevSpent),
         unallocated,
       }}
       members={members.map((m) => ({ id: m.id, name: m.user.name }))}
@@ -389,7 +422,7 @@ export async function DashboardPage({ searchParams }: Props) {
       pacing={pacing}
       pay={{
         amount: viewerIncome.pay,
-        carriedFrom: viewerIncome.payCarriedFrom ? formatPeriodLabel(viewerIncome.payCarriedFrom.year, viewerIncome.payCarriedFrom.month, dateFormat) : null,
+        carriedFrom: payCarriedFrom,
         extras: viewerIncome.extras,
       }}
       payback={payback}

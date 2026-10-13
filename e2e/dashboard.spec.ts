@@ -14,6 +14,13 @@ test.describe("dashboard", () => {
     await expect(page.getByText("Unallocated").first()).toBeVisible();
   });
 
+  test("follows the viewer's own plan: essentials and what went over", async ({ page }) => {
+    await expect(page.getByRole("heading", { name: "Essentials" })).toBeVisible();
+    await expect(page.getByText("Pay", { exact: true })).toBeVisible();
+    // The seed has spending outside any line, which comes out of the can-cut money.
+    await expect(page.getByText(/taken from your spending money\.$/)).toBeVisible();
+  });
+
   test("exposes previous/next month navigation", async ({ page }) => {
     await expect(page.getByLabel("Previous month")).toBeVisible();
     await expect(page.getByLabel("Next month")).toBeVisible();
