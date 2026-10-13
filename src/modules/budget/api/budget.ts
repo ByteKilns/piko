@@ -1,9 +1,26 @@
 import { and, eq, lte, or } from "drizzle-orm";
 
 import { db } from "@/db/client";
-import { budgetItems, categories, monthlyBudgets } from "@/db/schema";
+import { budgetItems, categories, householdMembers, incomes, monthlyBudgets } from "@/db/schema";
 
+import { type IncomeRow, monthIncome } from "../lib/income";
 import { type DatedLine, type PlanLine, planLinesForMonth } from "../lib/plan-lines";
+
+// Every income entry in the household (a handful a month), for working out
+// any month's pay and extra with monthIncome().
+export async function listIncomeRows(householdId: string): Promise<IncomeRow[]> {
+  const rows = await db.select().from(incomes).where(eq(incomes.householdId, householdId));
+  return rows.map((r) => ({ amount: Number(r.amount), id: r.id, kind: r.kind, memberId: r.memberId, month: r.month, note: r.note, year: r.year }));
+}
+
+// Everyone's income for the month: pay carried forward, plus extra.
+export async function householdIncome(householdId: string, year: number, month: number): Promise<number> {
+  const [rows, members] = await Promise.all([
+    listIncomeRows(householdId),
+    db.select({ id: householdMembers.id }).from(householdMembers).where(eq(householdMembers.householdId, householdId)),
+  ]);
+  return members.reduce((sum, m) => sum + monthIncome(rows, m.id, { month, year }).total, 0);
+}
 
 // Every budget line up to and including the given month, with the month it
 // was set in.

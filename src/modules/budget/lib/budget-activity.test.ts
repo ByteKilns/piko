@@ -27,6 +27,11 @@ describe("budget activity", () => {
     ]);
   });
 
+  it("marks extra income in its summary", () => {
+    const extra = { amount: "38000.00", kind: "extra", memberId: "m-2", month: 10, note: "Dashain bonus", year: 2026 };
+    expect(incomeSummary(f, extra)).toBe("Ravi · October 2026 · RS 38,000 · Extra · Dashain bonus");
+  });
+
   it("summarises and diffs income", () => {
     const before = { amount: "90000.00", memberId: "m-2", month: 10, note: null, year: 2026 };
     expect(incomeSummary(f, before)).toBe("Ravi · October 2026 · RS 90,000");

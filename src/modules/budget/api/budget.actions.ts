@@ -15,7 +15,7 @@ import { listCategories } from "@/modules/categories/api/categories";
 import { budgetItemChanges, budgetItemSummary, incomeChanges, incomeSummary } from "../lib/budget-activity";
 import { recurringBudgetLines } from "../lib/recurring-budget";
 import { type RemoveBudgetItemInput, removeBudgetItemSchema, type SetBudgetItemInput, setBudgetItemSchema } from "../schemas/budget-item.schema";
-import { type SetIncomeInput, setIncomeSchema } from "../schemas/income.schema";
+import { type ExtraIncomeInput, extraIncomeSchema, type SetIncomeInput, setIncomeSchema, type SetPayInput, setPaySchema } from "../schemas/income.schema";
 import { listPlanLines } from "./budget";
 
 // Insert-or-get in one statement. A select-then-insert would race when two
@@ -303,4 +303,104 @@ export async function setIncomeAction(input: SetIncomeInput) {
 
   revalidatePath("/budget");
   revalidatePath("/dashboard");
+}
+
+function revalidateIncomePaths() {
+  revalidatePath("/budget");
+  revalidatePath("/dashboard");
+  revalidatePath("/reports");
+}
+
+// Sets one person's pay for one month. Months after it use this pay until
+// it's changed again (see monthIncome).
+export async function setPayAction(input: SetPayInput) {
+  const member = await getCurrentMember();
+  const { householdId } = member;
+  const parsed = setPaySchema.parse(input);
+  await assertMemberInHousehold(householdId, parsed.memberId);
+
+  const [before] = await db
+    .select()
+    .from(incomes)
+    .where(
+      and(
+        eq(incomes.householdId, householdId),
+        eq(incomes.memberId, parsed.memberId),
+        eq(incomes.year, parsed.year),
+        eq(incomes.month, parsed.month),
+        eq(incomes.kind, "pay"),
+      ),
+    );
+  const [saved] = before
+    ? await db.update(incomes).set({ amount: String(parsed.amount) }).where(eq(incomes.id, before.id)).returning()
+    : await db
+        .insert(incomes)
+        .values({ amount: String(parsed.amount), householdId, kind: "pay", memberId: parsed.memberId, month: parsed.month, year: parsed.year })
+        .returning();
+
+  const f = await loadActivityFormatters(householdId);
+  const summary = incomeSummary(f, saved);
+  await logActivity(
+    activityActor(member),
+    before
+      ? { action: "updated", after: saved, before, changes: incomeChanges(f, before, saved), entityId: saved.id, entityType: "income", summary }
+      : { action: "created", after: saved, before: null, entityId: saved.id, entityType: "income", summary },
+  );
+
+  revalidateIncomePaths();
+}
+
+export async function addExtraIncomeAction(input: ExtraIncomeInput) {
+  const member = await getCurrentMember();
+  const { householdId } = member;
+  const parsed = extraIncomeSchema.parse(input);
+  await assertMemberInHousehold(householdId, parsed.memberId);
+
+  const [created] = await db
+    .insert(incomes)
+    .values({
+      amount: String(parsed.amount),
+      householdId,
+      kind: "extra",
+      memberId: parsed.memberId,
+      month: parsed.month,
+      note: parsed.note || null,
+      year: parsed.year,
+    })
+    .returning();
+
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "created",
+    after: created,
+    before: null,
+    entityId: created.id,
+    entityType: "income",
+    summary: incomeSummary(f, created),
+  });
+
+  revalidateIncomePaths();
+}
+
+export async function deleteIncomeAction(id: string) {
+  const member = await getCurrentMember();
+  const { householdId } = member;
+  const [before] = await db
+    .select()
+    .from(incomes)
+    .where(and(eq(incomes.id, id), eq(incomes.householdId, householdId)));
+  if (!before) return;
+
+  await db.delete(incomes).where(and(eq(incomes.id, id), eq(incomes.householdId, householdId)));
+
+  const f = await loadActivityFormatters(householdId);
+  await logActivity(activityActor(member), {
+    action: "deleted",
+    before,
+    entityId: id,
+    entityType: "income",
+    summary: incomeSummary(f, before),
+  });
+
+  revalidateIncomePaths();
 }

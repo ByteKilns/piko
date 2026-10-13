@@ -4,7 +4,7 @@ import { diffFields, type FieldSpec } from "@/modules/activity/lib/diff";
 import { LINE_KINDS } from "./plan-lines";
 
 export type BudgetItemSnapshot = { categoryId: string; kind?: null | string; ownerMemberId: null | string; plannedAmount: number | string };
-export type IncomeSnapshot = { amount: number | string; memberId: string; month: number; note?: null | string; year: number };
+export type IncomeSnapshot = { amount: number | string; kind?: string; memberId: string; month: number; note?: null | string; year: number };
 
 // "Groceries · Shared · Ashwin 2083 · RS 8,000"
 export function budgetItemSummary(
@@ -33,9 +33,10 @@ export function budgetItemChanges(f: ActivityFormatters, before: BudgetItemSnaps
   return diffFields(before, after, budgetItemFields(f));
 }
 
-// "Ravi · Ashwin 2083 · RS 90,000"
+// "Ravi · Ashwin 2083 · RS 90,000", or "… · Extra · Dashain bonus" for extra income.
 export function incomeSummary(f: ActivityFormatters, income: IncomeSnapshot): string {
-  return [f.member(income.memberId), f.period(income.year, income.month), f.money(income.amount)].filter(Boolean).join(" · ");
+  const extra = income.kind === "extra" ? ["Extra", f.text(income.note)] : [];
+  return [f.member(income.memberId), f.period(income.year, income.month), f.money(income.amount), ...extra].filter(Boolean).join(" · ");
 }
 
 export function incomeFields(f: ActivityFormatters): FieldSpec<IncomeSnapshot>[] {
