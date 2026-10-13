@@ -18,13 +18,20 @@ describe("movedThisMonth", () => {
         { amount: 100, date: "2026-10-04", type: "fine" },
         { amount: 34200, date: "2026-10-04", type: "payout" },
       ],
+      funds: 0,
       loanPayments: [
         { amount: 5000, date: "2026-10-10", direction: "taken" },
         { amount: 2000, date: "2026-10-12", direction: "given" },
       ],
     });
 
-    expect(moved).toEqual({ dhuku: 3400, loans: 5000, savings: 10000, total: 18400 });
+    expect(moved).toEqual({ dhuku: 3400, funds: 0, loans: 5000, savings: 10000, total: 18400 });
+  });
+
+  it("adds money put into funds", () => {
+    const moved = movedThisMonth({ ...OCTOBER, deposits: [], dhukuEntries: [], funds: 1225, loanPayments: [] });
+
+    expect(moved).toEqual({ dhuku: 0, funds: 1225, loans: 0, savings: 0, total: 1225 });
   });
 
   it("ignores anything outside the month", () => {
@@ -32,9 +39,10 @@ describe("movedThisMonth", () => {
       ...OCTOBER,
       deposits: [{ amount: 10000, date: "2026-09-30", kind: "deposit" }],
       dhukuEntries: [{ amount: 3000, date: "2026-11-01", type: "contribution" }],
+      funds: 0,
       loanPayments: [{ amount: 5000, date: "2026-09-15", direction: "taken" }],
     });
 
-    expect(moved).toEqual({ dhuku: 0, loans: 0, savings: 0, total: 0 });
+    expect(moved).toEqual({ dhuku: 0, funds: 0, loans: 0, savings: 0, total: 0 });
   });
 });

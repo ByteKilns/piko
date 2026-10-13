@@ -86,6 +86,31 @@ test.describe("budget plans per person", () => {
   });
 });
 
+test.describe("funds", () => {
+  test.beforeEach(() => test.slow());
+
+  test("a fund sets money aside each month and can take money added", async ({ page }) => {
+    const name = `e2e fund ${Date.now()}`;
+    await gotoRoute(page, "/budget");
+
+    await page.getByRole("button", { name: "Add fund" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Name").fill(name);
+    await dialog.getByLabel("Set aside each month").fill("1225");
+    await dialog.getByRole("button", { name: "Save fund" }).click();
+    await expect(dialog).toBeHidden({ timeout: 20_000 });
+    await page.reload();
+
+    // Once under "Set aside first", once under Funds.
+    await expect(budgetRow(page, name)).toHaveCount(2);
+
+    await budgetRow(page, name).last().click();
+    await dialog.getByLabel("Amount to add").fill("5000");
+    await dialog.getByRole("button", { name: "Add money" }).click();
+    await expect(dialog.getByText("Holds Rs 6,225.00")).toBeVisible({ timeout: 20_000 });
+  });
+});
+
 test.describe("budget", () => {
   test.beforeEach(async ({ page }) => {
     await gotoRoute(page, "/budget");

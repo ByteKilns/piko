@@ -80,7 +80,8 @@ type Props = {
   essentials: HomeEssential[];
   // The figures of the person viewing Home.
   ledger: {
-    moved: { dhuku: number; loans: number; savings: number; total: number };
+    moved: { dhuku: number; funds: number; loans: number; savings: number; total: number };
+    paidFromFunds: number;
     paidFromSavings: number;
     pay: number;
     payNote: null | string;
@@ -244,6 +245,7 @@ export function HomeView(props: Props) {
               )}
               {spentTrend && <span>{spentTrend}</span>}
               {ledger.paidFromSavings > 0 && <span>{formatMoney(ledger.paidFromSavings)} paid from savings</span>}
+              {ledger.paidFromFunds > 0 && <span>{formatMoney(ledger.paidFromFunds)} paid from funds</span>}
             </>
           }
         >
@@ -256,7 +258,7 @@ export function HomeView(props: Props) {
           label="Moved this month"
           note={
             ledger.moved.total > 0
-              ? `Savings ${formatMoney(ledger.moved.savings)} · Dhuku ${formatMoney(ledger.moved.dhuku)} · Loans ${formatMoney(ledger.moved.loans)}`
+              ? `Savings ${formatMoney(ledger.moved.savings)} · Dhuku ${formatMoney(ledger.moved.dhuku)} · Loans ${formatMoney(ledger.moved.loans)} · Funds ${formatMoney(ledger.moved.funds)}`
               : "Nothing moved yet"
           }
         >

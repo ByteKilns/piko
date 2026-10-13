@@ -24,6 +24,8 @@ import type { BudgetLead, PersonPlan, PlanRow, SharedRow } from "@/modules/budge
 import type { ExtraIncome } from "@/modules/budget/lib/income";
 import type { BudgetLineKind } from "@/modules/budget/lib/plan-lines";
 import type { SetAsideRow } from "@/modules/budget/lib/set-aside";
+import { FundDialog, type FundView } from "@/modules/funds/components/FundDialog";
+import type { YearMonth } from "@/modules/funds/lib/fund-math";
 
 type Category = { budgetType: "fixed" | "flexible"; groupName: string; id: string; name: string };
 
@@ -43,6 +45,7 @@ type LedgerFigures = {
 export type PersonView = {
   // Set when this month shows a plan carried over from an earlier month.
   carriedFrom: null | string;
+  funds: FundView[];
   key: "me" | "partner";
   lastKinds: Record<string, BudgetLineKind>;
   lead: BudgetLead;
@@ -57,9 +60,12 @@ export type PersonView = {
 
 type Props = {
   categories: Category[];
+  // Months a fund can be needed by.
+  dueOptions: { label: string; value: string }[];
   month: number;
   monthLabel: string;
   monthNav: MonthNavModel;
+  now: YearMonth;
   people: PersonView[];
   shared: SharedRow[];
   year: number;
@@ -84,6 +90,8 @@ export function BudgetView(props: Props) {
   const [openUnbudgeted, setOpenUnbudgeted] = useState(false);
   const [dialog, setDialog] = useState<{ defaultCategoryId?: string; initial?: BudgetDraft; open: boolean }>({ open: false });
   const [payOpen, setPayOpen] = useState(false);
+  // The fund is looked up by id on every render, so its balance updates after "Add money".
+  const [fundDialog, setFundDialog] = useState<{ fundId?: string; open: boolean }>({ open: false });
   const [fillPending, setFillPending] = useState(false);
 
   const person = tab === "shared" ? null : (props.people.find((p) => p.key === tab) ?? props.people[0]);
@@ -216,6 +224,15 @@ export function BudgetView(props: Props) {
         />
       )}
 
+      {person && (
+        <FundRows
+          canEdit={person.key === "me"}
+          funds={person.funds}
+          onAdd={() => setFundDialog({ open: true })}
+          onFund={(fund) => setFundDialog({ fundId: fund.id, open: true })}
+        />
+      )}
+
       {tab === "shared" && (
         <>
           <RowGroupHead columns={COLUMNS} first>
@@ -261,6 +278,16 @@ export function BudgetView(props: Props) {
         />
       )}
 
+      {person?.key === "me" && (
+        <FundDialog
+          dueOptions={props.dueOptions}
+          fund={person.funds.find((f) => f.id === fundDialog.fundId)}
+          now={props.now}
+          onOpenChange={(value) => !value && setFundDialog({ open: false })}
+          open={fundDialog.open}
+        />
+      )}
+
       {person && (
         <PayDialog
           extras={person.pay.extras}
@@ -289,7 +316,7 @@ function SetAsideRows({ setAside }: { setAside: PersonView["setAside"] }) {
       <RowGroupHead columns={COLUMNS} first>
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="text-[15px] font-semibold whitespace-nowrap">Set aside first</span>
-          <span className="truncate text-[13px] text-n-600">Filled in from savings, dhuku and loans</span>
+          <span className="truncate text-[13px] text-n-600">Filled in from savings, dhuku, loans and funds</span>
         </div>
         <div className="text-right text-[15px] font-semibold">
           <Money value={setAside.planned} />
@@ -325,6 +352,71 @@ function SetAsideRows({ setAside }: { setAside: PersonView["setAside"] }) {
             <div className="flex min-w-0 items-center gap-2.5">
               <Meter className="flex-1" ratio={Math.min(1, rowRatio)} />
               <span className="w-10.5 text-right text-[13px] text-n-700">{pct(rowRatio)}</span>
+            </div>
+          </Row>
+        );
+      })}
+    </>
+  );
+}
+
+type FundRowsProps = {
+  // Funds are their owner's: only your own can be added to or changed.
+  canEdit: boolean;
+  funds: FundView[];
+  onAdd: () => void;
+  onFund: (fund: FundView) => void;
+};
+
+// Funds: each one's monthly set-aside, what it holds, and its target.
+function FundRows({ canEdit, funds, onAdd, onFund }: FundRowsProps) {
+  if (!canEdit && funds.length === 0) return null;
+  return (
+    <>
+      <RowGroupHead columns={COLUMNS}>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="text-[15px] font-semibold whitespace-nowrap">Funds</span>
+          <span className="truncate text-[13px] text-n-600">
+            {funds.length === 0 ? "Money set aside for occasional costs" : "Monthly, holds, target"}
+          </span>
+        </div>
+        <div className="col-span-4 flex justify-end">
+          {canEdit && (
+            <Button className="h-auto px-1.5 py-0.75 text-[13px]" onClick={onAdd} type="button" variant="ghost">
+              <Plus />
+              Add fund
+            </Button>
+          )}
+        </div>
+      </RowGroupHead>
+      {funds.map((fund) => {
+        const ratio = fund.target ? Math.max(0, fund.balance / fund.target) : 0;
+        const short = fund.suggested !== null && fund.suggested > fund.monthlyAmount;
+        return (
+          <Row columns={COLUMNS} key={fund.id} onClick={canEdit ? () => onFund(fund) : undefined}>
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-[15px] whitespace-nowrap">{fund.name}</span>
+              {fund.dueLabel && (
+                <span className={cn("truncate text-xs", short ? "text-signal-ink" : "text-n-600")}>
+                  Needed by {fund.dueLabel}
+                  {short && fund.suggested !== null ? ` · needs ${formatMoney(fund.suggested)} a month` : ""}
+                </span>
+              )}
+            </div>
+            <div className="text-right text-[15px]">
+              <Money value={fund.monthlyAmount} />
+            </div>
+            <div className="text-right text-[15px]">
+              <Money tone={fund.balance < 0 ? "negative" : "default"} value={fund.balance} />
+            </div>
+            <div className="text-right text-[15px]">{fund.target === null ? <span className="text-n-500">—</span> : <Money value={fund.target} />}</div>
+            <div className="flex min-w-0 items-center gap-2.5">
+              {fund.target !== null && (
+                <>
+                  <Meter className="flex-1" ratio={Math.min(1, ratio)} />
+                  <span className="w-10.5 text-right text-[13px] text-n-700">{pct(ratio)}</span>
+                </>
+              )}
             </div>
           </Row>
         );

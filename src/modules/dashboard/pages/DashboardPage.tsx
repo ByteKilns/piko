@@ -15,6 +15,7 @@ import { todayISO } from "@/lib/today";
 import { listIncomeRows, listPlanLines } from "@/modules/budget/api/budget";
 import { buildPersonPlan, overrunFromPlan, overrunNote } from "@/modules/budget/lib/budget-view";
 import { monthIncome } from "@/modules/budget/lib/income";
+import { fundSetAsides } from "@/modules/budget/lib/set-aside";
 import { listCategories } from "@/modules/categories/api/categories";
 import {
   type HomeBalanceRow,
@@ -34,6 +35,9 @@ import { listDhukuEntries, listDhukus } from "@/modules/dhuku/api/dhuku.actions"
 import { dhukuPosition } from "@/modules/dhuku/lib/dhuku-money";
 import { listExpensesForMonth, listRecentExpenses } from "@/modules/expenses/api/expenses.actions";
 import { groupByDay } from "@/modules/expenses/lib/expense-view";
+import { payRows } from "@/modules/expenses/lib/pay-amount";
+import { listFundData } from "@/modules/funds/api/funds";
+import { fundBalances } from "@/modules/funds/lib/fund-math";
 import { listLoanPayments, listLoans } from "@/modules/loans/api/loans.actions";
 import { buildLoanCards, loanOverviewStats } from "@/modules/loans/lib/loan-stats";
 import { checkBudgetReminder } from "@/modules/notifications/api/notifications.actions";
@@ -97,6 +101,7 @@ export async function DashboardPage({ searchParams }: Props) {
     dhukuEntryRows,
     loanRows,
     loanPaymentRows,
+    fundData,
   ] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
@@ -116,19 +121,21 @@ export async function DashboardPage({ searchParams }: Props) {
     listDhukuEntries(householdId),
     listLoans(householdId),
     listLoanPayments(householdId),
+    listFundData(householdId),
   ]);
 
   if (isCurrentMonth) {
     await checkBudgetReminder(householdId, year, month, planLines.length);
   }
 
-  // Expenses paid from a savings pot came out of money set aside over many
-  // months, not this month's pay. Spent, Left and the weekly allowance leave
-  // them out; Home shows the viewer's on their own.
-  const payExpenseRows = expenseRows.filter((e) => e.savingsPotId === null);
-  const paidFromSavings = expenseRows
-    .filter((e) => e.savingsPotId !== null && e.paidByMemberId === memberId)
-    .reduce((s, e) => s + Number(e.amount), 0);
+  // Expenses paid from a savings pot or a fund came out of money set aside
+  // over earlier months, not this month's pay. Spent, Left and the weekly
+  // allowance count only the part paid from pay; Home shows the viewer's
+  // savings and fund parts on their own.
+  const payExpenseRows = payRows(expenseRows);
+  const viewerPaid = expenseRows.filter((e) => e.paidByMemberId === memberId);
+  const paidFromSavings = viewerPaid.filter((e) => e.savingsPotId !== null).reduce((s, e) => s + Number(e.amount), 0);
+  const paidFromFunds = viewerPaid.reduce((s, e) => s + Number(e.fundAmount ?? 0), 0);
 
   // Pay carries forward from earlier months; extra income counts in its own month.
   const incomes = members.map((m) => ({ amount: monthIncome(incomeRows, m.id, { month, year }).total, memberId: m.id }));
@@ -213,9 +220,7 @@ export async function DashboardPage({ searchParams }: Props) {
   const period = resolvePeriod(year, month, dateFormat);
   const memberIds = members.map((m) => m.id);
   const viewerShares = (rows: typeof expenseRows) =>
-    rows
-      .filter((e) => e.savingsPotId === null)
-      .flatMap((e) =>
+    payRows(rows).flatMap((e) =>
         walletShares(
           { amount: Number(e.amount), paidByMemberId: e.paidByMemberId, payBackAmount: e.payBackAmount === null ? null : Number(e.payBackAmount) },
           memberIds,
@@ -310,9 +315,20 @@ export async function DashboardPage({ searchParams }: Props) {
       reserveFull: balance >= reserveMinimum,
     };
   });
+  // The viewer's funds: what each holds now, and what went into them this
+  // month (the set-aside plus money added).
+  const viewerFunds = fundData.funds.filter((f) => f.ownerMemberId === memberId && !f.archived);
+  const balancesByFund = fundBalances({ ...fundData, funds: viewerFunds, through: { month, year } });
+  const intoFunds =
+    fundSetAsides({ funds: viewerFunds, memberId, month: { month, year }, plans: fundData.plans }).reduce((s, r) => s + r.planned, 0) +
+    fundData.topUps
+      .filter((t) => t.month === month && t.year === year && viewerFunds.some((f) => f.id === t.fundId))
+      .reduce((s, t) => s + t.amount, 0);
+
   // Money the viewer moved into their own piles this month: their savings
-  // deposits, their dhukus' payments and their repayments on loans they took.
-  // Unallocated takes it off too, since it's no longer free to spend.
+  // deposits, their dhukus' payments, their repayments on loans they took and
+  // what went into their funds. Unallocated takes it off too, since it's no
+  // longer free to spend.
   const viewerDhukuIds = new Set(dhukuRows.filter((d) => d.ownerMemberId === memberId).map((d) => d.id));
   const moved = movedThisMonth({
     deposits: deposits.filter((d) => d.memberId === memberId),
@@ -320,6 +336,7 @@ export async function DashboardPage({ searchParams }: Props) {
       .filter((e) => viewerDhukuIds.has(e.dhukuId))
       .map((e) => ({ amount: Number(e.amount), date: e.date, type: e.type })),
     endDate: period.endDate,
+    funds: intoFunds,
     loanPayments: loanPaymentRows.flatMap((p) => {
       const loan = loanRows.find((l) => l.id === p.loanId);
       return loan && p.memberId === memberId ? [{ amount: Number(p.amount), date: p.date, direction: loan.direction }] : [];
@@ -353,6 +370,7 @@ export async function DashboardPage({ searchParams }: Props) {
   });
   const balances: HomeBalanceRow[] = [
     ...savings.map((pot) => ({ amount: pot.balance, id: `pot:${pot.id}`, label: pot.name, sub: "Savings" })),
+    ...viewerFunds.map((fund) => ({ amount: balancesByFund.get(fund.id) ?? 0, id: `fund:${fund.id}`, label: fund.name, sub: "Fund" })),
     ...dhukuBalances,
     ...(loanStats.outstandingToReceive > 0
       ? [{ amount: loanStats.outstandingToReceive, id: "loans:owed", label: "Loans owed to you", sub: "Still to be paid back" }]
@@ -406,6 +424,7 @@ export async function DashboardPage({ searchParams }: Props) {
       essentials={essentials}
       ledger={{
         moved,
+        paidFromFunds,
         paidFromSavings,
         pay: viewerIncome.pay,
         payNote: viewerIncome.extra > 0 ? `+ ${formatMoney(viewerIncome.extra)} extra` : payCarriedFrom ? `Carried over from ${payCarriedFrom}` : null,

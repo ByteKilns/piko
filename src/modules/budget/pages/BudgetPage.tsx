@@ -8,14 +8,18 @@ import { BudgetView, type PersonView } from "@/modules/budget/components/BudgetV
 import { buildBudgetLead, buildPersonPlan, overBudgetRows, sharedRows } from "@/modules/budget/lib/budget-view";
 import { monthIncome } from "@/modules/budget/lib/income";
 import { lastKindByCategory } from "@/modules/budget/lib/plan-lines";
-import { dhukuSetAsides, loanSetAsides, savingsSetAsides } from "@/modules/budget/lib/set-aside";
+import { dhukuSetAsides, fundSetAsides, loanSetAsides, savingsSetAsides } from "@/modules/budget/lib/set-aside";
 import { listCategories } from "@/modules/categories/api/categories";
 import { walletShares } from "@/modules/dashboard/lib/wallet";
 import { listDhukuEntries, listDhukus } from "@/modules/dhuku/api/dhuku.actions";
 import { listExpensesForMonth } from "@/modules/expenses/api/expenses.actions";
+import { payRows } from "@/modules/expenses/lib/pay-amount";
+import { listFundData } from "@/modules/funds/api/funds";
+import { fundBalances, setAsideFor, suggestedMonthly } from "@/modules/funds/lib/fund-math";
 import { listLoanPayments, listLoans } from "@/modules/loans/api/loans.actions";
 import { checkBudgetReminder } from "@/modules/notifications/api/notifications.actions";
 import { listSavingsDeposits, listSavingsPotPlans, listSavingsPots } from "@/modules/savings/api/savings.actions";
+import { monthAfter } from "@/modules/savings/lib/savings-forecast";
 
 function percent(part: number, whole: number): number {
   return whole > 0 ? Math.round((part / whole) * 100) : 0;
@@ -47,6 +51,7 @@ export async function BudgetPage({ searchParams }: Props) {
     dhukuEntryRows,
     loanRows,
     loanPaymentRows,
+    fundData,
   ] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
@@ -61,6 +66,7 @@ export async function BudgetPage({ searchParams }: Props) {
     listDhukuEntries(householdId),
     listLoans(householdId),
     listLoanPayments(householdId),
+    listFundData(householdId),
   ]);
 
   if (isCurrentMonth) {
@@ -71,11 +77,9 @@ export async function BudgetPage({ searchParams }: Props) {
   const categoryList = categories.map((c) => ({ budgetType: c.budgetType, groupName: c.groupName, id: c.id, name: c.name }));
 
   // Each person's spending is what left their own wallet, the same as Home.
-  // Expenses paid from savings were saved for in earlier months, so they don't
-  // count against this month's budget.
-  const shares = expenseRows
-    .filter((e) => e.savingsPotId === null)
-    .flatMap((e) =>
+  // Expenses paid from savings or a fund were saved for in earlier months, so
+  // only the part paid from pay counts against this month's budget.
+  const shares = payRows(expenseRows).flatMap((e) =>
       walletShares(
         { amount: Number(e.amount), paidByMemberId: e.paidByMemberId, payBackAmount: e.payBackAmount === null ? null : Number(e.payBackAmount) },
         memberIds,
@@ -104,6 +108,7 @@ export async function BudgetPage({ searchParams }: Props) {
     principalAmount: Number(l.principalAmount),
   }));
   const payments = loanPaymentRows.map((p) => ({ amount: Number(p.amount), date: p.date, loanId: p.loanId }));
+  const thisMonth = { month, year };
 
   const ordered = [...members.filter((m) => m.id === memberId), ...members.filter((m) => m.id !== memberId)];
   const people: PersonView[] = ordered.map((member) => {
@@ -116,15 +121,35 @@ export async function BudgetPage({ searchParams }: Props) {
       ...savingsSetAsides({ deposits, memberId: member.id, period, plans, pots: potRows }),
       ...dhukuSetAsides({ dhukus, entries: dhukuEntries, memberId: member.id, period }),
       ...loanSetAsides({ loans, memberId: member.id, payments, period }),
+      ...fundSetAsides({ funds: fundData.funds, memberId: member.id, month: thisMonth, plans: fundData.plans }),
     ];
     const setAside = setAsideRows.reduce((sum, row) => sum + row.planned, 0);
     // The plan runs on pay only: extra income never makes room in it.
     const unplanned = income.pay - setAside - plan.budgeted;
     const carried = lines.find((l) => l.inherited);
+    const personFunds = fundData.funds.filter((f) => f.ownerMemberId === member.id && !f.archived);
+    const fundBalance = fundBalances({ ...fundData, funds: personFunds, through: thisMonth });
     const payCarriedFrom = income.payCarriedFrom ? formatPeriodLabel(income.payCarriedFrom.year, income.payCarriedFrom.month, dateFormat) : null;
 
     return {
       carriedFrom: carried ? formatPeriodLabel(carried.year, carried.month, dateFormat) : null,
+      funds: personFunds.map((fund) => {
+        const balance = fundBalance.get(fund.id) ?? 0;
+        const due = fund.dueYear !== null && fund.dueMonth !== null ? { month: fund.dueMonth, year: fund.dueYear } : null;
+        return {
+          balance,
+          due,
+          dueLabel: due ? formatPeriodLabel(due.year, due.month, dateFormat) : null,
+          id: fund.id,
+          monthlyAmount: setAsideFor(
+            fundData.plans.filter((p) => p.fundId === fund.id),
+            thisMonth,
+          ),
+          name: fund.name,
+          suggested: suggestedMonthly({ balance, due, now: thisMonth, target: fund.target }),
+          target: fund.target,
+        };
+      }),
       key: member.id === memberId ? ("me" as const) : ("partner" as const),
       lastKinds: lastKindByCategory(datedLines, member.id),
       lead: buildBudgetLead({
@@ -163,6 +188,10 @@ export async function BudgetPage({ searchParams }: Props) {
   return (
     <BudgetView
       categories={categoryList}
+      dueOptions={Array.from({ length: 36 }, (_, i) => monthAfter(currentYear, currentMonth, i)).map((ym) => ({
+        label: formatPeriodLabel(ym.year, ym.month, dateFormat),
+        value: `${ym.year}-${ym.month}`,
+      }))}
       month={month}
       monthLabel={formatPeriodLabel(year, month, dateFormat)}
       monthNav={buildMonthNav({
@@ -172,6 +201,7 @@ export async function BudgetPage({ searchParams }: Props) {
         dateFormat,
         selected: { month, year },
       })}
+      now={thisMonth}
       people={people}
       shared={sharedRows(planLines, categoryList)}
       year={year}
