@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { walletSpentByMember } from "./wallet";
+import { walletShares, walletSpentByMember } from "./wallet";
 
 const ME = "me";
 const HER = "her";
@@ -45,5 +45,18 @@ describe("walletSpentByMember", () => {
     const totals = walletSpentByMember([{ amount: 1000, paidByMemberId: ME, payBackAmount: 1000 }], [ME]);
 
     expect(totals.get(ME)).toBe(1000);
+  });
+});
+
+describe("walletShares", () => {
+  it("gives the whole expense to the payer when nothing is paid back", () => {
+    expect(walletShares({ amount: 2000, paidByMemberId: ME, payBackAmount: null }, [ME, HER])).toEqual([{ amount: 2000, memberId: ME }]);
+  });
+
+  it("splits off the part the other person will pay back", () => {
+    expect(walletShares({ amount: 3000, paidByMemberId: HER, payBackAmount: 1000 }, [ME, HER])).toEqual([
+      { amount: 2000, memberId: HER },
+      { amount: 1000, memberId: ME },
+    ]);
   });
 });
