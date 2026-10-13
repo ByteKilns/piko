@@ -46,10 +46,25 @@ test.describe("budget plans per person", () => {
     await expect(budgetRow(page, "Petrol")).toContainText("2,222");
   });
 
+  test("extra income shows on top of pay without growing the plan", async ({ page }) => {
+    await gotoMonthAhead(page, 3);
+
+    await page.getByRole("button", { name: "Pay & extra" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Extra amount").fill("1234");
+    await dialog.getByLabel("What was it?").fill("e2e bonus");
+    await dialog.getByRole("button", { name: "Add extra" }).click();
+    await expect(dialog.getByText("e2e bonus")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page.reload();
+
+    await expect(page.getByText("+ Rs 1,234.00 extra")).toBeVisible();
+  });
+
   test("a month with no lines of its own carries over the last plan", async ({ page }) => {
     await gotoMonthAhead(page, 2);
 
-    await expect(page.getByText(/^Carried over from/)).toBeVisible();
+    await expect(page.getByText(/Changing a line makes this month's plan its own/)).toBeVisible();
     await expect(page.getByText("Can cut", { exact: true })).toBeVisible();
     await expect(budgetRow(page, "Dining Out")).toHaveCount(1);
   });
@@ -78,8 +93,8 @@ test.describe("budget", () => {
 
   test("shows the month's plan", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "Budget", exact: true })).toBeVisible();
-    await expect(page.getByText("Budgeted", { exact: true })).toBeVisible();
-    await expect(page.getByText("Spent in budgets", { exact: true })).toBeVisible();
+    await expect(page.getByText("Left to plan", { exact: true })).toBeVisible();
+    await expect(page.getByText("Set aside first", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Click a row to change its budget")).toBeVisible();
   });
 
@@ -89,9 +104,9 @@ test.describe("budget", () => {
     await expect(page.getByRole("dialog").getByRole("heading", { name: "Set a budget" })).toBeVisible();
   });
 
-  test("opens the set-income dialog", async ({ page }) => {
-    await page.getByRole("button", { name: "Set income" }).click();
+  test("opens the pay dialog", async ({ page }) => {
+    await page.getByRole("button", { name: "Pay & extra" }).click();
 
-    await expect(page.getByRole("dialog").getByRole("heading", { name: "Set income" })).toBeVisible();
+    await expect(page.getByRole("dialog").getByRole("heading", { name: "Your pay" })).toBeVisible();
   });
 });

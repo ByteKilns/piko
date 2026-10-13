@@ -19,21 +19,23 @@ import type { MonthNavModel } from "@/lib/month-nav";
 import { cn } from "@/lib/utils";
 import { fillBudgetFromRecurringAction } from "@/modules/budget/api/budget.actions";
 import { BudgetDialog, type BudgetDraft } from "@/modules/budget/components/BudgetDialog";
-import { SetIncomeDialog } from "@/modules/budget/components/SetIncomeDialog";
+import { PayDialog } from "@/modules/budget/components/PayDialog";
 import type { BudgetLead, PersonPlan, PlanRow, SharedRow } from "@/modules/budget/lib/budget-view";
+import type { ExtraIncome } from "@/modules/budget/lib/income";
 import type { BudgetLineKind } from "@/modules/budget/lib/plan-lines";
+import type { SetAsideRow } from "@/modules/budget/lib/set-aside";
 
 type Category = { budgetType: "fixed" | "flexible"; groupName: string; id: string; name: string };
-type Member = { id: string; name: string };
 
 type LedgerFigures = {
   budgeted: number;
-  budgetedRatio: number;
   budgetedSub: string;
-  outside: number;
-  outsideSub: string;
-  spentIn: number;
-  spentInSub: string;
+  pay: number;
+  paySub: null | string;
+  // How much of pay the plan uses: set aside plus budgeted, over pay.
+  plannedRatio: number;
+  setAside: number;
+  setAsideSub: string;
   unplanned: number;
   unplannedSub: string;
 };
@@ -47,16 +49,14 @@ export type PersonView = {
   ledger: LedgerFigures;
   memberId: string;
   name: string;
+  pay: { amount: number; carriedFrom: null | string; extras: ExtraIncome[] };
   plan: PersonPlan;
-  savings: { planned: number; pots: { id: string; name: string; planned: number; putIn: number }[]; putIn: number };
+  setAside: { done: number; planned: number; rows: SetAsideRow[] };
   spentByCategory: Record<string, number>;
 };
 
 type Props = {
   categories: Category[];
-  currentMemberId: string;
-  incomes: Record<string, number>;
-  members: Member[];
   month: number;
   monthLabel: string;
   monthNav: MonthNavModel;
@@ -83,7 +83,7 @@ export function BudgetView(props: Props) {
   const [tab, setTab] = useState<Tab>("me");
   const [openUnbudgeted, setOpenUnbudgeted] = useState(false);
   const [dialog, setDialog] = useState<{ defaultCategoryId?: string; initial?: BudgetDraft; open: boolean }>({ open: false });
-  const [incomeOpen, setIncomeOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
   const [fillPending, setFillPending] = useState(false);
 
   const person = tab === "shared" ? null : (props.people.find((p) => p.key === tab) ?? props.people[0]);
@@ -135,11 +135,11 @@ export function BudgetView(props: Props) {
                   <Plus />
                   Add budget
                 </Button>
+                <Button onClick={() => setPayOpen(true)} variant="ghost">
+                  Pay &amp; extra
+                </Button>
               </>
             )}
-            <Button onClick={() => setIncomeOpen(true)} variant="ghost">
-              Set income
-            </Button>
           </>
         }
         monthNav={props.monthNav}
@@ -157,20 +157,22 @@ export function BudgetView(props: Props) {
           </p>
 
           <Ledger>
-            <LedgerCell bar={<Meter ratio={person.ledger.budgetedRatio} />} label="Budgeted" lead note={person.ledger.budgetedSub}>
-              <Money size="lead" value={person.ledger.budgeted} />
-            </LedgerCell>
-            <LedgerCell label="Spent in budgets" note={person.ledger.spentInSub}>
-              <Money size="cell" value={person.ledger.spentIn} />
-            </LedgerCell>
-            <LedgerCell label="Spent outside" note={person.ledger.outsideSub}>
-              <Money size="cell" value={person.ledger.outside} />
-            </LedgerCell>
             <LedgerCell
+              bar={<Meter ratio={person.ledger.plannedRatio} />}
               label="Left to plan"
+              lead
               note={<span className={cn(person.ledger.unplanned < 0 && "text-signal-ink")}>{person.ledger.unplannedSub}</span>}
             >
-              <Money size="cell" tone={person.ledger.unplanned < 0 ? "negative" : "default"} value={person.ledger.unplanned} />
+              <Money size="lead" tone={person.ledger.unplanned < 0 ? "negative" : "default"} value={person.ledger.unplanned} />
+            </LedgerCell>
+            <LedgerCell label="Pay" note={person.ledger.paySub} onSelect={() => setPayOpen(true)}>
+              <Money size="cell" value={person.ledger.pay} />
+            </LedgerCell>
+            <LedgerCell label="Set aside first" note={person.ledger.setAsideSub}>
+              <Money size="cell" value={person.ledger.setAside} />
+            </LedgerCell>
+            <LedgerCell label="Budgeted" note={person.ledger.budgetedSub}>
+              <Money size="cell" value={person.ledger.budgeted} />
             </LedgerCell>
           </Ledger>
         </>
@@ -199,7 +201,20 @@ export function BudgetView(props: Props) {
         <span>Used</span>
       </RowsHeader>
 
-      {person && <PersonRows monogram={monogram(person)} onCategory={openCategory} onNew={openNew} onRow={openRow} openUnbudgeted={openUnbudgeted} person={person} setOpenUnbudgeted={setOpenUnbudgeted} />}
+      {person && person.setAside.rows.length > 0 && <SetAsideRows setAside={person.setAside} />}
+
+      {person && (
+        <PersonRows
+          afterSetAside={person.setAside.rows.length > 0}
+          monogram={monogram(person)}
+          onCategory={openCategory}
+          onNew={openNew}
+          onRow={openRow}
+          openUnbudgeted={openUnbudgeted}
+          person={person}
+          setOpenUnbudgeted={setOpenUnbudgeted}
+        />
+      )}
 
       {tab === "shared" && (
         <>
@@ -229,49 +244,6 @@ export function BudgetView(props: Props) {
         </>
       )}
 
-      {person && person.savings.pots.length > 0 && (
-        <>
-          <RowGroupHead columns={COLUMNS}>
-            <div className="flex min-w-0 items-center gap-2.5">
-              <span className="text-[15px] font-semibold whitespace-nowrap">Savings</span>
-              <span className="truncate text-[13px] text-n-600">Planned against put in this month</span>
-            </div>
-            <div className="text-right text-[15px] font-semibold">
-              <Money value={person.savings.planned} />
-            </div>
-            <div className="text-right text-[15px] font-semibold">
-              <Money value={person.savings.putIn} />
-            </div>
-            <div className="text-right text-[15px] font-semibold">
-              <Money value={Math.max(0, person.savings.planned - person.savings.putIn)} />
-            </div>
-            <div className="flex min-w-0 items-center gap-2.5">
-              <Meter className="flex-1" ratio={person.savings.planned > 0 ? Math.min(1, person.savings.putIn / person.savings.planned) : 0} />
-              <span className="w-10.5 text-right text-[13px] font-semibold text-ink">
-                {pct(person.savings.planned > 0 ? person.savings.putIn / person.savings.planned : 0)}
-              </span>
-            </div>
-          </RowGroupHead>
-          {person.savings.pots.map((pot) => (
-            <Row columns={COLUMNS} key={pot.id}>
-              <span className="truncate text-[15px] whitespace-nowrap">{pot.name}</span>
-              <div className="text-right text-[15px]">
-                <Money value={pot.planned} />
-              </div>
-              <div className="text-right text-[15px]">
-                <Money value={pot.putIn} />
-              </div>
-              <div className="text-right text-[15px]">
-                <Money value={Math.max(0, pot.planned - pot.putIn)} />
-              </div>
-              <div className="flex min-w-0 items-center gap-2.5">
-                <Meter className="flex-1" ratio={pot.planned > 0 ? Math.min(1, pot.putIn / pot.planned) : 0} />
-                <span className="w-10.5 text-right text-[13px] text-n-700">{pct(pot.planned > 0 ? pot.putIn / pot.planned : 0)}</span>
-              </div>
-            </Row>
-          ))}
-        </>
-      )}
 
       {person && (
         <BudgetDialog
@@ -289,21 +261,81 @@ export function BudgetView(props: Props) {
         />
       )}
 
-      <SetIncomeDialog
-        currentMemberId={props.currentMemberId}
-        incomes={props.incomes}
-        members={props.members}
-        month={props.month}
-        monthLabel={props.monthLabel}
-        onOpenChange={setIncomeOpen}
-        open={incomeOpen}
-        year={props.year}
-      />
+      {person && (
+        <PayDialog
+          extras={person.pay.extras}
+          memberId={person.memberId}
+          month={props.month}
+          monthLabel={props.monthLabel}
+          onOpenChange={setPayOpen}
+          open={payOpen}
+          pay={person.pay.amount}
+          payCarriedFrom={person.pay.carriedFrom}
+          title={person.key === "me" ? "Your pay" : `${person.name}'s pay`}
+          year={props.year}
+        />
+      )}
     </div>
   );
 }
 
+// "Set aside first": savings plans, dhukus, loan installments (and later
+// funds), filled in from what Piko already knows. Done is what has actually
+// gone in this month.
+function SetAsideRows({ setAside }: { setAside: PersonView["setAside"] }) {
+  const ratio = setAside.planned > 0 ? setAside.done / setAside.planned : 0;
+  return (
+    <>
+      <RowGroupHead columns={COLUMNS} first>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="text-[15px] font-semibold whitespace-nowrap">Set aside first</span>
+          <span className="truncate text-[13px] text-n-600">Filled in from savings, dhuku and loans</span>
+        </div>
+        <div className="text-right text-[15px] font-semibold">
+          <Money value={setAside.planned} />
+        </div>
+        <div className="text-right text-[15px] font-semibold">
+          <Money value={setAside.done} />
+        </div>
+        <div className="text-right text-[15px] font-semibold">
+          <Money value={Math.max(0, setAside.planned - setAside.done)} />
+        </div>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Meter className="flex-1" ratio={Math.min(1, ratio)} />
+          <span className="w-10.5 text-right text-[13px] font-semibold text-ink">{pct(ratio)}</span>
+        </div>
+      </RowGroupHead>
+      {setAside.rows.map((row) => {
+        const rowRatio = row.planned > 0 ? row.done / row.planned : 0;
+        return (
+          <Row columns={COLUMNS} key={row.id}>
+            <div className="flex min-w-0 items-baseline gap-2.5">
+              <span className="truncate text-[15px] whitespace-nowrap">{row.label}</span>
+              <span className="shrink-0 text-xs text-n-600">{row.sub}</span>
+            </div>
+            <div className="text-right text-[15px]">
+              <Money value={row.planned} />
+            </div>
+            <div className="text-right text-[15px]">
+              <Money value={row.done} />
+            </div>
+            <div className="text-right text-[15px]">
+              <Money value={Math.max(0, row.planned - row.done)} />
+            </div>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <Meter className="flex-1" ratio={Math.min(1, rowRatio)} />
+              <span className="w-10.5 text-right text-[13px] text-n-700">{pct(rowRatio)}</span>
+            </div>
+          </Row>
+        );
+      })}
+    </>
+  );
+}
+
 type PersonRowsProps = {
+  // The "Set aside first" group sits above, so the first kind group isn't first on the page.
+  afterSetAside: boolean;
   monogram: MonogramPerson[];
   onCategory: (categoryId: string) => void;
   onNew: () => void;
@@ -315,7 +347,7 @@ type PersonRowsProps = {
 
 // One person's plan: a group per kind (fixed, essential, can cut), then their
 // spending in categories without a line.
-function PersonRows({ monogram, onCategory, onNew, onRow, openUnbudgeted, person, setOpenUnbudgeted }: PersonRowsProps) {
+function PersonRows({ afterSetAside, monogram, onCategory, onNew, onRow, openUnbudgeted, person, setOpenUnbudgeted }: PersonRowsProps) {
   const { plan } = person;
   const shown = plan.unbudgeted.slice(0, SHOWN_UNBUDGETED);
   const moreCount = plan.unbudgeted.length - shown.length;
@@ -325,7 +357,7 @@ function PersonRows({ monogram, onCategory, onNew, onRow, openUnbudgeted, person
   return (
     <>
       {plan.groups.length === 0 && (
-        <RowGroupHead columns={COLUMNS} first>
+        <RowGroupHead columns={COLUMNS} first={!afterSetAside}>
           <div className="flex min-w-0 items-center gap-2.5">
             <Monogram people={monogram} />
             <span className="text-[15px] font-semibold whitespace-nowrap">{person.key === "me" ? "Me" : person.name}</span>
@@ -347,7 +379,7 @@ function PersonRows({ monogram, onCategory, onNew, onRow, openUnbudgeted, person
         const left = group.planned - group.spent;
         return (
           <Fragment key={group.kind}>
-            <RowGroupHead columns={COLUMNS} first={index === 0}>
+            <RowGroupHead columns={COLUMNS} first={index === 0 && !afterSetAside}>
               <div className="flex min-w-0 items-center gap-2.5">
                 <span className="text-[15px] font-semibold whitespace-nowrap">{group.label}</span>
                 <span className="truncate text-[13px] text-n-600">

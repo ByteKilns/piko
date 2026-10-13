@@ -15,7 +15,7 @@ import { listCategories } from "@/modules/categories/api/categories";
 import { budgetItemChanges, budgetItemSummary, incomeChanges, incomeSummary } from "../lib/budget-activity";
 import { recurringBudgetLines } from "../lib/recurring-budget";
 import { type RemoveBudgetItemInput, removeBudgetItemSchema, type SetBudgetItemInput, setBudgetItemSchema } from "../schemas/budget-item.schema";
-import { type ExtraIncomeInput, extraIncomeSchema, type SetIncomeInput, setIncomeSchema, type SetPayInput, setPaySchema } from "../schemas/income.schema";
+import { type ExtraIncomeInput, extraIncomeSchema, type SetPayInput, setPaySchema } from "../schemas/income.schema";
 import { listPlanLines } from "./budget";
 
 // Insert-or-get in one statement. A select-then-insert would race when two
@@ -239,70 +239,6 @@ export async function fillBudgetFromRecurringAction(year: number, month: number,
   revalidatePath("/budget");
   revalidatePath("/dashboard");
   return toInsert.length;
-}
-
-export async function getIncomesForMonth(year: number, month: number) {
-  const { householdId } = await getCurrentMember();
-  return db
-    .select()
-    .from(incomes)
-    .where(and(eq(incomes.householdId, householdId), eq(incomes.year, year), eq(incomes.month, month)));
-}
-
-export async function listAllIncomes() {
-  const { householdId } = await getCurrentMember();
-  return db.select().from(incomes).where(eq(incomes.householdId, householdId));
-}
-
-export async function setIncomeAction(input: SetIncomeInput) {
-  const member = await getCurrentMember();
-  const { householdId } = member;
-  const parsed = setIncomeSchema.parse(input);
-
-  const members = await getHouseholdMembers(householdId);
-  if (!members.some((m) => m.id === parsed.memberId)) {
-    throw new Error("Member does not belong to this household");
-  }
-
-  const [before] = await db
-    .select()
-    .from(incomes)
-    .where(
-      and(
-        eq(incomes.householdId, householdId),
-        eq(incomes.memberId, parsed.memberId),
-        eq(incomes.year, parsed.year),
-        eq(incomes.month, parsed.month),
-      ),
-    );
-
-  const [saved] = await db
-    .insert(incomes)
-    .values({
-      householdId,
-      memberId: parsed.memberId,
-      year: parsed.year,
-      month: parsed.month,
-      amount: String(parsed.amount),
-      note: parsed.note,
-    })
-    .onConflictDoUpdate({
-      target: [incomes.memberId, incomes.year, incomes.month],
-      set: { amount: String(parsed.amount), note: parsed.note ?? null },
-    })
-    .returning();
-
-  const f = await loadActivityFormatters(householdId);
-  const after = { amount: parsed.amount, memberId: parsed.memberId, month: parsed.month, note: parsed.note, year: parsed.year };
-  await logActivity(
-    activityActor(member),
-    before
-      ? { action: "updated", after: saved, before, changes: incomeChanges(f, before, after), entityId: saved.id, entityType: "income", summary: incomeSummary(f, after) }
-      : { action: "created", after: saved, before: null, entityId: saved.id, entityType: "income", summary: incomeSummary(f, after) },
-  );
-
-  revalidatePath("/budget");
-  revalidatePath("/dashboard");
 }
 
 function revalidateIncomePaths() {

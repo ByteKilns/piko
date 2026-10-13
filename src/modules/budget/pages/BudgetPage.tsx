@@ -3,14 +3,17 @@ import { formatMoney } from "@/lib/money";
 import { buildMonthNav, parseMonthParam } from "@/lib/month-nav";
 import { currentPeriodYearMonth, formatPeriodLabel, MAX_NAVIGABLE_YEAR, MIN_NAVIGABLE_YEAR, resolvePeriod } from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
-import { listDatedLines, listPlanLines } from "@/modules/budget/api/budget";
-import { getIncomesForMonth } from "@/modules/budget/api/budget.actions";
+import { listDatedLines, listIncomeRows, listPlanLines } from "@/modules/budget/api/budget";
 import { BudgetView, type PersonView } from "@/modules/budget/components/BudgetView";
 import { buildBudgetLead, buildPersonPlan, overBudgetRows, sharedRows } from "@/modules/budget/lib/budget-view";
+import { monthIncome } from "@/modules/budget/lib/income";
 import { lastKindByCategory } from "@/modules/budget/lib/plan-lines";
+import { dhukuSetAsides, loanSetAsides, savingsSetAsides } from "@/modules/budget/lib/set-aside";
 import { listCategories } from "@/modules/categories/api/categories";
 import { walletShares } from "@/modules/dashboard/lib/wallet";
+import { listDhukuEntries, listDhukus } from "@/modules/dhuku/api/dhuku.actions";
 import { listExpensesForMonth } from "@/modules/expenses/api/expenses.actions";
+import { listLoanPayments, listLoans } from "@/modules/loans/api/loans.actions";
 import { checkBudgetReminder } from "@/modules/notifications/api/notifications.actions";
 import { listSavingsDeposits, listSavingsPotPlans, listSavingsPots } from "@/modules/savings/api/savings.actions";
 
@@ -30,16 +33,34 @@ export async function BudgetPage({ searchParams }: Props) {
   const isCurrentMonth = year === currentYear && month === currentMonth;
   const period = resolvePeriod(year, month, dateFormat);
 
-  const [members, categories, incomes, planLines, datedLines, expenseRows, potRows, planRows, depositRows] = await Promise.all([
+  const [
+    members,
+    categories,
+    incomeRows,
+    planLines,
+    datedLines,
+    expenseRows,
+    potRows,
+    planRows,
+    depositRows,
+    dhukuRows,
+    dhukuEntryRows,
+    loanRows,
+    loanPaymentRows,
+  ] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
-    getIncomesForMonth(year, month),
+    listIncomeRows(householdId),
     listPlanLines(householdId, year, month),
     listDatedLines(householdId, { month, year }),
     listExpensesForMonth(year, month, dateFormat),
     listSavingsPots(householdId),
     listSavingsPotPlans(householdId),
     listSavingsDeposits(householdId),
+    listDhukus(householdId),
+    listDhukuEntries(householdId),
+    listLoans(householdId),
+    listLoanPayments(householdId),
   ]);
 
   if (isCurrentMonth) {
@@ -61,24 +82,46 @@ export async function BudgetPage({ searchParams }: Props) {
       ).map((share) => ({ ...share, categoryId: e.categoryId })),
     );
 
+  const deposits = depositRows.map((d) => ({ amount: Number(d.amount), date: d.date, kind: d.kind, memberId: d.memberId, potId: d.potId }));
+  const plans = planRows.map((p) => ({ memberId: p.memberId, monthlyAmount: Number(p.monthlyAmount), potId: p.potId }));
+  const dhukus = dhukuRows.map((d) => ({
+    completedAt: d.completedAt,
+    id: d.id,
+    interestPerMonth: d.interestPerMonth === null ? null : Number(d.interestPerMonth),
+    monthlyContribution: Number(d.monthlyContribution),
+    name: d.name,
+    ownerMemberId: d.ownerMemberId,
+    totalMembers: d.totalMembers,
+  }));
+  const dhukuEntries = dhukuEntryRows.map((e) => ({ amount: Number(e.amount), date: e.date, dhukuId: e.dhukuId, type: e.type }));
+  const loans = loanRows.map((l) => ({
+    counterpartyName: l.counterpartyName,
+    direction: l.direction,
+    id: l.id,
+    installmentAmount: l.installmentAmount === null ? null : Number(l.installmentAmount),
+    installmentFrequency: l.installmentFrequency,
+    ownerMemberId: l.ownerMemberId,
+    principalAmount: Number(l.principalAmount),
+  }));
+  const payments = loanPaymentRows.map((p) => ({ amount: Number(p.amount), date: p.date, loanId: p.loanId }));
+
   const ordered = [...members.filter((m) => m.id === memberId), ...members.filter((m) => m.id !== memberId)];
   const people: PersonView[] = ordered.map((member) => {
     const lines = planLines.filter((l) => l.ownerMemberId === member.id);
     const spending = shares.filter((s) => s.memberId === member.id);
     const plan = buildPersonPlan({ categories: categoryList, lines, spending });
-    const income = incomes.filter((i) => i.memberId === member.id).reduce((sum, i) => sum + Number(i.amount), 0);
+    const income = monthIncome(incomeRows, member.id, { month, year });
 
-    // Savings comes from the pots' monthly plans: this person's share of each.
-    const pots = potRows.flatMap((pot) => {
-      const planned = planRows.filter((p) => p.potId === pot.id && p.memberId === member.id).reduce((sum, p) => sum + Number(p.monthlyAmount), 0);
-      const putIn = depositRows
-        .filter((d) => d.potId === pot.id && d.kind === "deposit" && d.memberId === member.id && d.date >= period.startDate && d.date <= period.endDate)
-        .reduce((sum, d) => sum + Number(d.amount), 0);
-      return planned > 0 || putIn > 0 ? [{ id: pot.id, name: pot.name, planned, putIn }] : [];
-    });
-    const plannedSavings = pots.reduce((sum, pot) => sum + pot.planned, 0);
-    const unplanned = income - plan.budgeted - plannedSavings;
+    const setAsideRows = [
+      ...savingsSetAsides({ deposits, memberId: member.id, period, plans, pots: potRows }),
+      ...dhukuSetAsides({ dhukus, entries: dhukuEntries, memberId: member.id, period }),
+      ...loanSetAsides({ loans, memberId: member.id, payments, period }),
+    ];
+    const setAside = setAsideRows.reduce((sum, row) => sum + row.planned, 0);
+    // The plan runs on pay only: extra income never makes room in it.
+    const unplanned = income.pay - setAside - plan.budgeted;
     const carried = lines.find((l) => l.inherited);
+    const payCarriedFrom = income.payCarriedFrom ? formatPeriodLabel(income.payCarriedFrom.year, income.payCarriedFrom.month, dateFormat) : null;
 
     return {
       carriedFrom: carried ? formatPeriodLabel(carried.year, carried.month, dateFormat) : null,
@@ -87,30 +130,30 @@ export async function BudgetPage({ searchParams }: Props) {
       lead: buildBudgetLead({
         allSpent: plan.totalSpent,
         budgeted: plan.budgeted,
-        income,
+        income: income.pay,
         outside: plan.unbudgetedTotal,
         overBudget: overBudgetRows(plan),
       }),
       ledger: {
         budgeted: plan.budgeted,
-        budgetedRatio: income > 0 ? plan.budgeted / income : 0,
-        budgetedSub: `${percent(plan.budgeted, income)}% of Rs ${formatMoney(income, { currency: false })} income`,
-        outside: plan.unbudgetedTotal,
-        outsideSub: `${percent(plan.unbudgetedTotal, plan.totalSpent)}% of all spending`,
-        spentIn: plan.spentInLines,
-        spentInSub: plan.budgeted > 0 ? `${percent(plan.spentInLines, plan.budgeted)}% of what's budgeted` : "Nothing budgeted yet",
+        budgetedSub: `${percent(plan.budgeted, income.pay)}% of pay`,
+        pay: income.pay,
+        paySub: income.extra > 0 ? `+ ${formatMoney(income.extra)} extra` : payCarriedFrom ? `Carried over from ${payCarriedFrom}` : null,
+        plannedRatio: income.pay > 0 ? (setAside + plan.budgeted) / income.pay : 0,
+        setAside,
+        setAsideSub: setAsideRows.length > 0 ? `${setAsideRows.length} ${setAsideRows.length === 1 ? "item" : "items"}` : "Nothing set aside",
         unplanned,
-        unplannedSub:
-          unplanned < 0
-            ? "The plan is bigger than income"
-            : plannedSavings > 0
-              ? `${percent(unplanned, income)}% of income, after ${formatMoney(plannedSavings)} planned savings`
-              : `${percent(unplanned, income)}% of income`,
+        unplannedSub: unplanned < 0 ? "The plan is bigger than pay" : `${percent(unplanned, income.pay)}% of pay not planned yet`,
       },
       memberId: member.id,
       name: member.user.name,
+      pay: { amount: income.pay, carriedFrom: payCarriedFrom, extras: income.extras },
       plan,
-      savings: { planned: plannedSavings, pots, putIn: pots.reduce((sum, pot) => sum + pot.putIn, 0) },
+      setAside: {
+        done: setAsideRows.reduce((sum, row) => sum + row.done, 0),
+        planned: setAside,
+        rows: setAsideRows,
+      },
       spentByCategory: Object.fromEntries(
         [...new Set(spending.map((s) => s.categoryId))].map((id) => [id, spending.filter((s) => s.categoryId === id).reduce((sum, s) => sum + s.amount, 0)]),
       ),
@@ -120,9 +163,6 @@ export async function BudgetPage({ searchParams }: Props) {
   return (
     <BudgetView
       categories={categoryList}
-      currentMemberId={memberId}
-      incomes={Object.fromEntries(memberIds.map((id) => [id, incomes.filter((i) => i.memberId === id).reduce((sum, i) => sum + Number(i.amount), 0)]))}
-      members={members.map((m) => ({ id: m.id, name: m.user.name }))}
       month={month}
       monthLabel={formatPeriodLabel(year, month, dateFormat)}
       monthNav={buildMonthNav({
