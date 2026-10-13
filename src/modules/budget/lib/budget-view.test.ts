@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildBudgetLead, buildPersonPlan, overBudgetRows, sharedRows } from "./budget-view";
+import { buildBudgetLead, buildPersonPlan, overBudgetRows, overrunFromPlan, overrunNote, sharedRows } from "./budget-view";
 
 const CATEGORIES = [
   { budgetType: "flexible" as const, id: "food", name: "Groceries" },
@@ -164,5 +164,67 @@ describe("overBudgetRows", () => {
       ],
     });
     expect(overBudgetRows(plan)).toEqual([{ categoryName: "Groceries", over: 500 }]);
+  });
+});
+
+describe("overrunFromPlan", () => {
+  it("collects lines past their amount, except can-cut ones, and spending without a line", () => {
+    const plan = buildPersonPlan({
+      categories: CATEGORIES,
+      lines: [
+        { categoryId: "food", inherited: false, kind: "essential", plannedAmount: 5000 },
+        { categoryId: "rent", inherited: false, kind: "fixed", plannedAmount: 20000 },
+        { categoryId: "lunch", inherited: false, kind: "can_cut", plannedAmount: 3000 },
+      ],
+      spending: [
+        { amount: 6000, categoryId: "food" },
+        { amount: 20000, categoryId: "rent" },
+        { amount: 4000, categoryId: "lunch" },
+        { amount: 500, categoryId: "fun" },
+      ],
+    });
+
+    expect(overrunFromPlan(plan)).toEqual({
+      sources: [
+        { categoryName: "Groceries", over: 1000 },
+        { categoryName: null, over: 500 },
+      ],
+      total: 1500,
+    });
+  });
+
+  it("is zero when everything outside can-cut is within plan", () => {
+    const plan = buildPersonPlan({
+      categories: CATEGORIES,
+      lines: [{ categoryId: "food", inherited: false, kind: "essential", plannedAmount: 5000 }],
+      spending: [{ amount: 4000, categoryId: "food" }],
+    });
+
+    expect(overrunFromPlan(plan)).toEqual({ sources: [], total: 0 });
+  });
+});
+
+describe("overrunNote", () => {
+  it("says what went over and where it came from", () => {
+    expect(overrunNote({ sources: [{ categoryName: "Petrol", over: 1000 }], total: 1000 })).toBe(
+      "Petrol went Rs 1,000.00 over, taken from your spending money.",
+    );
+  });
+
+  it("lists several sources", () => {
+    expect(
+      overrunNote({
+        sources: [
+          { categoryName: "Petrol", over: 1000 },
+          { categoryName: "Family Support", over: 5000 },
+          { categoryName: null, over: 500 },
+        ],
+        total: 6500,
+      }),
+    ).toBe("Petrol went Rs 1,000.00 over, Family Support went Rs 5,000.00 over and Rs 500.00 went outside a budget, taken from your spending money.");
+  });
+
+  it("says nothing without an overrun", () => {
+    expect(overrunNote({ sources: [], total: 0 })).toBeNull();
   });
 });

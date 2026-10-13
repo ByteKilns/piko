@@ -123,3 +123,22 @@ function spentInRange(spentByDay: number[], startDay: number, endDay: number): n
   }
   return total;
 }
+
+// The index of the week a day falls in (the last week for a day past the end).
+export function weekIndexOf(schedule: PacingSchedule, dayOfPeriod: number): number {
+  const week = schedule.weeks.find((w) => dayOfPeriod >= w.startDay && dayOfPeriod <= w.endDay) ?? schedule.weeks[schedule.weeks.length - 1];
+  return week.index;
+}
+
+// Money gone over elsewhere in the plan comes out of what's left of the
+// allowance: the weeks from `fromIndex` on shrink in proportion (never below
+// zero), so one week isn't wiped out, and earlier weeks stay as they were.
+export function withOverrun(schedule: PacingSchedule, fromIndex: number, overrun: number): PacingSchedule {
+  if (overrun <= 0) return schedule;
+  const remaining = schedule.weeks.filter((w) => w.index >= fromIndex).reduce((s, w) => s + w.allowance, 0);
+  const factor = remaining > 0 ? Math.max(0, remaining - overrun) / remaining : 0;
+  return {
+    ...schedule,
+    weeks: schedule.weeks.map((w) => (w.index >= fromIndex ? { ...w, allowance: Math.round(w.allowance * factor) } : w)),
+  };
+}

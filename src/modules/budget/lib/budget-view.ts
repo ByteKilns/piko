@@ -128,3 +128,29 @@ export function overBudgetRows(plan: PersonPlan): { categoryName: string; over: 
     .filter((row) => row.spent > row.planned)
     .map((row) => ({ categoryName: row.categoryName, over: row.spent - row.planned }));
 }
+
+// What went over plan outside the can-cut lines: another line spent past its
+// amount (categoryName set), or spending in categories with no line at all
+// (categoryName null). It comes out of the can-cut money that's left.
+export type Overrun = { sources: { categoryName: null | string; over: number }[]; total: number };
+
+export function overrunFromPlan(plan: PersonPlan): Overrun {
+  const sources: Overrun["sources"] = plan.groups
+    .filter((group) => group.kind !== "can_cut")
+    .flatMap((group) => group.rows)
+    .filter((row) => row.spent > row.planned)
+    .map((row) => ({ categoryName: row.categoryName, over: row.spent - row.planned }));
+  if (plan.unbudgetedTotal > 0) sources.push({ categoryName: null, over: plan.unbudgetedTotal });
+  return { sources, total: sum(sources.map((s) => s.over)) };
+}
+
+// "Petrol went Rs 1,000.00 over and Rs 500.00 went outside a budget, taken
+// from your spending money."
+export function overrunNote(overrun: Overrun): null | string {
+  if (overrun.total <= 0) return null;
+  const parts = overrun.sources.map((s) =>
+    s.categoryName === null ? `${formatMoney(s.over)} went outside a budget` : `${s.categoryName} went ${formatMoney(s.over)} over`,
+  );
+  const joined = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+  return `${joined}, taken from your spending money.`;
+}

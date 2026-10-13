@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildPacingSchedule, currentWeekPacing } from "./pacing";
+import { buildPacingSchedule, currentWeekPacing, weekIndexOf, withOverrun } from "./pacing";
 
 describe("buildPacingSchedule", () => {
   it("creates one week per 7 days", () => {
@@ -81,5 +81,52 @@ describe("currentWeekPacing", () => {
     const spentByDay = new Array(30).fill(0);
     spentByDay[0] = 999999;
     expect(currentWeekPacing(schedule, 3, spentByDay).remaining).toBe(0);
+  });
+});
+
+describe("weekIndexOf", () => {
+  const schedule = buildPacingSchedule({ daysInPeriod: 30, flexibleTotal: 4000 });
+
+  it("finds the week a day falls in", () => {
+    expect(weekIndexOf(schedule, 1)).toBe(0);
+    expect(weekIndexOf(schedule, 15)).toBe(2);
+    expect(weekIndexOf(schedule, 30)).toBe(4);
+  });
+
+  it("uses the last week for a day past the end", () => {
+    expect(weekIndexOf(schedule, 31)).toBe(4);
+  });
+});
+
+describe("withOverrun", () => {
+  const schedule = buildPacingSchedule({ daysInPeriod: 30, flexibleTotal: 7500 });
+  const sum = (from: number, s = schedule) => s.weeks.filter((w) => w.index >= from).reduce((t, w) => t + w.allowance, 0);
+
+  it("takes the overrun out of this week and the weeks after it", () => {
+    const cut = withOverrun(schedule, 2, 1000);
+
+    expect(Math.abs(sum(2, cut) - (sum(2) - 1000))).toBeLessThanOrEqual(2);
+  });
+
+  it("leaves earlier weeks as they were", () => {
+    const cut = withOverrun(schedule, 2, 1000);
+
+    expect(cut.weeks.slice(0, 2)).toEqual(schedule.weeks.slice(0, 2));
+  });
+
+  it("spreads the cut so no single week is wiped out", () => {
+    const cut = withOverrun(schedule, 2, 1000);
+
+    for (const week of cut.weeks.slice(2)) expect(week.allowance).toBeGreaterThan(0);
+  });
+
+  it("never goes below zero", () => {
+    const cut = withOverrun(schedule, 3, 99999);
+
+    expect(cut.weeks.slice(3).every((w) => w.allowance === 0)).toBe(true);
+  });
+
+  it("changes nothing without an overrun", () => {
+    expect(withOverrun(schedule, 1, 0)).toBe(schedule);
   });
 });
