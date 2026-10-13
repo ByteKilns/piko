@@ -7,14 +7,16 @@ import { db } from "@/db/client";
 import { budgetItems, incomes, monthlyBudgets, recurringExpenses } from "@/db/schema";
 import { getDateFormatPref } from "@/lib/date-format-cookie";
 import { resolvePeriod } from "@/lib/month-period";
-import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
+import { type CurrentMember, getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { activityActor, loadActivityFormatters, logActivities, logActivity } from "@/modules/activity/api/activity";
+import type { ActivityFormatters } from "@/modules/activity/lib/activity-values";
 import { listCategories } from "@/modules/categories/api/categories";
 
 import { budgetItemChanges, budgetItemSummary, incomeChanges, incomeSummary } from "../lib/budget-activity";
 import { recurringBudgetLines } from "../lib/recurring-budget";
 import { type RemoveBudgetItemInput, removeBudgetItemSchema, type SetBudgetItemInput, setBudgetItemSchema } from "../schemas/budget-item.schema";
 import { type SetIncomeInput, setIncomeSchema } from "../schemas/income.schema";
+import { listPlanLines } from "./budget";
 
 // Insert-or-get in one statement. A select-then-insert would race when two
 // requests hit a not-yet-created month at the same time (both see nothing,
@@ -37,10 +39,46 @@ function ownerIs(ownerMemberId: null | string) {
   return ownerMemberId === null ? isNull(budgetItems.ownerMemberId) : eq(budgetItems.ownerMemberId, ownerMemberId);
 }
 
-export async function getBudgetItemsForMonth(year: number, month: number) {
-  const { householdId } = await getCurrentMember();
-  const budget = await getOrCreateMonthlyBudget(householdId, year, month);
-  return db.select().from(budgetItems).where(eq(budgetItems.monthlyBudgetId, budget.id));
+async function assertMemberInHousehold(householdId: string, memberId: string) {
+  const members = await getHouseholdMembers(householdId);
+  if (!members.some((m) => m.id === memberId)) {
+    throw new Error("Member does not belong to this household");
+  }
+}
+
+// A month where a person has no lines of their own shows their last month's
+// plan. The first change to such a month copies that plan in for real, so the
+// change lands on the copy and the rest of the plan stays as it was.
+async function materializeMonth(member: CurrentMember, f: ActivityFormatters, ownerMemberId: string, year: number, month: number) {
+  const { householdId } = member;
+  const [budget, plan] = await Promise.all([getOrCreateMonthlyBudget(householdId, year, month), listPlanLines(householdId, year, month)]);
+  const carried = plan.filter((l) => l.ownerMemberId === ownerMemberId && l.inherited);
+  if (carried.length === 0) return budget;
+
+  const inserted = await db
+    .insert(budgetItems)
+    .values(
+      carried.map((l) => ({
+        categoryId: l.categoryId,
+        kind: l.kind,
+        monthlyBudgetId: budget.id,
+        ownerMemberId,
+        plannedAmount: String(l.plannedAmount),
+      })),
+    )
+    .onConflictDoNothing()
+    .returning();
+  await logActivities(
+    activityActor(member),
+    inserted.map((item) => ({
+      action: "created" as const,
+      after: item,
+      entityId: item.id,
+      entityType: "budget_item" as const,
+      summary: budgetItemSummary(f, item, { month, year }),
+    })),
+  );
+  return budget;
 }
 
 export async function setBudgetItemAction(input: SetBudgetItemInput) {
@@ -48,27 +86,15 @@ export async function setBudgetItemAction(input: SetBudgetItemInput) {
   const { householdId } = member;
   const parsed = setBudgetItemSchema.parse(input);
 
-  const categories = await listCategories(householdId);
+  const [categories, f] = await Promise.all([listCategories(householdId), loadActivityFormatters(householdId)]);
   if (!categories.some((c) => c.id === parsed.categoryId)) {
     throw new Error("Category does not belong to this household");
   }
+  await assertMemberInHousehold(householdId, parsed.ownerMemberId);
 
-  if (parsed.ownerMemberId !== null) {
-    const members = await getHouseholdMembers(householdId);
-    if (!members.some((m) => m.id === parsed.ownerMemberId)) {
-      throw new Error("Member does not belong to this household");
-    }
-  }
+  const budget = await materializeMonth(member, f, parsed.ownerMemberId, parsed.year, parsed.month);
 
-  const budget = await getOrCreateMonthlyBudget(householdId, parsed.year, parsed.month);
-
-  // Each person's line is their own, so a save only ever touches this owner's
-  // line. The one exception is moving a line: editing it with a different
-  // "For" removes the old owner's line in the same transaction.
-  const movedFrom =
-    parsed.replacesOwnerMemberId !== undefined && parsed.replacesOwnerMemberId !== parsed.ownerMemberId ? parsed.replacesOwnerMemberId : undefined;
-
-  // What the log diffs against: the line being moved, or this owner's line.
+  // Only ever this person's own line: the other person's plan is theirs.
   const [before] = await db
     .select()
     .from(budgetItems)
@@ -76,86 +102,31 @@ export async function setBudgetItemAction(input: SetBudgetItemInput) {
       and(
         eq(budgetItems.monthlyBudgetId, budget.id),
         eq(budgetItems.categoryId, parsed.categoryId),
-        ownerIs(movedFrom === undefined ? parsed.ownerMemberId : movedFrom),
+        eq(budgetItems.ownerMemberId, parsed.ownerMemberId),
       ),
     );
+  const [item] = await db
+    .insert(budgetItems)
+    .values({
+      categoryId: parsed.categoryId,
+      kind: parsed.kind,
+      monthlyBudgetId: budget.id,
+      ownerMemberId: parsed.ownerMemberId,
+      plannedAmount: String(parsed.plannedAmount),
+    })
+    .onConflictDoUpdate({
+      set: { kind: parsed.kind, plannedAmount: String(parsed.plannedAmount) },
+      target: [budgetItems.monthlyBudgetId, budgetItems.categoryId, budgetItems.ownerMemberId],
+    })
+    .returning();
 
-  const item = await db.transaction(async (tx) => {
-    if (movedFrom !== undefined) {
-      await tx
-        .delete(budgetItems)
-        .where(and(eq(budgetItems.monthlyBudgetId, budget.id), eq(budgetItems.categoryId, parsed.categoryId), ownerIs(movedFrom)));
-    }
-
-    if (parsed.ownerMemberId === null) {
-      // The unique constraint on budget_items is a plain multi-column UNIQUE
-      // (monthly_budget_id, category_id, owner_member_id), not a partial unique
-      // index. Postgres never treats two NULLs as equal for uniqueness purposes,
-      // so `ON CONFLICT (monthly_budget_id, category_id, owner_member_id)` never
-      // fires when owner_member_id is NULL — two "shared" inserts for the same
-      // category/month would each succeed and create a duplicate row instead of
-      // updating in place. Verified empirically against the live DB. So for the
-      // shared (null-owner) case we must select-then-branch inside the
-      // transaction instead of relying on onConflictDoUpdate.
-      const [existing] = await tx
-        .select()
-        .from(budgetItems)
-        .where(
-          and(
-            eq(budgetItems.monthlyBudgetId, budget.id),
-            eq(budgetItems.categoryId, parsed.categoryId),
-            isNull(budgetItems.ownerMemberId),
-          ),
-        )
-        .for("update");
-
-      if (existing) {
-        const [updated] = await tx
-          .update(budgetItems)
-          .set({ plannedAmount: String(parsed.plannedAmount) })
-          .where(eq(budgetItems.id, existing.id))
-          .returning();
-        return updated;
-      }
-      const [inserted] = await tx
-        .insert(budgetItems)
-        .values({
-          monthlyBudgetId: budget.id,
-          categoryId: parsed.categoryId,
-          ownerMemberId: null,
-          plannedAmount: String(parsed.plannedAmount),
-        })
-        .returning();
-      return inserted;
-    } else {
-      // For a non-null owner, the composite unique constraint does detect
-      // conflicts correctly, so the atomic upsert is safe here.
-      const [upserted] = await tx
-        .insert(budgetItems)
-        .values({
-          monthlyBudgetId: budget.id,
-          categoryId: parsed.categoryId,
-          ownerMemberId: parsed.ownerMemberId,
-          plannedAmount: String(parsed.plannedAmount),
-        })
-        .onConflictDoUpdate({
-          target: [budgetItems.monthlyBudgetId, budgetItems.categoryId, budgetItems.ownerMemberId],
-          set: { plannedAmount: String(parsed.plannedAmount) },
-        })
-        .returning();
-      return upserted;
-    }
-  });
-
-  const itemId = item.id;
-  const f = await loadActivityFormatters(householdId);
-  const after = { categoryId: parsed.categoryId, ownerMemberId: parsed.ownerMemberId, plannedAmount: parsed.plannedAmount };
+  const after = { categoryId: parsed.categoryId, kind: parsed.kind, ownerMemberId: parsed.ownerMemberId, plannedAmount: parsed.plannedAmount };
   const summary = budgetItemSummary(f, after, { month: parsed.month, year: parsed.year });
   await logActivity(
     activityActor(member),
     before
-      ? { action: "updated", after: item, before, changes: budgetItemChanges(f, before, after), entityId: itemId, entityType: "budget_item", summary }
-      : { action: "created", after: item, before: null, entityId: itemId, entityType: "budget_item", summary },
+      ? { action: "updated", after: item, before, changes: budgetItemChanges(f, before, after), entityId: item.id, entityType: "budget_item", summary }
+      : { action: "created", after: item, before: null, entityId: item.id, entityType: "budget_item", summary },
   );
 
   revalidatePath("/budget");
@@ -166,104 +137,61 @@ export async function removeBudgetItemAction(input: RemoveBudgetItemInput) {
   const member = await getCurrentMember();
   const { householdId } = member;
   const parsed = removeBudgetItemSchema.parse(input);
+  const f = await loadActivityFormatters(householdId);
 
-  const budget = await getOrCreateMonthlyBudget(householdId, parsed.year, parsed.month);
-  const [before] = await db
+  let budget;
+  if (parsed.ownerMemberId === null) {
+    budget = await getOrCreateMonthlyBudget(householdId, parsed.year, parsed.month);
+  } else {
+    await assertMemberInHousehold(householdId, parsed.ownerMemberId);
+    budget = await materializeMonth(member, f, parsed.ownerMemberId, parsed.year, parsed.month);
+  }
+
+  const own = await db
     .select()
     .from(budgetItems)
-    .where(
-      and(
-        eq(budgetItems.monthlyBudgetId, budget.id),
-        eq(budgetItems.categoryId, parsed.categoryId),
-        ownerIs(parsed.ownerMemberId),
-      ),
-    );
+    .where(and(eq(budgetItems.monthlyBudgetId, budget.id), ownerIs(parsed.ownerMemberId)));
+  const before = own.find((l) => l.categoryId === parsed.categoryId);
   if (!before) return;
 
-  await db.delete(budgetItems).where(eq(budgetItems.id, before.id));
-
-  const f = await loadActivityFormatters(householdId);
-  await logActivity(activityActor(member), {
-    action: "deleted",
-    before,
-    entityId: before.id,
-    entityType: "budget_item",
-    summary: budgetItemSummary(f, before, { month: parsed.month, year: parsed.year }),
-  });
-
-  revalidatePath("/budget");
-  revalidatePath("/dashboard");
-}
-
-function previousMonth(year: number, month: number) {
-  return month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
-}
-
-// Non-destructive: only fills in categories/owners that don't already have a
-// budget_items row for the target month, so re-running this (or copying into
-// a month you've already partly filled out) never clobbers anything.
-export async function copyPreviousMonthBudgetAction(year: number, month: number) {
-  const member = await getCurrentMember();
-  const { householdId } = member;
-  const prev = previousMonth(year, month);
-
-  const [prevBudget] = await db
-    .select()
-    .from(monthlyBudgets)
-    .where(and(eq(monthlyBudgets.householdId, householdId), eq(monthlyBudgets.year, prev.year), eq(monthlyBudgets.month, prev.month)));
-  if (!prevBudget) {
-    revalidatePath("/budget");
-    return;
-  }
-
-  const prevItems = await db.select().from(budgetItems).where(eq(budgetItems.monthlyBudgetId, prevBudget.id));
-  if (prevItems.length === 0) {
-    revalidatePath("/budget");
-    return;
-  }
-
-  const budget = await getOrCreateMonthlyBudget(householdId, year, month);
-  const existingItems = await db.select().from(budgetItems).where(eq(budgetItems.monthlyBudgetId, budget.id));
-  const existingKeys = new Set(existingItems.map((i) => `${i.categoryId}::${i.ownerMemberId ?? "shared"}`));
-
-  const toInsert = prevItems
-    .filter((i) => !existingKeys.has(`${i.categoryId}::${i.ownerMemberId ?? "shared"}`))
-    .map((i) => ({
-      categoryId: i.categoryId,
-      monthlyBudgetId: budget.id,
-      ownerMemberId: i.ownerMemberId,
-      plannedAmount: i.plannedAmount,
-    }));
-
-  if (toInsert.length > 0) {
-    const inserted = await db.insert(budgetItems).values(toInsert).returning();
-    const f = await loadActivityFormatters(householdId);
-    await logActivities(
-      activityActor(member),
-      inserted.map((item) => ({
-        action: "created" as const,
-        after: item,
-        entityId: item.id,
-        entityType: "budget_item" as const,
-        summary: budgetItemSummary(f, item, { month, year }),
-      })),
-    );
+  const summary = budgetItemSummary(f, before, { month: parsed.month, year: parsed.year });
+  if (parsed.ownerMemberId !== null && own.length === 1) {
+    // Removing a person's last line would leave the month empty, and an empty
+    // month shows the previous month's plan again. Keep it at zero instead.
+    const [after] = await db.update(budgetItems).set({ plannedAmount: "0" }).where(eq(budgetItems.id, before.id)).returning();
+    await logActivity(activityActor(member), {
+      action: "updated",
+      after,
+      before,
+      changes: budgetItemChanges(f, before, after),
+      entityId: before.id,
+      entityType: "budget_item",
+      summary,
+    });
+  } else {
+    await db.delete(budgetItems).where(eq(budgetItems.id, before.id));
+    await logActivity(activityActor(member), { action: "deleted", before, entityId: before.id, entityType: "budget_item", summary });
   }
 
   revalidatePath("/budget");
   revalidatePath("/dashboard");
 }
 
-// Adds a budget line for each category and owner with recurring bills due this
-// month. Lines that already exist are left alone, the same as copying last
-// month. Returns how many lines it added.
-export async function fillBudgetFromRecurringAction(year: number, month: number): Promise<number> {
+// Adds a line to one person's plan for each category with their recurring
+// bills due this month. Lines they already have are left alone. Returns how
+// many lines it added.
+export async function fillBudgetFromRecurringAction(year: number, month: number, ownerMemberId: string): Promise<number> {
   const member = await getCurrentMember();
   const { householdId } = member;
+  await assertMemberInHousehold(householdId, ownerMemberId);
   const dateFormat = await getDateFormatPref(householdId);
   const period = resolvePeriod(year, month, dateFormat);
 
-  const bills = await db.select().from(recurringExpenses).where(eq(recurringExpenses.householdId, householdId));
+  // A person's plan only takes their own bills.
+  const bills = await db
+    .select()
+    .from(recurringExpenses)
+    .where(and(eq(recurringExpenses.householdId, householdId), eq(recurringExpenses.ownerMemberId, ownerMemberId)));
   const lines = recurringBudgetLines(
     bills.map((b) => ({
       amount: Number(b.amount),
@@ -277,21 +205,25 @@ export async function fillBudgetFromRecurringAction(year: number, month: number)
   );
   if (lines.length === 0) return 0;
 
-  const budget = await getOrCreateMonthlyBudget(householdId, year, month);
-  const existingItems = await db.select().from(budgetItems).where(eq(budgetItems.monthlyBudgetId, budget.id));
-  const existingKeys = new Set(existingItems.map((i) => `${i.categoryId}::${i.ownerMemberId ?? "shared"}`));
+  const f = await loadActivityFormatters(householdId);
+  const budget = await materializeMonth(member, f, ownerMemberId, year, month);
+  const existing = await db
+    .select()
+    .from(budgetItems)
+    .where(and(eq(budgetItems.monthlyBudgetId, budget.id), eq(budgetItems.ownerMemberId, ownerMemberId)));
+  const existingCategoryIds = new Set(existing.map((i) => i.categoryId));
   const toInsert = lines
-    .filter((line) => !existingKeys.has(`${line.categoryId}::${line.ownerMemberId ?? "shared"}`))
+    .filter((line) => !existingCategoryIds.has(line.categoryId))
     .map((line) => ({
       categoryId: line.categoryId,
+      kind: "fixed" as const,
       monthlyBudgetId: budget.id,
-      ownerMemberId: line.ownerMemberId,
+      ownerMemberId,
       plannedAmount: String(line.plannedAmount),
     }));
 
   if (toInsert.length > 0) {
     const inserted = await db.insert(budgetItems).values(toInsert).returning();
-    const f = await loadActivityFormatters(householdId);
     await logActivities(
       activityActor(member),
       inserted.map((item) => ({

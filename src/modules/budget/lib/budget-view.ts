@@ -1,107 +1,94 @@
 import { formatMoney } from "@/lib/money";
-import type { MemberRole } from "@/modules/expenses/lib/member-tone";
 
-// Pure view logic for the Budget page: the per-owner groups (budgeted rows +
-// "without a budget" spend), the headline figures, and the lead sentence.
+import { type BudgetLineKind, kindOf, LINE_KINDS } from "./plan-lines";
 
-export type BudgetViewRow = {
-  budgetType: "fixed" | "flexible";
+// Pure view logic for the Budget page: one person's plan (their lines grouped
+// by kind, plus spending outside any line), the headline figures and the
+// lead sentence.
+
+export type PlanRow = {
   categoryId: string;
   categoryName: string;
+  inherited: boolean;
+  kind: BudgetLineKind;
   planned: number;
   spent: number;
 };
 
+export type KindGroup = { kind: BudgetLineKind; label: string; planned: number; rows: PlanRow[]; spent: number };
+
 export type UnbudgetedRow = { categoryId: string; categoryName: string; spent: number };
 
-export type BudgetOwnerGroup = {
+export type PersonPlan = {
   budgeted: number;
-  key: MemberRole;
-  name: string;
-  rows: BudgetViewRow[];
-  spent: number;
+  groups: KindGroup[];
+  spentInLines: number;
   totalSpent: number;
   unbudgeted: UnbudgetedRow[];
   unbudgetedTotal: number;
 };
 
-type ItemInput = { categoryId: string; ownerMemberId: null | string; plannedAmount: number | string };
-type ExpenseInput = { amount: number | string; categoryId: string; ownerMemberId: null | string };
 type CategoryInput = { budgetType: "fixed" | "flexible"; id: string; name: string };
+type LineInput = { categoryId: string; inherited: boolean; kind: BudgetLineKind | null; plannedAmount: number };
+type SpendInput = { amount: number; categoryId: string };
 
-function merged(
-  budgetItems: ItemInput[],
-  expenses: ExpenseInput[],
-): Map<string, { planned: number; spent: number }> {
-  const map = new Map<string, { planned: number; spent: number }>();
-  const key = (categoryId: string, ownerMemberId: null | string) => `${categoryId}::${ownerMemberId ?? "shared"}`;
-  const at = (k: string) => {
-    const existing = map.get(k);
-    if (existing) return existing;
-    const created = { planned: 0, spent: 0 };
-    map.set(k, created);
-    return created;
+const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
+
+// `lines` and `spending` are one person's: their plan lines, and the part of
+// each expense that came out of their own wallet.
+export function buildPersonPlan(input: { categories: CategoryInput[]; lines: LineInput[]; spending: SpendInput[] }): PersonPlan {
+  const categoryById = new Map(input.categories.map((c) => [c.id, c]));
+  const spentByCategory = new Map<string, number>();
+  for (const s of input.spending) spentByCategory.set(s.categoryId, (spentByCategory.get(s.categoryId) ?? 0) + s.amount);
+
+  const rows: PlanRow[] = input.lines.flatMap((line) => {
+    const category = categoryById.get(line.categoryId);
+    if (!category || line.plannedAmount <= 0) return [];
+    return [
+      {
+        categoryId: line.categoryId,
+        categoryName: category.name,
+        inherited: line.inherited,
+        kind: kindOf(line.kind, category.budgetType),
+        planned: line.plannedAmount,
+        spent: spentByCategory.get(line.categoryId) ?? 0,
+      },
+    ];
+  });
+
+  const groups = LINE_KINDS.flatMap(({ label, value }) => {
+    const kindRows = rows.filter((r) => r.kind === value).sort((a, b) => b.spent / b.planned - a.spent / a.planned);
+    if (kindRows.length === 0) return [];
+    return [{ kind: value, label, planned: sum(kindRows.map((r) => r.planned)), rows: kindRows, spent: sum(kindRows.map((r) => r.spent)) }];
+  });
+
+  const planned = new Set(rows.map((r) => r.categoryId));
+  const unbudgeted = [...spentByCategory]
+    .filter(([categoryId, spent]) => !planned.has(categoryId) && spent > 0)
+    .map(([categoryId, spent]) => ({ categoryId, categoryName: categoryById.get(categoryId)?.name ?? "Unknown", spent }))
+    .sort((a, b) => b.spent - a.spent);
+
+  const spentInLines = sum(rows.map((r) => r.spent));
+  const unbudgetedTotal = sum(unbudgeted.map((r) => r.spent));
+  return {
+    budgeted: sum(rows.map((r) => r.planned)),
+    groups,
+    spentInLines,
+    totalSpent: spentInLines + unbudgetedTotal,
+    unbudgeted,
+    unbudgetedTotal,
   };
-
-  for (const item of budgetItems) at(key(item.categoryId, item.ownerMemberId)).planned += Number(item.plannedAmount);
-  for (const expense of expenses) at(key(expense.categoryId, expense.ownerMemberId)).spent += Number(expense.amount);
-  return map;
 }
 
-export function buildBudgetGroups(input: {
-  budgetItems: ItemInput[];
-  categories: CategoryInput[];
-  expenses: ExpenseInput[];
-  meId: string;
-  partnerId: null | string;
-  partnerName: null | string;
-}): BudgetOwnerGroup[] {
-  const { budgetItems, categories, expenses, meId, partnerId, partnerName } = input;
-  const categoryById = new Map(categories.map((c) => [c.id, c]));
-  const combined = merged(budgetItems, expenses);
+// Lines set for both people before plans were per person. Spending now counts
+// against whoever paid, so these only show what was planned.
+export type SharedRow = { categoryId: string; categoryName: string; planned: number };
 
-  const buckets: Record<MemberRole, BudgetViewRow[]> = { me: [], partner: [], shared: [] };
-  const unbuckets: Record<MemberRole, UnbudgetedRow[]> = { me: [], partner: [], shared: [] };
-
-  for (const [composite, totals] of combined) {
-    const [categoryId, ownerKey] = composite.split("::");
-    const category = categoryById.get(categoryId);
-    if (!category) continue;
-    const role = ownerKey === "shared" ? "shared" : ownerKey === meId ? "me" : "partner";
-    if (totals.planned > 0) {
-      buckets[role].push({
-        budgetType: category.budgetType,
-        categoryId,
-        categoryName: category.name,
-        planned: totals.planned,
-        spent: totals.spent,
-      });
-    } else if (totals.spent > 0) {
-      unbuckets[role].push({ categoryId, categoryName: category.name, spent: totals.spent });
-    }
-  }
-
-  const base: { key: MemberRole; name: string }[] = [
-    { key: "me", name: "Me" },
-    ...(partnerId ? [{ key: "partner" as const, name: partnerName ?? "Partner" }] : []),
-    { key: "shared", name: "Shared" },
-  ];
-
-  return base.map(({ key, name }) => {
-    const rows = [...buckets[key]].sort((a, b) => b.spent / b.planned - a.spent / a.planned);
-    const unbudgeted = [...unbuckets[key]].sort((a, b) => b.spent - a.spent);
-    const spent = rows.reduce((sum, row) => sum + row.spent, 0);
-    const unbudgetedTotal = unbudgeted.reduce((sum, row) => sum + row.spent, 0);
-    return {
-      budgeted: rows.reduce((sum, row) => sum + row.planned, 0),
-      key,
-      name,
-      rows,
-      spent,
-      totalSpent: spent + unbudgetedTotal,
-      unbudgeted,
-      unbudgetedTotal,
-    };
+export function sharedRows(lines: { categoryId: string; ownerMemberId: null | string; plannedAmount: number }[], categories: CategoryInput[]): SharedRow[] {
+  return lines.flatMap((line) => {
+    const category = categories.find((c) => c.id === line.categoryId);
+    if (line.ownerMemberId !== null || !category || line.plannedAmount <= 0) return [];
+    return [{ categoryId: line.categoryId, categoryName: category.name, planned: line.plannedAmount }];
   });
 }
 
@@ -135,8 +122,8 @@ export function buildBudgetLead(input: {
   return { outside: `${share(outside, allSpent)}%`, planned: `${share(budgeted, income)}%`, rest, strong };
 }
 
-export function overBudgetRows(groups: BudgetOwnerGroup[]): { categoryName: string; over: number }[] {
-  return groups
+export function overBudgetRows(plan: PersonPlan): { categoryName: string; over: number }[] {
+  return plan.groups
     .flatMap((group) => group.rows)
     .filter((row) => row.spent > row.planned)
     .map((row) => ({ categoryName: row.categoryName, over: row.spent - row.planned }));

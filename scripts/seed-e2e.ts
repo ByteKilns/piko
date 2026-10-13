@@ -173,17 +173,17 @@ async function main() {
   const oldest = months[0];
 
   // A small plan for the current month so the dashboard hero (weekly pacing)
-  // and the budget page have something to render. Groceries is shared and
-  // flexible; the rest sit with one member.
+  // and the budget page have something to render. Each person plans their
+  // own money: one line of each kind for member 1, a can-cut line for member 2.
   const [currentBudget] = await db
     .insert(monthlyBudgets)
     .values({ householdId: household.id, month: current.month, year: current.year })
     .returning();
   await db.insert(budgetItems).values([
-    { categoryId: idOf("Groceries"), monthlyBudgetId: currentBudget.id, ownerMemberId: null, plannedAmount: "15000" },
-    { categoryId: idOf("Dining Out"), monthlyBudgetId: currentBudget.id, ownerMemberId: m1.id, plannedAmount: "6000" },
-    { categoryId: idOf("Entertainment"), monthlyBudgetId: currentBudget.id, ownerMemberId: m2.id, plannedAmount: "4000" },
-    { categoryId: idOf("EMI"), monthlyBudgetId: currentBudget.id, ownerMemberId: m1.id, plannedAmount: "8000" },
+    { categoryId: idOf("Groceries"), kind: "essential", monthlyBudgetId: currentBudget.id, ownerMemberId: m1.id, plannedAmount: "15000" },
+    { categoryId: idOf("Dining Out"), kind: "can_cut", monthlyBudgetId: currentBudget.id, ownerMemberId: m1.id, plannedAmount: "6000" },
+    { categoryId: idOf("Entertainment"), kind: "can_cut", monthlyBudgetId: currentBudget.id, ownerMemberId: m2.id, plannedAmount: "4000" },
+    { categoryId: idOf("EMI"), kind: "fixed", monthlyBudgetId: currentBudget.id, ownerMemberId: m1.id, plannedAmount: "8000" },
   ]);
 
   // Current-month income and spending so the dashboard, budget and reports

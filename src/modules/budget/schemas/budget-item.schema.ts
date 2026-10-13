@@ -4,11 +4,10 @@ export const setBudgetItemSchema = z.object({
   year: z.number().int(),
   month: z.number().int().min(1).max(12),
   categoryId: z.string().uuid(),
-  ownerMemberId: z.string().uuid().nullable(),
+  // Each person plans their own money, so a new line always has an owner.
+  ownerMemberId: z.string().uuid(),
   plannedAmount: z.number().nonnegative(),
-  // When editing an existing line: whose line it was. If it differs from
-  // ownerMemberId, the line moves to the new owner.
-  replacesOwnerMemberId: z.string().uuid().nullable().optional(),
+  kind: z.enum(["fixed", "essential", "can_cut"]),
 });
 
 export type SetBudgetItemInput = z.infer<typeof setBudgetItemSchema>;
@@ -17,6 +16,7 @@ export const removeBudgetItemSchema = z.object({
   year: z.number().int(),
   month: z.number().int().min(1).max(12),
   categoryId: z.string().uuid(),
+  // null removes an old shared line.
   ownerMemberId: z.string().uuid().nullable(),
 });
 

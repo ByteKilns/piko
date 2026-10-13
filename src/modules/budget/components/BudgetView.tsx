@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from "react";
 
-import { ChevronRight, Copy, Plus, Repeat } from "lucide-react";
+import { ChevronRight, Plus, Repeat } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -17,10 +17,11 @@ import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
 import type { MonthNavModel } from "@/lib/month-nav";
 import { cn } from "@/lib/utils";
-import { copyPreviousMonthBudgetAction, fillBudgetFromRecurringAction } from "@/modules/budget/api/budget.actions";
-import { BudgetDialog, type BudgetDraft, type BudgetOwnerKey } from "@/modules/budget/components/BudgetDialog";
+import { fillBudgetFromRecurringAction } from "@/modules/budget/api/budget.actions";
+import { BudgetDialog, type BudgetDraft } from "@/modules/budget/components/BudgetDialog";
 import { SetIncomeDialog } from "@/modules/budget/components/SetIncomeDialog";
-import type { BudgetLead, BudgetOwnerGroup } from "@/modules/budget/lib/budget-view";
+import type { BudgetLead, PersonPlan, PlanRow, SharedRow } from "@/modules/budget/lib/budget-view";
+import type { BudgetLineKind } from "@/modules/budget/lib/plan-lines";
 
 type Category = { budgetType: "fixed" | "flexible"; groupName: string; id: string; name: string };
 type Member = { id: string; name: string };
@@ -37,25 +38,34 @@ type LedgerFigures = {
   unplannedSub: string;
 };
 
-type Props = {
-  canCopy: boolean;
-  categories: Category[];
-  currentMemberId: string;
-  groups: BudgetOwnerGroup[];
-  income: number;
-  incomes: Record<string, number>;
+export type PersonView = {
+  // Set when this month shows a plan carried over from an earlier month.
+  carriedFrom: null | string;
+  key: "me" | "partner";
+  lastKinds: Record<string, BudgetLineKind>;
   lead: BudgetLead;
   ledger: LedgerFigures;
+  memberId: string;
+  name: string;
+  plan: PersonPlan;
+  savings: { planned: number; pots: { id: string; name: string; planned: number; putIn: number }[]; putIn: number };
+  spentByCategory: Record<string, number>;
+};
+
+type Props = {
+  categories: Category[];
+  currentMemberId: string;
+  incomes: Record<string, number>;
   members: Member[];
   month: number;
+  monthLabel: string;
   monthNav: MonthNavModel;
-  prevMonthName: string;
-  savings: { planned: number; pots: { id: string; name: string; planned: number; putIn: number }[]; putIn: number };
-  spentByKey: Record<string, number>;
+  people: PersonView[];
+  shared: SharedRow[];
   year: number;
 };
 
-type Tab = "all" | BudgetOwnerKey;
+type Tab = "me" | "partner" | "shared";
 
 const COLUMNS: RowColumns = {
   lg: "minmax(170px,1.6fr) repeat(3,minmax(0,0.85fr)) minmax(140px,1.2fr)",
@@ -69,64 +79,33 @@ function pct(ratio: number) {
 }
 
 export function BudgetView(props: Props) {
-  const { currentMemberId, groups, members } = props;
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("all");
-  const [openUnbudgeted, setOpenUnbudgeted] = useState<Partial<Record<BudgetOwnerKey, boolean>>>({});
-  const [dialog, setDialog] = useState<{ defaultCategoryId?: string; initial?: BudgetDraft; open: boolean; ownerKey: BudgetOwnerKey }>({
-    open: false,
-    ownerKey: "me",
-  });
+  const [tab, setTab] = useState<Tab>("me");
+  const [openUnbudgeted, setOpenUnbudgeted] = useState(false);
+  const [dialog, setDialog] = useState<{ defaultCategoryId?: string; initial?: BudgetDraft; open: boolean }>({ open: false });
   const [incomeOpen, setIncomeOpen] = useState(false);
-  const [copyPending, setCopyPending] = useState(false);
   const [fillPending, setFillPending] = useState(false);
 
-  const me = members.find((m) => m.id === currentMemberId);
-  const partner = members.find((m) => m.id !== currentMemberId) ?? null;
-  const people: Record<"me" | "partner", MonogramPerson> = {
-    me: { name: me?.name ?? "Me", role: "me" },
-    partner: { name: partner?.name ?? "Partner", role: "partner" },
-  };
-  const monograms = (key: BudgetOwnerKey): MonogramPerson[] => {
-    if (key === "shared") return partner ? [people.me, people.partner] : [people.me];
-    return [people[key]];
-  };
-
-  const visible = groups.filter((group) => tab === "all" || tab === group.key);
+  const person = tab === "shared" ? null : (props.people.find((p) => p.key === tab) ?? props.people[0]);
+  const monogram = (p: PersonView): MonogramPerson[] => [{ name: p.name, role: p.key }];
 
   function openNew() {
-    setDialog({ open: true, ownerKey: tab === "all" ? "me" : tab });
+    setDialog({ open: true });
   }
 
-  function openRow(group: BudgetOwnerGroup, row: BudgetOwnerGroup["rows"][number]) {
-    setDialog({
-      initial: { budgetType: row.budgetType, categoryId: row.categoryId, ownerKey: group.key, planned: row.planned },
-      open: true,
-      ownerKey: group.key,
-    });
+  function openRow(row: PlanRow) {
+    setDialog({ initial: { categoryId: row.categoryId, kind: row.kind, planned: row.planned }, open: true });
   }
 
-  function openCategory(key: BudgetOwnerKey, categoryId: string) {
-    setDialog({ defaultCategoryId: categoryId, open: true, ownerKey: key });
-  }
-
-  async function copy() {
-    setCopyPending(true);
-    try {
-      await copyPreviousMonthBudgetAction(props.year, props.month);
-      toast.success("Copied last month's budget");
-      router.refresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to copy");
-    } finally {
-      setCopyPending(false);
-    }
+  function openCategory(categoryId: string) {
+    setDialog({ defaultCategoryId: categoryId, open: true });
   }
 
   async function fillFromRecurring() {
+    if (!person) return;
     setFillPending(true);
     try {
-      const added = await fillBudgetFromRecurringAction(props.year, props.month);
+      const added = await fillBudgetFromRecurringAction(props.year, props.month, person.memberId);
       toast.success(added > 0 ? `Added ${added} ${added === 1 ? "line" : "lines"} from recurring bills` : "Nothing new to add from recurring bills");
       router.refresh();
     } catch (err) {
@@ -136,23 +115,28 @@ export function BudgetView(props: Props) {
     }
   }
 
+  const tabs = [
+    ...props.people.map((p) => ({ label: p.key === "me" ? "Me" : p.name, value: p.key })),
+    ...(props.shared.length > 0 ? [{ label: "Shared", value: "shared" as const }] : []),
+  ];
+
   return (
     <div>
       <PageHeader
         actions={
           <>
-            <Button disabled={fillPending} onClick={() => void fillFromRecurring()} variant="ghost">
-              <Repeat />
-              Fill from recurring
-            </Button>
-            <Button disabled={!props.canCopy || copyPending} onClick={() => void copy()} variant="ghost">
-              <Copy />
-              Copy {props.prevMonthName}&apos;s budget
-            </Button>
-            <Button className="h-9.5" onClick={openNew} variant="outline">
-              <Plus />
-              Add budget
-            </Button>
+            {person && (
+              <>
+                <Button disabled={fillPending} onClick={() => void fillFromRecurring()} variant="ghost">
+                  <Repeat />
+                  Fill from recurring
+                </Button>
+                <Button className="h-9.5" onClick={openNew} variant="outline">
+                  <Plus />
+                  Add budget
+                </Button>
+              </>
+            )}
             <Button onClick={() => setIncomeOpen(true)} variant="ghost">
               Set income
             </Button>
@@ -162,46 +146,50 @@ export function BudgetView(props: Props) {
         title="Budget"
       />
 
-      <p className="mb-6.5 max-w-[60ch] text-xl leading-[1.45] tracking-[-0.005em] text-n-800 text-pretty">
-        You&apos;ve planned <strong className="text-ink">{props.lead.planned} of this month&apos;s income</strong>, yet{" "}
-        <strong className="text-ink">{props.lead.outside} of spending</strong> happened outside a budget.{" "}
-        <strong className="text-ink">{props.lead.strong}</strong>
-        {props.lead.rest}
-      </p>
+      {person && (
+        <>
+          <p className="mb-6.5 max-w-[60ch] text-xl leading-[1.45] tracking-[-0.005em] text-n-800 text-pretty">
+            {person.key === "me" ? "You've" : `${person.name} has`} planned{" "}
+            <strong className="text-ink">{person.lead.planned} of this month&apos;s income</strong>, yet{" "}
+            <strong className="text-ink">{person.lead.outside} of spending</strong> happened outside a budget.{" "}
+            <strong className="text-ink">{person.lead.strong}</strong>
+            {person.lead.rest}
+          </p>
 
-      <Ledger>
-        <LedgerCell
-          bar={<Meter ratio={props.ledger.budgetedRatio} />}
-          label="Budgeted"
-          lead
-          note={props.ledger.budgetedSub}
-        >
-          <Money size="lead" value={props.ledger.budgeted} />
-        </LedgerCell>
-        <LedgerCell label="Spent in budgets" note={props.ledger.spentInSub}>
-          <Money size="cell" value={props.ledger.spentIn} />
-        </LedgerCell>
-        <LedgerCell label="Spent outside" note={props.ledger.outsideSub}>
-          <Money size="cell" value={props.ledger.outside} />
-        </LedgerCell>
-        <LedgerCell label="Left to plan" note={props.ledger.unplannedSub}>
-          <Money size="cell" value={props.ledger.unplanned} />
-        </LedgerCell>
-      </Ledger>
+          <Ledger>
+            <LedgerCell bar={<Meter ratio={person.ledger.budgetedRatio} />} label="Budgeted" lead note={person.ledger.budgetedSub}>
+              <Money size="lead" value={person.ledger.budgeted} />
+            </LedgerCell>
+            <LedgerCell label="Spent in budgets" note={person.ledger.spentInSub}>
+              <Money size="cell" value={person.ledger.spentIn} />
+            </LedgerCell>
+            <LedgerCell label="Spent outside" note={person.ledger.outsideSub}>
+              <Money size="cell" value={person.ledger.outside} />
+            </LedgerCell>
+            <LedgerCell
+              label="Left to plan"
+              note={<span className={cn(person.ledger.unplanned < 0 && "text-signal-ink")}>{person.ledger.unplannedSub}</span>}
+            >
+              <Money size="cell" tone={person.ledger.unplanned < 0 ? "negative" : "default"} value={person.ledger.unplanned} />
+            </LedgerCell>
+          </Ledger>
+        </>
+      )}
 
       <LineTabs
-        aside="Click a row to change its budget"
+        aside={person ? "Click a row to change its budget" : undefined}
         className="mt-5.5 mb-6.5"
-        label="Owner"
+        label="Whose plan"
         onChange={(value) => setTab(value)}
-        tabs={[
-          { label: "All", value: "all" },
-          { label: "Me", value: "me" },
-          ...(partner ? [{ label: partner.name, value: "partner" as const }] : []),
-          { label: "Shared", value: "shared" },
-        ]}
+        tabs={tabs}
         value={tab}
       />
+
+      {person?.carriedFrom && (
+        <p className="mb-4 text-[13px] text-n-700">
+          Carried over from {person.carriedFrom}. Changing a line makes this month&apos;s plan its own.
+        </p>
+      )}
 
       <RowsHeader columns={COLUMNS}>
         <span>Category</span>
@@ -211,143 +199,37 @@ export function BudgetView(props: Props) {
         <span>Used</span>
       </RowsHeader>
 
-      {visible.map((group, index) => {
-        const usedRatio = group.budgeted > 0 ? group.spent / group.budgeted : 0;
-        const left = group.budgeted - group.spent;
-        const open = openUnbudgeted[group.key] ?? false;
-        const shown = group.unbudgeted.slice(0, SHOWN_UNBUDGETED);
-        const moreCount = group.unbudgeted.length - shown.length;
-        const moreTotal = group.unbudgeted.slice(SHOWN_UNBUDGETED).reduce((sum, row) => sum + row.spent, 0);
-        const preview = `${shown.map((row) => row.categoryName).join(", ")}${moreCount > 0 ? ` and ${moreCount} more` : ""}`;
-        const sub =
-          group.rows.length > 0
-            ? `${group.rows.length} ${group.rows.length === 1 ? "budget" : "budgets"} · Rs ${formatMoney(group.totalSpent, { currency: false })} spent in all`
-            : `No budgets yet · Rs ${formatMoney(group.totalSpent, { currency: false })} spent`;
+      {person && <PersonRows monogram={monogram(person)} onCategory={openCategory} onNew={openNew} onRow={openRow} openUnbudgeted={openUnbudgeted} person={person} setOpenUnbudgeted={setOpenUnbudgeted} />}
 
-        return (
-          <Fragment key={group.key}>
-            <RowGroupHead columns={COLUMNS} first={index === 0}>
-              <div className="flex min-w-0 items-center gap-2.5">
-                <Monogram people={monograms(group.key)} />
-                <span className="text-[15px] font-semibold whitespace-nowrap">{group.name}</span>
-                <span className="truncate text-[13px] text-n-600">{sub}</span>
+      {tab === "shared" && (
+        <>
+          <RowGroupHead columns={COLUMNS} first>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="text-[15px] font-semibold whitespace-nowrap">Shared</span>
+              <span className="truncate text-[13px] text-n-600">From before plans were per person. Spending now counts against whoever paid.</span>
+            </div>
+            <div className="text-right text-[15px] font-semibold">
+              <Money value={props.shared.reduce((sum, row) => sum + row.planned, 0)} />
+            </div>
+            <div />
+            <div />
+            <div />
+          </RowGroupHead>
+          {props.shared.map((row) => (
+            <Row columns={COLUMNS} key={row.categoryId}>
+              <span className="truncate text-[15px] whitespace-nowrap">{row.categoryName}</span>
+              <div className="text-right text-[15px]">
+                <Money value={row.planned} />
               </div>
-              {group.rows.length > 0 ? (
-                <>
-                  <div className="text-right text-[15px] font-semibold">
-                    <Money value={group.budgeted} />
-                  </div>
-                  <div className="text-right text-[15px] font-semibold">
-                    <Money value={group.spent} />
-                  </div>
-                  <div className={cn("text-right text-[15px] font-semibold", left < 0 && "text-signal-ink")}>
-                    <Money tone={left < 0 ? "negative" : "default"} value={left} />
-                  </div>
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <Meter className="flex-1" ratio={usedRatio} />
-                    <span className={cn("w-10.5 text-right text-[13px] font-semibold", usedRatio > 1 ? "text-signal-ink" : "text-ink")}>
-                      {pct(usedRatio)}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <div className="col-span-4 flex justify-end">
-                  <Button className="h-auto px-1.5 py-0.75 text-[13px]" onClick={openNew} type="button" variant="ghost">
-                    <Plus />
-                    Set a budget
-                  </Button>
-                </div>
-              )}
-            </RowGroupHead>
+              <div className="text-right text-[15px] text-n-500">—</div>
+              <div className="text-right text-[15px] text-n-500">—</div>
+              <div />
+            </Row>
+          ))}
+        </>
+      )}
 
-            {group.rows.map((row) => {
-              const rowRatio = row.planned > 0 ? row.spent / row.planned : 0;
-              const rowLeft = row.planned - row.spent;
-              return (
-                <Row columns={COLUMNS} key={row.categoryId} onClick={() => openRow(group, row)}>
-                  <div className="flex min-w-0 items-baseline gap-2.5">
-                    <span className="truncate text-[15px] whitespace-nowrap">{row.categoryName}</span>
-                    <span className="shrink-0 text-xs text-n-600">{row.budgetType === "fixed" ? "Fixed" : "Flexible"}</span>
-                  </div>
-                  <div className="text-right text-[15px]">
-                    <Money value={row.planned} />
-                  </div>
-                  <div className="text-right text-[15px]">
-                    <Money value={row.spent} />
-                  </div>
-                  <div className={cn("text-right text-[15px] font-semibold", rowLeft < 0 && "text-signal-ink")}>
-                    <Money tone={rowLeft < 0 ? "negative" : "default"} value={rowLeft} />
-                  </div>
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <Meter className="flex-1" ratio={rowRatio} />
-                    <span className={cn("w-10.5 text-right text-[13px]", rowRatio > 1 ? "text-signal-ink" : "text-n-700")}>
-                      {pct(rowRatio)}
-                    </span>
-                  </div>
-                </Row>
-              );
-            })}
-
-            {group.unbudgeted.length > 0 && (
-              <>
-                <Row
-                  columns={COLUMNS}
-                  onClick={() => setOpenUnbudgeted((prev) => ({ ...prev, [group.key]: !open }))}
-                >
-                  <div className="col-span-2 flex min-w-0 items-center gap-2">
-                    <ChevronRight aria-hidden className={cn("size-3.5 shrink-0 text-n-600 transition-transform", open && "rotate-90")} />
-                    <span className="shrink-0 text-sm text-n-800">Without a budget</span>
-                    <span className="truncate text-[13px] text-n-600">{preview}</span>
-                  </div>
-                  <div className="text-right text-[15px]">
-                    <Money value={group.unbudgetedTotal} />
-                  </div>
-                  <div />
-                  <div className="text-[13px] text-n-600">
-                    {group.unbudgeted.length} {group.unbudgeted.length === 1 ? "category" : "categories"}
-                  </div>
-                </Row>
-
-                {open &&
-                  shown.map((row) => (
-                    <Row className="bg-ink/3" columns={COLUMNS} key={row.categoryId}>
-                      <div className="col-span-2 truncate pl-5.5 text-sm text-n-800">{row.categoryName}</div>
-                      <div className="text-right text-sm">
-                        <Money value={row.spent} />
-                      </div>
-                      <div />
-                      <div className="flex">
-                        <Button
-                          className="h-auto px-1.5 py-0.5 text-[13px]"
-                          onClick={() => void openCategory(group.key, row.categoryId)}
-                          type="button"
-                          variant="ghost"
-                        >
-                          Set budget
-                        </Button>
-                      </div>
-                    </Row>
-                  ))}
-
-                {open && moreCount > 0 && (
-                  <Row className="bg-ink/3" columns={COLUMNS}>
-                    <div className="col-span-2 truncate pl-5.5 text-sm text-n-800">
-                      {moreCount} more {moreCount === 1 ? "category" : "categories"}
-                    </div>
-                    <div className="text-right text-sm">
-                      <Money value={moreTotal} />
-                    </div>
-                    <div />
-                    <div />
-                  </Row>
-                )}
-              </>
-            )}
-          </Fragment>
-        );
-      })}
-
-      {tab === "all" && props.savings.pots.length > 0 && (
+      {person && person.savings.pots.length > 0 && (
         <>
           <RowGroupHead columns={COLUMNS}>
             <div className="flex min-w-0 items-center gap-2.5">
@@ -355,22 +237,22 @@ export function BudgetView(props: Props) {
               <span className="truncate text-[13px] text-n-600">Planned against put in this month</span>
             </div>
             <div className="text-right text-[15px] font-semibold">
-              <Money value={props.savings.planned} />
+              <Money value={person.savings.planned} />
             </div>
             <div className="text-right text-[15px] font-semibold">
-              <Money value={props.savings.putIn} />
+              <Money value={person.savings.putIn} />
             </div>
             <div className="text-right text-[15px] font-semibold">
-              <Money value={Math.max(0, props.savings.planned - props.savings.putIn)} />
+              <Money value={Math.max(0, person.savings.planned - person.savings.putIn)} />
             </div>
             <div className="flex min-w-0 items-center gap-2.5">
-              <Meter className="flex-1" ratio={props.savings.planned > 0 ? Math.min(1, props.savings.putIn / props.savings.planned) : 0} />
+              <Meter className="flex-1" ratio={person.savings.planned > 0 ? Math.min(1, person.savings.putIn / person.savings.planned) : 0} />
               <span className="w-10.5 text-right text-[13px] font-semibold text-ink">
-                {pct(props.savings.planned > 0 ? props.savings.putIn / props.savings.planned : 0)}
+                {pct(person.savings.planned > 0 ? person.savings.putIn / person.savings.planned : 0)}
               </span>
             </div>
           </RowGroupHead>
-          {props.savings.pots.map((pot) => (
+          {person.savings.pots.map((pot) => (
             <Row columns={COLUMNS} key={pot.id}>
               <span className="truncate text-[15px] whitespace-nowrap">{pot.name}</span>
               <div className="text-right text-[15px]">
@@ -391,30 +273,177 @@ export function BudgetView(props: Props) {
         </>
       )}
 
-      <BudgetDialog
-        categories={props.categories}
-        currentMemberId={currentMemberId}
-        defaultCategoryId={dialog.defaultCategoryId}
-        initial={dialog.initial}
-        members={members}
-        month={props.month}
-        onOpenChange={(value) => !value && setDialog((prev) => ({ ...prev, initial: undefined, open: false }))}
-        open={dialog.open}
-        ownerKey={dialog.ownerKey}
-        spentByKey={props.spentByKey}
-        year={props.year}
-      />
+      {person && (
+        <BudgetDialog
+          categories={props.categories}
+          defaultCategoryId={dialog.defaultCategoryId}
+          initial={dialog.initial}
+          lastKinds={person.lastKinds}
+          month={props.month}
+          onOpenChange={(value) => !value && setDialog({ open: false })}
+          open={dialog.open}
+          ownerMemberId={person.memberId}
+          planLabel={person.key === "me" ? "Your plan" : `${person.name}'s plan`}
+          spentByCategory={person.spentByCategory}
+          year={props.year}
+        />
+      )}
 
       <SetIncomeDialog
-        currentMemberId={currentMemberId}
+        currentMemberId={props.currentMemberId}
         incomes={props.incomes}
-        members={members}
+        members={props.members}
         month={props.month}
-        monthLabel={props.monthNav.label}
+        monthLabel={props.monthLabel}
         onOpenChange={setIncomeOpen}
         open={incomeOpen}
         year={props.year}
       />
     </div>
+  );
+}
+
+type PersonRowsProps = {
+  monogram: MonogramPerson[];
+  onCategory: (categoryId: string) => void;
+  onNew: () => void;
+  onRow: (row: PlanRow) => void;
+  openUnbudgeted: boolean;
+  person: PersonView;
+  setOpenUnbudgeted: (open: boolean) => void;
+};
+
+// One person's plan: a group per kind (fixed, essential, can cut), then their
+// spending in categories without a line.
+function PersonRows({ monogram, onCategory, onNew, onRow, openUnbudgeted, person, setOpenUnbudgeted }: PersonRowsProps) {
+  const { plan } = person;
+  const shown = plan.unbudgeted.slice(0, SHOWN_UNBUDGETED);
+  const moreCount = plan.unbudgeted.length - shown.length;
+  const moreTotal = plan.unbudgeted.slice(SHOWN_UNBUDGETED).reduce((sum, row) => sum + row.spent, 0);
+  const preview = `${shown.map((row) => row.categoryName).join(", ")}${moreCount > 0 ? ` and ${moreCount} more` : ""}`;
+
+  return (
+    <>
+      {plan.groups.length === 0 && (
+        <RowGroupHead columns={COLUMNS} first>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Monogram people={monogram} />
+            <span className="text-[15px] font-semibold whitespace-nowrap">{person.key === "me" ? "Me" : person.name}</span>
+            <span className="truncate text-[13px] text-n-600">
+              No budgets yet · Rs {formatMoney(plan.totalSpent, { currency: false })} spent
+            </span>
+          </div>
+          <div className="col-span-4 flex justify-end">
+            <Button className="h-auto px-1.5 py-0.75 text-[13px]" onClick={onNew} type="button" variant="ghost">
+              <Plus />
+              Set a budget
+            </Button>
+          </div>
+        </RowGroupHead>
+      )}
+
+      {plan.groups.map((group, index) => {
+        const usedRatio = group.planned > 0 ? group.spent / group.planned : 0;
+        const left = group.planned - group.spent;
+        return (
+          <Fragment key={group.kind}>
+            <RowGroupHead columns={COLUMNS} first={index === 0}>
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="text-[15px] font-semibold whitespace-nowrap">{group.label}</span>
+                <span className="truncate text-[13px] text-n-600">
+                  {group.rows.length} {group.rows.length === 1 ? "line" : "lines"}
+                </span>
+              </div>
+              <div className="text-right text-[15px] font-semibold">
+                <Money value={group.planned} />
+              </div>
+              <div className="text-right text-[15px] font-semibold">
+                <Money value={group.spent} />
+              </div>
+              <div className={cn("text-right text-[15px] font-semibold", left < 0 && "text-signal-ink")}>
+                <Money tone={left < 0 ? "negative" : "default"} value={left} />
+              </div>
+              <div className="flex min-w-0 items-center gap-2.5">
+                <Meter className="flex-1" ratio={usedRatio} />
+                <span className={cn("w-10.5 text-right text-[13px] font-semibold", usedRatio > 1 ? "text-signal-ink" : "text-ink")}>
+                  {pct(usedRatio)}
+                </span>
+              </div>
+            </RowGroupHead>
+
+            {group.rows.map((row) => {
+              const rowRatio = row.planned > 0 ? row.spent / row.planned : 0;
+              const rowLeft = row.planned - row.spent;
+              return (
+                <Row columns={COLUMNS} key={row.categoryId} onClick={() => onRow(row)}>
+                  <span className="truncate text-[15px] whitespace-nowrap">{row.categoryName}</span>
+                  <div className="text-right text-[15px]">
+                    <Money value={row.planned} />
+                  </div>
+                  <div className="text-right text-[15px]">
+                    <Money value={row.spent} />
+                  </div>
+                  <div className={cn("text-right text-[15px] font-semibold", rowLeft < 0 && "text-signal-ink")}>
+                    <Money tone={rowLeft < 0 ? "negative" : "default"} value={rowLeft} />
+                  </div>
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <Meter className="flex-1" ratio={rowRatio} />
+                    <span className={cn("w-10.5 text-right text-[13px]", rowRatio > 1 ? "text-signal-ink" : "text-n-700")}>{pct(rowRatio)}</span>
+                  </div>
+                </Row>
+              );
+            })}
+          </Fragment>
+        );
+      })}
+
+      {plan.unbudgeted.length > 0 && (
+        <>
+          <Row columns={COLUMNS} onClick={() => setOpenUnbudgeted(!openUnbudgeted)}>
+            <div className="col-span-2 flex min-w-0 items-center gap-2">
+              <ChevronRight aria-hidden className={cn("size-3.5 shrink-0 text-n-600 transition-transform", openUnbudgeted && "rotate-90")} />
+              <span className="shrink-0 text-sm text-n-800">Without a budget</span>
+              <span className="truncate text-[13px] text-n-600">{preview}</span>
+            </div>
+            <div className="text-right text-[15px]">
+              <Money value={plan.unbudgetedTotal} />
+            </div>
+            <div />
+            <div className="text-[13px] text-n-600">
+              {plan.unbudgeted.length} {plan.unbudgeted.length === 1 ? "category" : "categories"}
+            </div>
+          </Row>
+
+          {openUnbudgeted &&
+            shown.map((row) => (
+              <Row className="bg-ink/3" columns={COLUMNS} key={row.categoryId}>
+                <div className="col-span-2 truncate pl-5.5 text-sm text-n-800">{row.categoryName}</div>
+                <div className="text-right text-sm">
+                  <Money value={row.spent} />
+                </div>
+                <div />
+                <div className="flex">
+                  <Button className="h-auto px-1.5 py-0.5 text-[13px]" onClick={() => onCategory(row.categoryId)} type="button" variant="ghost">
+                    Set budget
+                  </Button>
+                </div>
+              </Row>
+            ))}
+
+          {openUnbudgeted && moreCount > 0 && (
+            <Row className="bg-ink/3" columns={COLUMNS}>
+              <div className="col-span-2 truncate pl-5.5 text-sm text-n-800">
+                {moreCount} more {moreCount === 1 ? "category" : "categories"}
+              </div>
+              <div className="text-right text-sm">
+                <Money value={moreTotal} />
+              </div>
+              <div />
+              <div />
+            </Row>
+          )}
+        </>
+      )}
+    </>
   );
 }

@@ -12,41 +12,39 @@ import { Segmented } from "@/components/Segmented";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
 import { removeBudgetItemAction, setBudgetItemAction } from "@/modules/budget/api/budget.actions";
-import { updateCategoryAction } from "@/modules/categories/api/categories.actions";
+import { type BudgetLineKind, kindOf, LINE_KINDS } from "@/modules/budget/lib/plan-lines";
 
 type Category = { budgetType: "fixed" | "flexible"; groupName: string; id: string; name: string };
-type Member = { id: string; name: string };
 
-export type BudgetOwnerKey = "me" | "partner" | "shared";
-
-export type BudgetDraft = {
-  budgetType: "fixed" | "flexible";
-  categoryId: string;
-  ownerKey: BudgetOwnerKey;
-  planned: number;
-};
+export type BudgetDraft = { categoryId: string; kind: BudgetLineKind; planned: number };
 
 type Props = {
   categories: Category[];
-  currentMemberId: string;
   defaultCategoryId?: string;
   initial?: BudgetDraft;
-  members: Member[];
+  // The kind this person last gave each category, so a new line starts the same way.
+  lastKinds: Record<string, BudgetLineKind>;
   month: number;
   onOpenChange: (open: boolean) => void;
   open: boolean;
-  ownerKey: BudgetOwnerKey;
-  spentByKey: Record<string, number>;
+  ownerMemberId: string;
+  // "Your plan" or "Karuna's plan".
+  planLabel: string;
+  spentByCategory: Record<string, number>;
   year: number;
 };
 
 const FORM_ID = "budget-form";
 const AMOUNT_ERROR = "Enter a monthly amount";
 
-// Set / change a category's budget for one owner. The category's Type also
-// updates the shared category (spec §3.3), so every owner's budget for it
-// reads the same.
-export function BudgetDialog({ categories, currentMemberId, defaultCategoryId, initial, members, month, onOpenChange, open, ownerKey, spentByKey, year }: Props) {
+const KIND_HELP: Record<BudgetLineKind, string> = {
+  can_cut: "Money you can choose not to spend, like lunches out or shopping. Home's safe to spend is worked out from these.",
+  essential: "Changes month to month but can't really be cut, like petrol or groceries.",
+  fixed: "The same every month, like rent, a loan payment or a bill.",
+};
+
+// Set or change one line of one person's plan.
+export function BudgetDialog({ onOpenChange, open, ...rest }: Props) {
   const [pending, setPending] = useState(false);
 
   return (
@@ -57,7 +55,7 @@ export function BudgetDialog({ categories, currentMemberId, defaultCategoryId, i
           <Button className="min-w-35 justify-start" disabled={pending} form={FORM_ID} type="submit">
             {pending ? "Saving..." : "Save budget"}
           </Button>
-          {initial && (
+          {rest.initial && (
             <Button disabled={pending} form={FORM_ID} type="submit" value="remove" variant="destructive">
               Remove budget
             </Button>
@@ -67,42 +65,37 @@ export function BudgetDialog({ categories, currentMemberId, defaultCategoryId, i
       hint="Enter to save · Esc to close"
       onOpenChange={onOpenChange}
       open={open}
-      title={initial ? "Change budget" : "Set a budget"}
+      subtitle={rest.planLabel}
+      title={rest.initial ? "Change budget" : "Set a budget"}
     >
-      <BudgetFields
-        categories={categories}
-        currentMemberId={currentMemberId}
-        defaultCategoryId={defaultCategoryId}
-        initial={initial}
-        members={members}
-        month={month}
-        onDone={() => onOpenChange(false)}
-        onPendingChange={setPending}
-        ownerKey={ownerKey}
-        spentByKey={spentByKey}
-        year={year}
-      />
+      <BudgetFields {...rest} onDone={() => onOpenChange(false)} onPendingChange={setPending} />
     </Modal>
   );
 }
 
 type FieldsProps = Omit<Props, "onOpenChange" | "open"> & { onDone: () => void; onPendingChange: (pending: boolean) => void };
 
-function BudgetFields({ categories, currentMemberId, defaultCategoryId, initial, members, month, onDone, onPendingChange, ownerKey, spentByKey, year }: FieldsProps) {
+function BudgetFields({
+  categories,
+  defaultCategoryId,
+  initial,
+  lastKinds,
+  month,
+  onDone,
+  onPendingChange,
+  ownerMemberId,
+  spentByCategory,
+  year,
+}: FieldsProps) {
   const router = useRouter();
+  const defaultKind = (categoryId: string) => lastKinds[categoryId] ?? kindOf(null, categories.find((c) => c.id === categoryId)?.budgetType);
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? defaultCategoryId ?? "");
-  const [owner, setOwner] = useState<BudgetOwnerKey>(initial?.ownerKey ?? ownerKey);
   const [amount, setAmount] = useState(initial ? String(initial.planned) : "");
-  const [budgetType, setBudgetType] = useState<"fixed" | "flexible">(
-    () => initial?.budgetType ?? categories.find((c) => c.id === defaultCategoryId)?.budgetType ?? "flexible",
-  );
+  const [kind, setKind] = useState<BudgetLineKind>(() => initial?.kind ?? defaultKind(initial?.categoryId ?? defaultCategoryId ?? ""));
   const [error, setError] = useState<string | undefined>();
 
-  const partner = members.find((m) => m.id !== currentMemberId) ?? null;
-  const memberIdFor = (key: BudgetOwnerKey) => (key === "shared" ? null : key === "me" ? currentMemberId : (partner?.id ?? currentMemberId));
-
   const selectedCategory = categories.find((c) => c.id === categoryId) ?? null;
-  const spent = categoryId ? (spentByKey[`${categoryId}::${owner}`] ?? 0) : 0;
+  const spent = categoryId ? (spentByCategory[categoryId] ?? 0) : 0;
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -111,7 +104,7 @@ function BudgetFields({ categories, currentMemberId, defaultCategoryId, initial,
     onPendingChange(true);
     try {
       if (intent === "remove") {
-        await removeBudgetItemAction({ categoryId, month, ownerMemberId: memberIdFor(owner), year });
+        await removeBudgetItemAction({ categoryId, month, ownerMemberId, year });
         toast.success("Budget removed");
         onDone();
         router.refresh();
@@ -128,22 +121,7 @@ function BudgetFields({ categories, currentMemberId, defaultCategoryId, initial,
         return;
       }
 
-      if (selectedCategory.budgetType !== budgetType) {
-        await updateCategoryAction(selectedCategory.id, {
-          budgetType,
-          groupName: selectedCategory.groupName,
-          name: selectedCategory.name,
-        });
-      }
-      await setBudgetItemAction({
-        categoryId: selectedCategory.id,
-        month,
-        ownerMemberId: memberIdFor(owner),
-        plannedAmount: value,
-        // Only a line kept in the same category can move to another owner.
-        replacesOwnerMemberId: initial?.categoryId === selectedCategory.id ? memberIdFor(initial.ownerKey) : undefined,
-        year,
-      });
+      await setBudgetItemAction({ categoryId: selectedCategory.id, kind, month, ownerMemberId, plannedAmount: value, year });
       toast.success("Budget saved");
       onDone();
       router.refresh();
@@ -154,12 +132,6 @@ function BudgetFields({ categories, currentMemberId, defaultCategoryId, initial,
     }
   }
 
-  const ownerOptions = [
-    { label: "Me", value: "me" as const },
-    ...(partner ? [{ label: partner.name, value: "partner" as const }] : []),
-    { label: "Shared", value: "shared" as const },
-  ];
-
   return (
     <form className="flex flex-col gap-5.5" id={FORM_ID} noValidate onSubmit={onSubmit}>
       <div>
@@ -169,6 +141,8 @@ function BudgetFields({ categories, currentMemberId, defaultCategoryId, initial,
           label="Category"
           onValueChange={(value) => {
             setCategoryId(value);
+            // A new line starts as this person last had it for the category.
+            if (!initial) setKind(defaultKind(value));
             setError(undefined);
           }}
           placeholder="Search categories..."
@@ -180,8 +154,6 @@ function BudgetFields({ categories, currentMemberId, defaultCategoryId, initial,
           </p>
         )}
       </div>
-
-      <Segmented label="For" onChange={setOwner} options={ownerOptions} value={owner} />
 
       <AmountInput
         data-autofocus
@@ -196,18 +168,8 @@ function BudgetFields({ categories, currentMemberId, defaultCategoryId, initial,
       />
 
       <div>
-        <Segmented
-          label="Type"
-          onChange={setBudgetType}
-          options={[
-            { label: "Fixed", value: "fixed" },
-            { label: "Flexible", value: "flexible" },
-          ]}
-          value={budgetType}
-        />
-        <p className="mt-1.5 text-xs leading-normal text-n-600">
-          Fixed is the same every month, like a loan payment. Flexible changes, like groceries.
-        </p>
+        <Segmented label="Kind" onChange={setKind} options={LINE_KINDS} value={kind} />
+        <p className="mt-1.5 text-xs leading-normal text-n-600">{KIND_HELP[kind]}</p>
       </div>
     </form>
   );

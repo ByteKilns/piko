@@ -1,70 +1,117 @@
 import { describe, expect, it } from "vitest";
 
-import { buildBudgetGroups, buildBudgetLead, overBudgetRows } from "./budget-view";
+import { buildBudgetLead, buildPersonPlan, overBudgetRows, sharedRows } from "./budget-view";
 
 const CATEGORIES = [
-  { budgetType: "flexible" as const, id: "cat-food", name: "Groceries" },
-  { budgetType: "fixed" as const, id: "cat-rent", name: "Rent" },
-  { budgetType: "flexible" as const, id: "cat-fun", name: "Fun" },
+  { budgetType: "flexible" as const, id: "food", name: "Groceries" },
+  { budgetType: "fixed" as const, id: "rent", name: "Rent" },
+  { budgetType: "flexible" as const, id: "lunch", name: "Lunch" },
+  { budgetType: "flexible" as const, id: "fun", name: "Fun" },
 ];
 
-describe("buildBudgetGroups", () => {
-  it("splits budgeted rows from unbudgeted spend per owner", () => {
-    const groups = buildBudgetGroups({
-      budgetItems: [{ categoryId: "cat-food", ownerMemberId: null, plannedAmount: "8000" }],
+describe("buildPersonPlan", () => {
+  it("groups lines by kind in the order fixed, essential, can cut", () => {
+    const plan = buildPersonPlan({
       categories: CATEGORIES,
-      expenses: [
-        { amount: 3000, categoryId: "cat-food", ownerMemberId: null },
-        { amount: 500, categoryId: "cat-fun", ownerMemberId: null },
+      lines: [
+        { categoryId: "lunch", inherited: false, kind: "can_cut", plannedAmount: 3000 },
+        { categoryId: "food", inherited: false, kind: null, plannedAmount: 5000 },
+        { categoryId: "rent", inherited: false, kind: null, plannedAmount: 20000 },
       ],
-      meId: "m1",
-      partnerId: "m2",
-      partnerName: "Karuna",
+      spending: [],
     });
 
-    const shared = groups.find((g) => g.key === "shared")!;
-    expect(shared.budgeted).toBe(8000);
-    expect(shared.spent).toBe(3000);
-    expect(shared.rows).toHaveLength(1);
-    expect(shared.unbudgeted).toEqual([{ categoryId: "cat-fun", categoryName: "Fun", spent: 500 }]);
-    expect(shared.unbudgetedTotal).toBe(500);
-    expect(shared.totalSpent).toBe(3500);
+    expect(plan.groups.map((g) => [g.label, g.planned])).toEqual([
+      ["Fixed", 20000],
+      ["Essential", 5000],
+      ["Can cut", 3000],
+    ]);
+    expect(plan.budgeted).toBe(28000);
   });
 
-  it("attributes spend to the owning member and names the partner group", () => {
-    const groups = buildBudgetGroups({
-      budgetItems: [{ categoryId: "cat-rent", ownerMemberId: "m2", plannedAmount: "20000" }],
+  it("counts spending against the line for its category", () => {
+    const plan = buildPersonPlan({
       categories: CATEGORIES,
-      expenses: [{ amount: 21000, categoryId: "cat-rent", ownerMemberId: "m2" }],
-      meId: "m1",
-      partnerId: "m2",
-      partnerName: "Karuna",
+      lines: [{ categoryId: "food", inherited: false, kind: "essential", plannedAmount: 5000 }],
+      spending: [
+        { amount: 1200, categoryId: "food" },
+        { amount: 800, categoryId: "food" },
+      ],
     });
 
-    const partner = groups.find((g) => g.key === "partner")!;
-    expect(partner.name).toBe("Karuna");
-    expect(partner.rows[0]).toMatchObject({ categoryName: "Rent", planned: 20000, spent: 21000 });
-    expect(groups.find((g) => g.key === "me")!.rows).toHaveLength(0);
+    expect(plan.groups[0].rows[0]).toMatchObject({ categoryName: "Groceries", planned: 5000, spent: 2000 });
+    expect(plan.spentInLines).toBe(2000);
   });
 
-  it("sorts budgeted rows by used ratio descending", () => {
-    const groups = buildBudgetGroups({
-      budgetItems: [
-        { categoryId: "cat-food", ownerMemberId: null, plannedAmount: "1000" },
-        { categoryId: "cat-fun", ownerMemberId: null, plannedAmount: "1000" },
-      ],
+  it("lists spending in categories without a line, biggest first", () => {
+    const plan = buildPersonPlan({
       categories: CATEGORIES,
-      expenses: [
-        { amount: 500, categoryId: "cat-food", ownerMemberId: null },
-        { amount: 900, categoryId: "cat-fun", ownerMemberId: null },
+      lines: [{ categoryId: "food", inherited: false, kind: "essential", plannedAmount: 5000 }],
+      spending: [
+        { amount: 300, categoryId: "lunch" },
+        { amount: 900, categoryId: "fun" },
+        { amount: 1000, categoryId: "food" },
       ],
-      meId: "m1",
-      partnerId: null,
-      partnerName: null,
     });
 
-    expect(groups.map((g) => g.key)).toEqual(["me", "shared"]);
-    expect(groups.find((g) => g.key === "shared")!.rows.map((r) => r.categoryName)).toEqual(["Fun", "Groceries"]);
+    expect(plan.unbudgeted).toEqual([
+      { categoryId: "fun", categoryName: "Fun", spent: 900 },
+      { categoryId: "lunch", categoryName: "Lunch", spent: 300 },
+    ]);
+    expect(plan.unbudgetedTotal).toBe(1200);
+    expect(plan.totalSpent).toBe(2200);
+  });
+
+  it("treats a zero line as no line", () => {
+    const plan = buildPersonPlan({
+      categories: CATEGORIES,
+      lines: [{ categoryId: "lunch", inherited: false, kind: "can_cut", plannedAmount: 0 }],
+      spending: [{ amount: 400, categoryId: "lunch" }],
+    });
+
+    expect(plan.groups).toEqual([]);
+    expect(plan.unbudgeted).toEqual([{ categoryId: "lunch", categoryName: "Lunch", spent: 400 }]);
+  });
+
+  it("sorts rows in a group by how much of the line is used", () => {
+    const plan = buildPersonPlan({
+      categories: CATEGORIES,
+      lines: [
+        { categoryId: "food", inherited: false, kind: "essential", plannedAmount: 1000 },
+        { categoryId: "fun", inherited: false, kind: "essential", plannedAmount: 1000 },
+      ],
+      spending: [
+        { amount: 500, categoryId: "food" },
+        { amount: 900, categoryId: "fun" },
+      ],
+    });
+
+    expect(plan.groups[0].rows.map((r) => r.categoryName)).toEqual(["Fun", "Groceries"]);
+  });
+
+  it("keeps whether a line was carried over", () => {
+    const plan = buildPersonPlan({
+      categories: CATEGORIES,
+      lines: [{ categoryId: "food", inherited: true, kind: null, plannedAmount: 5000 }],
+      spending: [],
+    });
+
+    expect(plan.groups[0].rows[0].inherited).toBe(true);
+  });
+});
+
+describe("sharedRows", () => {
+  it("keeps only shared lines with an amount", () => {
+    expect(
+      sharedRows(
+        [
+          { categoryId: "food", ownerMemberId: null, plannedAmount: 1500 },
+          { categoryId: "fun", ownerMemberId: null, plannedAmount: 0 },
+          { categoryId: "lunch", ownerMemberId: "me", plannedAmount: 3000 },
+        ],
+        CATEGORIES,
+      ),
+    ).toEqual([{ categoryId: "food", categoryName: "Groceries", planned: 1500 }]);
   });
 });
 
@@ -105,20 +152,17 @@ describe("buildBudgetLead", () => {
 
 describe("overBudgetRows", () => {
   it("collects only rows that spent more than planned", () => {
-    const groups = buildBudgetGroups({
-      budgetItems: [
-        { categoryId: "cat-food", ownerMemberId: null, plannedAmount: "1000" },
-        { categoryId: "cat-fun", ownerMemberId: null, plannedAmount: "1000" },
-      ],
+    const plan = buildPersonPlan({
       categories: CATEGORIES,
-      expenses: [
-        { amount: 1500, categoryId: "cat-food", ownerMemberId: null },
-        { amount: 400, categoryId: "cat-fun", ownerMemberId: null },
+      lines: [
+        { categoryId: "food", inherited: false, kind: "essential", plannedAmount: 1000 },
+        { categoryId: "fun", inherited: false, kind: "can_cut", plannedAmount: 1000 },
       ],
-      meId: "m1",
-      partnerId: null,
-      partnerName: null,
+      spending: [
+        { amount: 1500, categoryId: "food" },
+        { amount: 400, categoryId: "fun" },
+      ],
     });
-    expect(overBudgetRows(groups)).toEqual([{ categoryName: "Groceries", over: 500 }]);
+    expect(overBudgetRows(plan)).toEqual([{ categoryName: "Groceries", over: 500 }]);
   });
 });
