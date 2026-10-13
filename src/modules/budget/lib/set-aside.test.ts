@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dhukuSetAsides, loanSetAsides, savingsSetAsides } from "./set-aside";
+import { dhukuSetAsides, fundSetAsides, loanSetAsides, savingsSetAsides } from "./set-aside";
 
 const ME = "me";
 const HER = "her";
@@ -99,6 +99,25 @@ describe("dhuku interest timing", () => {
     });
 
     expect(rows[0]).toMatchObject({ planned: 3000, sub: "Dhuku" });
+  });
+});
+
+describe("fundSetAsides", () => {
+  const fund = { archived: false, id: "worldlink", name: "WorldLink", ownerMemberId: ME, startMonth: 6, startYear: 2083 };
+  const plans = [{ fromMonth: 6, fromYear: 2083, fundId: "worldlink", monthlyAmount: 1225 }];
+
+  it("sets aside this month's amount, always done", () => {
+    expect(fundSetAsides({ funds: [fund], memberId: ME, month: { month: 7, year: 2083 }, plans })).toEqual([
+      { done: 1225, id: "fund:worldlink", kind: "fund", label: "WorldLink", planned: 1225, sub: "Fund" },
+    ]);
+  });
+
+  it("leaves out archived funds, other people's, ones not started yet and ones set to nothing", () => {
+    const month = { month: 7, year: 2083 };
+    expect(fundSetAsides({ funds: [{ ...fund, archived: true }], memberId: ME, month, plans })).toEqual([]);
+    expect(fundSetAsides({ funds: [{ ...fund, ownerMemberId: HER }], memberId: ME, month, plans })).toEqual([]);
+    expect(fundSetAsides({ funds: [{ ...fund, startMonth: 8 }], memberId: ME, month, plans })).toEqual([]);
+    expect(fundSetAsides({ funds: [fund], memberId: ME, month, plans: [{ ...plans[0], monthlyAmount: 0 }] })).toEqual([]);
   });
 });
 

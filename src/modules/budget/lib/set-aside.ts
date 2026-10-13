@@ -1,6 +1,8 @@
+import { setAsideFor } from "@/modules/funds/lib/fund-math";
+
 // "Set aside first": money a person's plan takes off the top before any
 // budget line, filled in from what Piko already knows (savings pot plans,
-// dhukus, loan installments) so it's never typed twice. None of it is
+// dhukus, loan installments, funds) so it's never typed twice. None of it is
 // spending: it's money moved to the person's own piles or paid back.
 
 export type SetAsideKind = "dhuku" | "fund" | "loan" | "savings";
@@ -58,6 +60,26 @@ export function dhukuSetAsides(input: {
     const planned = dhuku.monthlyContribution + (tookPot ? (dhuku.interestPerMonth ?? 0) : 0);
     const done = sum(entries.filter((e) => e.type === "contribution" && inPeriod(e.date, input.period)).map((e) => e.amount));
     return [{ done, id: `dhuku:${dhuku.id}`, kind: "dhuku" as const, label: dhuku.name, planned, sub: tookPot ? "Dhuku, with interest" : "Dhuku" }];
+  });
+}
+
+// Each of this person's funds in use: this month's set-aside. A fund only
+// exists in Piko, so its set-aside always counts as done.
+export function fundSetAsides(input: {
+  funds: { archived: boolean; id: string; name: string; ownerMemberId: string; startMonth: number; startYear: number }[];
+  memberId: string;
+  month: { month: number; year: number };
+  plans: { fromMonth: number; fromYear: number; fundId: string; monthlyAmount: number }[];
+}): SetAsideRow[] {
+  return input.funds.flatMap((fund) => {
+    if (fund.ownerMemberId !== input.memberId || fund.archived) return [];
+    if (fund.startYear * 12 + fund.startMonth > input.month.year * 12 + input.month.month) return [];
+    const planned = setAsideFor(
+      input.plans.filter((p) => p.fundId === fund.id),
+      input.month,
+    );
+    if (planned <= 0) return [];
+    return [{ done: planned, id: `fund:${fund.id}`, kind: "fund" as const, label: fund.name, planned, sub: "Fund" }];
   });
 }
 
