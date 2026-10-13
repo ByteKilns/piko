@@ -42,12 +42,12 @@ const rowFields = <T>(specs: FieldSpec<T>[]): FieldSpec<Row>[] => specs.map(({ f
 export const ENTITY_REVERT: Partial<Record<ActivityEntityType, EntityRevert>> = {
   budget_item: {
     children: [],
-    editable: ["ownerMemberId", "plannedAmount"],
+    editable: ["kind", "ownerMemberId", "plannedAmount"],
     fields: (f) => [{ format: f.category, key: "categoryId", label: "Category" }, ...rowFields(budgetItemFields(f))],
     noun: "budget line",
     parentNoun: "month's budget",
     references: (r) => ({ categoryIds: ids(r.categoryId), memberIds: ids(r.ownerMemberId), parentId: String(r.monthlyBudgetId) }),
-    // A budget line is its category/month: an owner change deletes the row and inserts another.
+    // A budget line is its category, person and month: the row there now may be a different one.
     restoreReplacesExisting: true,
     summary: (f, r) => [f.category(r.categoryId), f.owner(r.ownerMemberId), f.money(r.plannedAmount)].filter(Boolean).join(" · "),
   },

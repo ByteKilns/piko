@@ -1,7 +1,9 @@
 import type { ActivityFormatters } from "@/modules/activity/lib/activity-values";
 import { diffFields, type FieldSpec } from "@/modules/activity/lib/diff";
 
-export type BudgetItemSnapshot = { categoryId: string; ownerMemberId: null | string; plannedAmount: number | string };
+import { LINE_KINDS } from "./plan-lines";
+
+export type BudgetItemSnapshot = { categoryId: string; kind?: null | string; ownerMemberId: null | string; plannedAmount: number | string };
 export type IncomeSnapshot = { amount: number | string; memberId: string; month: number; note?: null | string; year: number };
 
 // "Groceries · Shared · Ashwin 2083 · RS 8,000"
@@ -15,10 +17,15 @@ export function budgetItemSummary(
     .join(" · ");
 }
 
+function kindLabel(value: unknown): null | string {
+  return LINE_KINDS.find((k) => k.value === value)?.label ?? null;
+}
+
 export function budgetItemFields(f: ActivityFormatters): FieldSpec<BudgetItemSnapshot>[] {
   return [
     { format: f.money, key: "plannedAmount", label: "Planned" },
     { format: f.owner, key: "ownerMemberId", label: "For" },
+    { format: kindLabel, key: "kind", label: "Kind" },
   ];
 }
 

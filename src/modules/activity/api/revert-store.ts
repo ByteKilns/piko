@@ -168,11 +168,12 @@ const categoryStore = tableStore({
 });
 
 const budgetItemStore = tableStore({
-  // A budget line is its category/month: changing the owner deletes the row
-  // and inserts another, so the line there now may carry a different id.
-  // Prefer the entry's own row if several owners share the category.
+  // A budget line is its category, person and month, so the line there now
+  // may carry a different id (an older owner change deleted the row and
+  // inserted another). Prefer the entry's own row, then the same person's:
+  // each person has their own line for a category.
   find: async (h, id, entry) => {
-    const { categoryId, monthlyBudgetId } = entry.after ?? entry.before ?? {};
+    const { categoryId, monthlyBudgetId, ownerMemberId } = entry.after ?? entry.before ?? {};
     if (typeof categoryId === "string" && typeof monthlyBudgetId === "string") {
       const lines = await db
         .select()
@@ -184,7 +185,7 @@ const budgetItemStore = tableStore({
             inArray(budgetItems.monthlyBudgetId, budgetIdsOf(h)),
           ),
         );
-      const line = lines.find((l) => l.id === id) ?? lines[0];
+      const line = lines.find((l) => l.id === id) ?? lines.find((l) => l.ownerMemberId === (ownerMemberId ?? null));
       if (line) return line;
     }
     return (await db.select().from(budgetItems).where(and(eq(budgetItems.id, id), inArray(budgetItems.monthlyBudgetId, budgetIdsOf(h)))))[0];

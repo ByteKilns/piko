@@ -20,6 +20,13 @@ describe("budget activity", () => {
     ]);
   });
 
+  it("diffs the kind of a line", () => {
+    const before = { categoryId: "cat-1", kind: "essential", ownerMemberId: "m-1", plannedAmount: "3000.00" };
+    expect(budgetItemChanges(f, before, { ...before, kind: "can_cut", plannedAmount: 3000 })).toEqual([
+      { field: "Kind", from: "Essential", to: "Can cut" },
+    ]);
+  });
+
   it("summarises and diffs income", () => {
     const before = { amount: "90000.00", memberId: "m-2", month: 10, note: null, year: 2026 };
     expect(incomeSummary(f, before)).toBe("Ravi · October 2026 · RS 90,000");
