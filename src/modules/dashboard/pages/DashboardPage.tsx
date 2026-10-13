@@ -10,13 +10,14 @@ import {
   MIN_NAVIGABLE_YEAR,
   resolvePeriod,
 } from "@/lib/month-period";
-import { getEffectiveMember, getHouseholdMembers } from "@/lib/session";
+import { getCurrentMember, getEffectiveMember, getHouseholdMembers } from "@/lib/session";
 import { todayISO } from "@/lib/today";
 import { listIncomeRows, listPlanLines } from "@/modules/budget/api/budget";
 import { buildPersonPlan, overrunFromPlan, overrunNote } from "@/modules/budget/lib/budget-view";
 import { monthIncome } from "@/modules/budget/lib/income";
-import { fundSetAsides } from "@/modules/budget/lib/set-aside";
 import { listCategories } from "@/modules/categories/api/categories";
+import { listCushionData } from "@/modules/cushion/api/cushion";
+import { cushionBalance } from "@/modules/cushion/lib/month-close";
 import {
   type HomeBalanceRow,
   type HomeEssential,
@@ -24,13 +25,14 @@ import {
   type HomePacing,
   type HomeRecentGroup,
   type HomeSavingsPot,
+  type HomeSettle,
   HomeView,
 } from "@/modules/dashboard/components/HomeView";
 import { daysLeftInMonth, spentByDayIn } from "@/modules/dashboard/lib/cash-flow";
 import { toExpenseInputs } from "@/modules/dashboard/lib/map-rows";
-import { movedThisMonth } from "@/modules/dashboard/lib/moved";
+import { personMonthMoney } from "@/modules/dashboard/lib/month-money";
 import { buildPacingSchedule, currentWeekPacing, weekIndexOf, withOverrun } from "@/modules/dashboard/lib/pacing";
-import { walletShares, walletSpentByMember } from "@/modules/dashboard/lib/wallet";
+import { walletSpentByMember } from "@/modules/dashboard/lib/wallet";
 import { listDhukuEntries, listDhukus } from "@/modules/dhuku/api/dhuku.actions";
 import { dhukuPosition } from "@/modules/dhuku/lib/dhuku-money";
 import { listExpensesForMonth, listRecentExpenses } from "@/modules/expenses/api/expenses.actions";
@@ -73,7 +75,10 @@ function weekdayOf(startDate: string, dayOfPeriod: number): string {
 type Props = { searchParams: Promise<{ month?: string; year?: string }> };
 
 export async function DashboardPage({ searchParams }: Props) {
-  const { householdId, memberId } = await getEffectiveMember();
+  // memberId is whoever Home is viewed as; only the real member can decide
+  // their own month's leftover or change their cushion.
+  const current = await getCurrentMember();
+  const { householdId, memberId } = await getEffectiveMember(current);
   const dateFormat = await getDateFormatPref(householdId);
   const params = await searchParams;
   const { year: currentYear, month: currentMonth } = currentPeriodYearMonth(dateFormat);
@@ -102,6 +107,7 @@ export async function DashboardPage({ searchParams }: Props) {
     loanRows,
     loanPaymentRows,
     fundData,
+    cushionData,
   ] = await Promise.all([
     getHouseholdMembers(householdId),
     listCategories(householdId),
@@ -122,6 +128,7 @@ export async function DashboardPage({ searchParams }: Props) {
     listLoans(householdId),
     listLoanPayments(householdId),
     listFundData(householdId),
+    listCushionData(householdId),
   ]);
 
   if (isCurrentMonth) {
@@ -215,21 +222,25 @@ export async function DashboardPage({ searchParams }: Props) {
     },
   ];
 
-  // Home's figures and hero follow the person viewing it: their Spent is what
-  // left their own wallet, and their plan is their own lines.
+  // Home's figures and hero follow the person viewing it. Their month is
+  // worked out the same way closing a month does, so Unallocated and the
+  // amount left to decide on always agree; their plan is their own lines.
   const period = resolvePeriod(year, month, dateFormat);
-  const memberIds = members.map((m) => m.id);
-  const viewerShares = (rows: typeof expenseRows) =>
-    payRows(rows).flatMap((e) =>
-        walletShares(
-          { amount: Number(e.amount), paidByMemberId: e.paidByMemberId, payBackAmount: e.payBackAmount === null ? null : Number(e.payBackAmount) },
-          memberIds,
-        ).flatMap((share) => (share.memberId === memberId ? [{ amount: share.amount, categoryId: e.categoryId, date: e.date }] : [])),
-      );
-  const viewerSpending = viewerShares(expenseRows);
-  const viewerSpent = viewerSpending.reduce((s, e) => s + e.amount, 0);
-  const viewerPrevSpent = viewerShares(prevExpenseRows).reduce((s, e) => s + e.amount, 0);
-  const viewerIncome = monthIncome(incomeRows, memberId, { month, year });
+  const moneyInput = {
+    deposits: depositRows.map((d) => ({ amount: Number(d.amount), date: d.date, kind: d.kind, memberId: d.memberId })),
+    dhukuEntries: dhukuEntryRows.map((e) => ({ amount: Number(e.amount), date: e.date, dhukuId: e.dhukuId, type: e.type })),
+    dhukus: dhukuRows,
+    fundData,
+    incomeRows,
+    loanPayments: loanPaymentRows.map((p) => ({ amount: Number(p.amount), date: p.date, loanId: p.loanId, memberId: p.memberId })),
+    loans: loanRows,
+    memberId,
+    memberIds: members.map((m) => m.id),
+  };
+  const viewerMoney = personMonthMoney({ ...moneyInput, expenses: expenseRows, month: { month, year }, period });
+  const prevMoney = personMonthMoney({ ...moneyInput, expenses: prevExpenseRows, month: prev, period: resolvePeriod(prev.year, prev.month, dateFormat) });
+  const viewerSpending = viewerMoney.spending;
+  const viewerIncome = viewerMoney.income;
   const payCarriedFrom = viewerIncome.payCarriedFrom
     ? formatPeriodLabel(viewerIncome.payCarriedFrom.year, viewerIncome.payCarriedFrom.month, dateFormat)
     : null;
@@ -315,45 +326,37 @@ export async function DashboardPage({ searchParams }: Props) {
       reserveFull: balance >= reserveMinimum,
     };
   });
-  // The viewer's funds: what each holds now, and what went into them this
-  // month (the set-aside plus money added).
+  // What each of the viewer's funds holds now.
   const viewerFunds = fundData.funds.filter((f) => f.ownerMemberId === memberId && !f.archived);
   const balancesByFund = fundBalances({ ...fundData, funds: viewerFunds, through: { month, year } });
-  const intoFunds =
-    fundSetAsides({ funds: viewerFunds, memberId, month: { month, year }, plans: fundData.plans }).reduce((s, r) => s + r.planned, 0) +
-    fundData.topUps
-      .filter((t) => t.month === month && t.year === year && viewerFunds.some((f) => f.id === t.fundId))
-      .reduce((s, t) => s + t.amount, 0);
-
-  // Money the viewer moved into their own piles this month: their savings
-  // deposits, their dhukus' payments, their repayments on loans they took and
-  // what went into their funds. Unallocated takes it off too, since it's no
-  // longer free to spend.
-  const viewerDhukuIds = new Set(dhukuRows.filter((d) => d.ownerMemberId === memberId).map((d) => d.id));
-  const moved = movedThisMonth({
-    deposits: deposits.filter((d) => d.memberId === memberId),
-    dhukuEntries: dhukuEntryRows
-      .filter((e) => viewerDhukuIds.has(e.dhukuId))
-      .map((e) => ({ amount: Number(e.amount), date: e.date, type: e.type })),
-    endDate: period.endDate,
-    funds: intoFunds,
-    loanPayments: loanPaymentRows.flatMap((p) => {
-      const loan = loanRows.find((l) => l.id === p.loanId);
-      return loan && p.memberId === memberId ? [{ amount: Number(p.amount), date: p.date, direction: loan.direction }] : [];
-    }),
-    startDate: period.startDate,
-  });
-  const unallocated = viewerIncome.pay + viewerIncome.extra - viewerSpent - moved.total;
 
   // Balances: where each pile stands, apart from this month's spending.
   // Positive = yours, or owed to you; negative = you owe it.
-  const loanStats = loanOverviewStats(
-    buildLoanCards(
-      loanRows,
-      loanPaymentRows.map((p) => ({ amount: Number(p.amount), loanId: p.loanId })),
-      new Map(members.map((m) => [m.id, m])),
-    ),
+  const loanCards = buildLoanCards(
+    loanRows,
+    loanPaymentRows.map((p) => ({ amount: Number(p.amount), loanId: p.loanId })),
+    new Map(members.map((m) => [m.id, m])),
   );
+  const loanStats = loanOverviewStats(loanCards);
+
+  // Last month's leftover waits on Home (in the current month) until the
+  // viewer decides on it: into savings, funds or loans, or kept as cushion.
+  const settled = cushionData.settlements.some((s) => s.memberId === memberId && s.month === prev.month && s.year === prev.year);
+  const settle: HomeSettle | null =
+    isCurrentMonth && !settled && (prevMoney.income.pay > 0 || prevMoney.spent > 0)
+      ? {
+          amount: prevMoney.unallocated,
+          canSettle: memberId === current.memberId,
+          funds: viewerFunds.map((f) => ({ id: f.id, name: f.name })),
+          loans: loanCards
+            .filter((l) => l.ownerMemberId === memberId && l.direction === "taken" && l.outstanding > 0)
+            .map((l) => ({ id: l.id, name: l.counterpartyName, owed: l.outstanding })),
+          month: prev.month,
+          monthLabel: formatPeriodLabel(prev.year, prev.month, dateFormat),
+          pots: potRows.filter((p) => p.ownerMemberId === null || p.ownerMemberId === memberId).map((p) => ({ id: p.id, name: p.name })),
+          year: prev.year,
+        }
+      : null;
   const dhukuBalances: HomeBalanceRow[] = dhukuRows.flatMap((dhuku) => {
     const entries = dhukuEntryRows.filter((e) => e.dhukuId === dhuku.id).map((e) => ({ amount: Number(e.amount), type: e.type }));
     const contributions = entries.filter((e) => e.type === "contribution").length;
@@ -419,20 +422,25 @@ export async function DashboardPage({ searchParams }: Props) {
     <HomeView
       balances={balances}
       currentMemberId={memberId}
+      cushion={{
+        balance: cushionBalance(cushionData.entries.filter((e) => e.memberId === memberId)),
+        canEdit: memberId === current.memberId,
+        target: cushionData.targets.find((t) => t.memberId === memberId)?.target ?? null,
+      }}
       daysLeft={daysLeftInMonth(year, month, dateFormat)}
 
       essentials={essentials}
       ledger={{
-        moved,
+        moved: viewerMoney.moved,
         paidFromFunds,
         paidFromSavings,
         pay: viewerIncome.pay,
         payNote: viewerIncome.extra > 0 ? `+ ${formatMoney(viewerIncome.extra)} extra` : payCarriedFrom ? `Carried over from ${payCarriedFrom}` : null,
-        spent: viewerSpent,
-        spentMeterRatio: viewerIncome.pay > 0 ? viewerSpent / viewerIncome.pay : 0,
-        spentPctOfPay: percent(viewerSpent, viewerIncome.pay),
-        spentTrendPct: trendPct(viewerSpent, viewerPrevSpent),
-        unallocated,
+        spent: viewerMoney.spent,
+        spentMeterRatio: viewerIncome.pay > 0 ? viewerMoney.spent / viewerIncome.pay : 0,
+        spentPctOfPay: percent(viewerMoney.spent, viewerIncome.pay),
+        spentTrendPct: trendPct(viewerMoney.spent, prevMoney.spent),
+        unallocated: viewerMoney.unallocated,
       }}
       members={members.map((m) => ({ id: m.id, name: m.user.name }))}
       month={month}
@@ -449,6 +457,7 @@ export async function DashboardPage({ searchParams }: Props) {
       recent={recent}
       recentPaybacks={recentPaybacks}
       savings={savings}
+      settle={settle}
       spentMonthName={monthLabel.split(" ")[0]}
       year={year}
     />

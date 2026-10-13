@@ -23,6 +23,8 @@ import { cn } from "@/lib/utils";
 import { PayDialog } from "@/modules/budget/components/PayDialog";
 import type { ExtraIncome } from "@/modules/budget/lib/income";
 import { CategoryIcon } from "@/modules/categories/components/CategoryIcon";
+import { CushionDialog } from "@/modules/cushion/components/CushionDialog";
+import { SettleCard, type SettleOptions } from "@/modules/cushion/components/SettleCard";
 import { deletePaybackAction } from "@/modules/paybacks/api/paybacks.actions";
 import { PaybackDialog } from "@/modules/paybacks/components/PaybackDialog";
 import type { PaybackBalance } from "@/modules/paybacks/lib/payback-balance";
@@ -57,6 +59,9 @@ export type HomeBalanceRow = { amount: number; id: string; label: string; sub: s
 
 export type HomeEssential = { categoryName: string; planned: number; spent: number };
 
+// Last month's leftover, waiting to be decided on.
+export type HomeSettle = SettleOptions & { amount: number; canSettle: boolean; month: number; monthLabel: string; year: number };
+
 export type HomePacing = {
   carryIn: number;
   nextWeekAllowance: number;
@@ -75,6 +80,8 @@ export type HomePaybackRow = { amount: number; dateLabel: string; fromName: stri
 type Props = {
   balances: HomeBalanceRow[];
   currentMemberId: string;
+  // The viewer's cushion; canEdit only when it's the person signed in.
+  cushion: { balance: number; canEdit: boolean; target: null | number };
   daysLeft: number;
   // The essential lines of the person viewing Home.
   essentials: HomeEssential[];
@@ -103,6 +110,7 @@ type Props = {
   recent: HomeRecentGroup[];
   recentPaybacks: HomePaybackRow[];
   savings: HomeSavingsPot[];
+  settle: HomeSettle | null;
   spentMonthName: string;
   year: number;
 };
@@ -124,6 +132,7 @@ export function HomeView(props: Props) {
   const [explain, setExplain] = useState(false);
   const [incomeOpen, setIncomeOpen] = useState(false);
   const [paybackOpen, setPaybackOpen] = useState(false);
+  const [cushionOpen, setCushionOpen] = useState(false);
   const router = useRouter();
   const nameOf = (id: string) => props.members.find((m) => m.id === id)?.name ?? "Partner";
 
@@ -154,6 +163,8 @@ export function HomeView(props: Props) {
         monthNav={props.monthNav}
         title="Home"
       />
+
+      {props.settle && <SettleCard {...props.settle} />}
 
       <section className="grid grid-cols-1 gap-x-14 gap-y-5 border-t-2 border-ink pt-5 pb-2 @min-[780px]:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-2.5">
@@ -411,10 +422,27 @@ export function HomeView(props: Props) {
         })}
       </section>
 
-      {props.balances.length > 0 && (
-        <section className="mt-13 max-w-160">
-          <SectionHeading sub="Where your money stands, apart from this month's spending">Balances</SectionHeading>
-          {props.balances.map((row) => (
+      <section className="mt-13 max-w-160">
+        <SectionHeading sub="Where your money stands, apart from this month's spending">Balances</SectionHeading>
+        <div className="flex items-baseline justify-between gap-4 border-b border-n-300 py-3">
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <span className="truncate text-[15px]">Cushion</span>
+            <span className="text-[13px] text-n-600">
+              {props.cushion.target === null ? "Money beyond this month's plan" : `Aiming for ${formatMoney(props.cushion.target)}`}
+            </span>
+          </span>
+          <span className="flex items-baseline gap-3">
+            {props.cushion.canEdit && (
+              <Button className="h-auto px-1.5 py-0.5 text-[13px]" onClick={() => setCushionOpen(true)} type="button" variant="ghost">
+                Change
+              </Button>
+            )}
+            <span className={cn("text-[15px] font-semibold", props.cushion.balance < 0 && "text-signal-ink")}>
+              <Money tone={props.cushion.balance < 0 ? "negative" : "default"} value={props.cushion.balance} />
+            </span>
+          </span>
+        </div>
+        {props.balances.map((row) => (
             <div className="flex items-baseline justify-between gap-4 border-b border-n-300 py-3" key={row.id}>
               <span className="flex min-w-0 flex-col gap-0.5">
                 <span className="truncate text-[15px]">{row.label}</span>
@@ -425,8 +453,7 @@ export function HomeView(props: Props) {
               </span>
             </div>
           ))}
-        </section>
-      )}
+      </section>
 
       <div className="mt-13 grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-12">
         <section className="min-w-0">
@@ -514,6 +541,8 @@ export function HomeView(props: Props) {
         title="Pay & extra"
         year={props.year}
       />
+
+      <CushionDialog balance={props.cushion.balance} onOpenChange={setCushionOpen} open={cushionOpen} target={props.cushion.target} />
 
       <PaybackDialog
         currentMemberId={props.currentMemberId}

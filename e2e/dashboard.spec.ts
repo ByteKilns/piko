@@ -21,6 +21,23 @@ test.describe("dashboard", () => {
     await expect(page.getByText(/taken from your spending money\.$/)).toBeVisible();
   });
 
+  test("asks about last month's leftover until it's decided", async ({ page }) => {
+    test.slow();
+    // The seed leaves member 1 money over in the previous month.
+    const card = page.getByRole("region", { name: /to decide$/ });
+    await expect(card).toBeVisible();
+
+    await card.getByRole("button", { name: "Done" }).click();
+
+    await expect(card).toBeHidden({ timeout: 20_000 });
+    await expect(page.getByText("Cushion", { exact: true })).toBeVisible();
+
+    // A decided month isn't asked about again.
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Home", exact: true })).toBeVisible();
+    await expect(card).toHaveCount(0);
+  });
+
   test("exposes previous/next month navigation", async ({ page }) => {
     await expect(page.getByLabel("Previous month")).toBeVisible();
     await expect(page.getByLabel("Next month")).toBeVisible();
