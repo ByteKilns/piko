@@ -1,8 +1,12 @@
-import { integer, numeric, pgTable, unique, uuid } from "drizzle-orm/pg-core";
+import { integer, numeric, pgEnum, pgTable, unique, uuid } from "drizzle-orm/pg-core";
 
 import { categories } from "./categories";
 import { householdMembers } from "./householdMembers";
 import { households } from "./households";
+
+// How a person treats one of their budget lines. "can_cut" lines make up the
+// money Home's "safe to spend" is worked out from.
+export const budgetLineKindEnum = pgEnum("budget_line_kind", ["fixed", "essential", "can_cut"]);
 
 export const monthlyBudgets = pgTable(
   "monthly_budgets",
@@ -32,6 +36,9 @@ export const budgetItems = pgTable(
       onDelete: "cascade",
     }),
     plannedAmount: numeric("planned_amount", { precision: 12, scale: 2 }).notNull(),
+    // null = not chosen yet: it follows the category (fixed → fixed,
+    // flexible → essential).
+    kind: budgetLineKindEnum("kind"),
   },
   (table) => [
     unique().on(table.monthlyBudgetId, table.categoryId, table.ownerMemberId),

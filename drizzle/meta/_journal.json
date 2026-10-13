@@ -155,6 +155,13 @@
       "when": 1791723217532,
       "tag": "0021_clumsy_mister_fear",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791898532304,
+      "tag": "0022_nosy_rogue",
+      "breakpoints": true
     }
   ]
 }
