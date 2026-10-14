@@ -5,17 +5,18 @@ import 'package:ota_update/ota_update.dart';
 
 import '../models/app_release.dart';
 import '../theme/app_theme.dart';
+import 'sheet_frame.dart';
 
 Future<void> showAppUpdateSheet(BuildContext context, AppRelease release) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+    useSafeArea: true,
     builder: (_) => AppUpdateSheet(release: release),
   );
 }
 
-/// Tappable card telling the user a newer build is available.
+/// Tappable strip telling the user a newer build is available.
 class AppUpdateBanner extends StatelessWidget {
   const AppUpdateBanner({super.key, required this.release});
 
@@ -23,22 +24,23 @@ class AppUpdateBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.piko;
+
     return Material(
-      color: AppColors.accentLight,
-      borderRadius: BorderRadius.circular(16),
+      color: c.surface,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
         onTap: () => showAppUpdateSheet(context, release),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+          padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
           child: Row(
             children: [
-              const Icon(Icons.system_update, color: AppColors.accentLightForeground),
+              // The red square the website uses for anything unread.
+              Container(width: 8, height: 8, color: c.signal),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Update available — v${release.versionName}',
-                  style: const TextStyle(fontWeight: FontWeight.w500, color: AppColors.textPrimary),
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
               TextButton(
@@ -125,57 +127,55 @@ class _AppUpdateSheetState extends State<AppUpdateSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.piko;
+    final text = Theme.of(context).textTheme;
     final release = widget.release;
     final sizeMb = (release.sizeBytes / (1024 * 1024)).toStringAsFixed(1);
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('UPDATE AVAILABLE', style: AppTheme.eyebrow),
-            const SizedBox(height: 4),
-            Text('Piko v${release.versionName}', style: AppTheme.sectionHeading),
-            const SizedBox(height: 4),
-            Text('$sizeMb MB', style: AppTheme.subtitle),
-            if (release.notes != null && release.notes!.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 200),
-                child: SingleChildScrollView(child: Text(release.notes!)),
-              ),
-            ],
-            const SizedBox(height: 24),
-            if (_busy) ...[
-              LinearProgressIndicator(value: _installing ? null : _progress, color: AppColors.primary),
-              const SizedBox(height: 8),
-              Text(
-                _installing
-                    ? 'Follow the prompt to install the update.'
-                    : 'Downloading… ${((_progress ?? 0) * 100).round()}%',
-                style: AppTheme.subtitle,
-              ),
-              // The installer is a separate system screen; if it's dismissed there's no event, so offer a way out.
-              if (_installing)
-                TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
-            ] else ...[
-              if (_error != null) ...[
-                Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                const SizedBox(height: 12),
+    return SheetFrame(
+      title: 'Piko v${release.versionName}',
+      footer: _busy
+          // The installer is a separate system screen; if it's dismissed there's no event, so offer a way out.
+          ? (_installing
+              ? Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+                )
+              : null)
+          : Row(
+              children: [
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _startUpdate,
+                    child: Text(_error == null ? 'Update now' : 'Try again'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Later')),
               ],
-              FilledButton(
-                onPressed: _startUpdate,
-                child: Text(_error == null ? 'Update now' : 'Try again'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Later'),
-              ),
-            ],
+            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('UPDATE AVAILABLE · $sizeMb MB', style: text.labelSmall),
+          if (release.notes != null && release.notes!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(release.notes!, style: text.bodyMedium),
           ],
-        ),
+          if (_busy) ...[
+            const SizedBox(height: 20),
+            LinearProgressIndicator(value: _installing ? null : _progress),
+            const SizedBox(height: 8),
+            Text(
+              _installing ? 'Follow the prompt to install the update.' : 'Downloading… ${((_progress ?? 0) * 100).round()}%',
+              style: text.bodySmall,
+            ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: 16),
+            Text(_error!, style: text.bodyMedium!.copyWith(color: c.signalInk)),
+          ],
+        ],
       ),
     );
   }
