@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -10,6 +9,7 @@ import '../providers/api_client_provider.dart';
 import '../providers/app_update_provider.dart';
 import '../providers/categories_provider.dart';
 import '../services/api_client.dart';
+import '../services/bs_calendar.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_update_sheet.dart';
 
@@ -127,7 +127,7 @@ class _VoiceCaptureScreenState extends ConsumerState<VoiceCaptureScreen> with Si
 
       setState(() {
         _stage = _VoiceStage.notUnderstood;
-        _notUnderstoodMessage = "Couldn't quite catch that as an expense — try rephrasing, or add it manually.";
+        _notUnderstoodMessage = "Couldn't quite catch that as an expense — try rephrasing, or type it instead.";
       });
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -144,22 +144,9 @@ class _VoiceCaptureScreenState extends ConsumerState<VoiceCaptureScreen> with Si
     }
   }
 
-  ExpenseDraft _emptyDraft() {
-    final categories = ref.read(categoriesProvider).valueOrNull;
-    final firstCategoryId = categories?.categories.firstOrNull?.id ?? '';
-    final firstMemberId = categories?.members.firstOrNull?.id ?? '';
-    final today = DateTime.now();
-    final dateStr =
-        '${today.year.toString().padLeft(4, '0')}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-
-    return ExpenseDraft(
-      amount: 0,
-      categoryId: firstCategoryId,
-      ownerMemberId: null,
-      paidByMemberId: firstMemberId,
-      date: dateStr,
-      note: null,
-    );
+  // Hands back an empty expense, so Home opens the sheet for typing.
+  void _typeInstead() {
+    Navigator.of(context).pop(ExpenseDraft.blank(ref.read(categoriesProvider).valueOrNull, today: formatAd(DateTime.now())));
   }
 
   @override
@@ -172,10 +159,11 @@ class _VoiceCaptureScreenState extends ConsumerState<VoiceCaptureScreen> with Si
         actions: [
           if (update != null)
             IconButton(
-              icon: const Badge(child: Icon(Icons.system_update)),
+              icon: const Badge(child: Icon(Icons.system_update_outlined)),
               tooltip: 'Update available',
               onPressed: () => showAppUpdateSheet(context, update),
             ),
+          const SizedBox(width: 8),
         ],
         leading: IconButton(
           icon: const Icon(Icons.close),
@@ -199,94 +187,96 @@ class _VoiceCaptureScreenState extends ConsumerState<VoiceCaptureScreen> with Si
   }
 
   Widget _buildBody() {
+    final c = context.piko;
+    final text = Theme.of(context).textTheme;
+
     switch (_stage) {
       case _VoiceStage.listening:
         return Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _ListeningOrb(pulse: _pulse, soundLevel: _soundLevel),
-            const SizedBox(height: 16),
-            _ListeningLabel(pulse: _pulse),
+            Center(child: _ListeningMark(pulse: _pulse, soundLevel: _soundLevel)),
+            const SizedBox(height: 28),
+            Center(child: _ListeningLabel(pulse: _pulse)),
             const SizedBox(height: 16),
             AnimatedSize(
               duration: const Duration(milliseconds: 200),
               child: Text(
                 _transcript.isEmpty ? 'Say what you spent — e.g. "400 on groceries".' : _transcript,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'SpaceGrotesk',
-                  fontSize: _transcript.isEmpty ? 16 : 22,
-                  fontWeight: _transcript.isEmpty ? FontWeight.w400 : FontWeight.w500,
-                  color: _transcript.isEmpty ? AppColors.textMuted : AppColors.textPrimary,
-                ),
+                style: _transcript.isEmpty
+                    ? text.bodyLarge!.copyWith(color: c.n600)
+                    : TextStyle(fontSize: 24, height: 1.25, fontWeight: FontWeight.w800, letterSpacing: -0.24, color: c.ink),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 36),
             FilledButton.icon(
               onPressed: _stopAndParse,
               icon: const Icon(Icons.check),
               label: const Text('Done'),
             ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(_emptyDraft()),
-              child: const Text('Type it instead'),
-            ),
+            const SizedBox(height: 8),
+            TextButton(onPressed: _typeInstead, child: const Text('Type it instead')),
           ],
         );
       case _VoiceStage.parsing:
-        return const Column(
+        return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: AppColors.primary),
-            SizedBox(height: 16),
-            Text('Understanding…', style: TextStyle(fontFamily: 'SpaceGrotesk', color: AppColors.textPrimary)),
+            Text('UNDERSTANDING', style: text.labelSmall),
+            const SizedBox(height: 16),
+            const SizedBox(width: 160, child: LinearProgressIndicator()),
+            if (_transcript.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text('"$_transcript"', textAlign: TextAlign.center, style: text.bodyLarge!.copyWith(color: c.n700)),
+            ],
           ],
         );
       case _VoiceStage.notUnderstood:
         return Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              _notUnderstoodMessage ?? 'Not understood.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'SpaceGrotesk', color: AppColors.textPrimary),
+            Text(_notUnderstoodMessage ?? 'Not understood.', textAlign: TextAlign.center, style: text.titleMedium),
+            if (_transcript.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text('"$_transcript"', textAlign: TextAlign.center, style: text.bodySmall),
+            ],
+            const SizedBox(height: 28),
+            FilledButton.icon(
+              onPressed: _startListening,
+              icon: const Icon(Icons.mic),
+              label: const Text('Try again'),
             ),
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 8,
-              alignment: WrapAlignment.center,
-              children: [
-                OutlinedButton(onPressed: _startListening, child: const Text('Try again')),
-                if (_transcript.isNotEmpty)
-                  OutlinedButton(
-                    onPressed: () => _parse(_transcript),
-                    child: const Text('Retry parsing'),
-                  ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(_emptyDraft()),
-                  child: const Text('Add manually'),
-                ),
-              ],
-            ),
+            if (_transcript.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              OutlinedButton(onPressed: () => _parse(_transcript), child: const Text('Retry parsing')),
+            ],
+            const SizedBox(height: 8),
+            TextButton(onPressed: _typeInstead, child: const Text('Type it instead')),
           ],
         );
     }
   }
 }
 
-/// Mic button surrounded by expanding ripple rings; the core swells with the live sound level.
-class _ListeningOrb extends StatelessWidget {
-  const _ListeningOrb({required this.pulse, required this.soundLevel});
+/// A red square with the mic, surrounded by square outlines rippling out from
+/// it; the square swells with the live sound level.
+class _ListeningMark extends StatelessWidget {
+  const _ListeningMark({required this.pulse, required this.soundLevel});
 
   final Animation<double> pulse;
   final double soundLevel;
 
-  static const _size = 220.0;
-  static const _coreSize = 96.0;
+  static const _size = 200.0;
+  static const _coreSize = 88.0;
   static const _ringCount = 3;
 
   @override
   Widget build(BuildContext context) {
+    final c = context.piko;
+
     return SizedBox(
       width: _size,
       height: _size,
@@ -295,37 +285,24 @@ class _ListeningOrb extends StatelessWidget {
         builder: (context, child) => Stack(
           alignment: Alignment.center,
           children: [
-            for (var i = 0; i < _ringCount; i++) _ring((pulse.value + i / _ringCount) % 1),
-            // Soft glow that tracks how loud the user is speaking.
+            for (var i = 0; i < _ringCount; i++) _ring((pulse.value + i / _ringCount) % 1, c.signal),
+            // Soft block that tracks how loud the user is speaking.
             AnimatedContainer(
               duration: const Duration(milliseconds: 120),
-              width: _coreSize + 36 * soundLevel,
-              height: _coreSize + 36 * soundLevel,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary.withValues(alpha: 0.18),
-              ),
+              width: _coreSize + 32 * soundLevel,
+              height: _coreSize + 32 * soundLevel,
+              color: c.signal.withValues(alpha: 0.16),
             ),
             child!,
           ],
         ),
         child: AnimatedScale(
           duration: const Duration(milliseconds: 120),
-          scale: 1 + 0.12 * soundLevel,
+          scale: 1 + 0.1 * soundLevel,
           child: Container(
             width: _coreSize,
             height: _coreSize,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.35),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
+            color: c.signalFill,
             child: const Icon(Icons.mic, size: 40, color: Colors.white),
           ),
         ),
@@ -333,20 +310,19 @@ class _ListeningOrb extends StatelessWidget {
     );
   }
 
-  Widget _ring(double t) {
-    final diameter = _coreSize + (_size - _coreSize) * Curves.easeOut.transform(t);
+  Widget _ring(double t, Color color) {
+    final side = _coreSize + (_size - _coreSize) * Curves.easeOut.transform(t);
     return Container(
-      width: diameter,
-      height: diameter,
+      width: side,
+      height: side,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.45 * (1 - t)), width: 2),
+        border: Border.all(color: color.withValues(alpha: 0.45 * (1 - t)), width: 1.5),
       ),
     );
   }
 }
 
-/// "LISTENING" eyebrow with three dots that bounce in sequence.
+/// "LISTENING" micro-label with three square dots that bounce in sequence.
 class _ListeningLabel extends StatelessWidget {
   const _ListeningLabel({required this.pulse});
 
@@ -354,12 +330,14 @@ class _ListeningLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.piko;
+
     return AnimatedBuilder(
       animation: pulse,
       builder: (context, _) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('LISTENING', style: AppTheme.eyebrow),
+          Text('LISTENING', style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(width: 6),
           for (var i = 0; i < 3; i++)
             Transform.translate(
@@ -368,7 +346,7 @@ class _ListeningLabel extends StatelessWidget {
                 width: 4,
                 height: 4,
                 margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                decoration: const BoxDecoration(color: AppColors.textMuted, shape: BoxShape.circle),
+                color: c.n600,
               ),
             ),
         ],
