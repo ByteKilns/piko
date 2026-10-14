@@ -1,17 +1,28 @@
-// mobile/lib/widgets/expense_confirm_sheet.dart
 import 'package:flutter/material.dart';
 
 import '../models/category_option.dart';
 import '../models/expense_draft.dart';
 import '../models/member_option.dart';
 import '../services/bs_calendar.dart';
+import '../services/people.dart';
 import '../theme/app_theme.dart';
+import 'amount_field.dart';
 import 'bs_date_picker.dart';
+import 'labeled_field.dart';
+import 'segmented.dart';
+import 'sheet_frame.dart';
 
+// The website's Add expense dialog as a bottom sheet: the big amount, the
+// category with one-tap chips, For and Paid by as segments, the date and a
+// note. Voice drafts open it pre-filled for checking.
 class ExpenseConfirmSheet extends StatefulWidget {
   final ExpenseDraft initialDraft;
   final List<CategoryOption> categories;
   final List<MemberOption> members;
+  // The signed-in member, so the sheet can say "Me". Null from an older server.
+  final String? currentMemberId;
+  // Categories offered as chips under the picker, most used first.
+  final List<String> quickCategoryIds;
   final AppDateFormat dateFormat;
   final BsCalendar calendar;
   final Future<void> Function(ExpenseDraft draft) onSave;
@@ -21,6 +32,8 @@ class ExpenseConfirmSheet extends StatefulWidget {
     required this.initialDraft,
     required this.categories,
     required this.members,
+    this.currentMemberId,
+    this.quickCategoryIds = const [],
     required this.dateFormat,
     required this.calendar,
     required this.onSave,
@@ -69,6 +82,14 @@ class _ExpenseConfirmSheetState extends State<ExpenseConfirmSheet> {
     super.dispose();
   }
 
+  // Someone's own expense is usually paid by them; Shared keeps whoever was picked.
+  void _chooseOwner(String? memberId) {
+    setState(() {
+      _ownerMemberId = memberId;
+      if (memberId != null) _paidByMemberId = memberId;
+    });
+  }
+
   Future<void> _save() async {
     setState(() => _saving = true);
     final draft = ExpenseDraft(
@@ -109,83 +130,153 @@ class _ExpenseConfirmSheetState extends State<ExpenseConfirmSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+    final c = context.piko;
+    final text = Theme.of(context).textTheme;
+    final people = meFirst(widget.members, widget.currentMemberId);
+    final quick = [
+      for (final id in widget.quickCategoryIds) ...widget.categories.where((category) => category.id == id),
+    ];
+
+    return SheetFrame(
+      title: 'Add expense',
+      footer: Row(
+        children: [
+          Expanded(
+            child: FilledButton(
+              key: const Key('save-button'),
+              onPressed: _canSave ? _save : null,
+              child: Text(_saving ? 'Saving...' : 'Add expense'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          OutlinedButton(onPressed: () => Navigator.of(context).maybePop(), child: const Text('Cancel')),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(color: AppColors.textMuted.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          TextField(
+          AmountField(
             key: const Key('amount-field'),
             controller: _amountController,
-            decoration: const InputDecoration(labelText: 'Amount'),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: const TextStyle(fontFamily: 'SpaceGrotesk', fontSize: 20, fontWeight: FontWeight.w600),
+            // A typed-in expense starts with the amount; a voice draft already has one.
+            autofocus: widget.initialDraft.amount <= 0,
             onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: 14),
-          DropdownButtonFormField<String>(
-            key: const Key('category-field'),
-            value: widget.categories.any((c) => c.id == _categoryId) ? _categoryId : null,
-            decoration: const InputDecoration(labelText: 'Category'),
-            items: widget.categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-            onChanged: (value) => setState(() => _categoryId = value!),
-          ),
-          const SizedBox(height: 14),
-          DropdownButtonFormField<String>(
-            key: const Key('paid-by-field'),
-            value: widget.members.any((m) => m.id == _paidByMemberId) ? _paidByMemberId : null,
-            decoration: const InputDecoration(labelText: 'Paid by'),
-            items: widget.members.map((m) => DropdownMenuItem(value: m.id, child: Text(m.name))).toList(),
-            onChanged: (value) => setState(() => _paidByMemberId = value!),
-          ),
-          const SizedBox(height: 14),
-          DropdownButtonFormField<String>(
-            key: const Key('owner-field'),
-            value: _ownerMemberId == null || widget.members.any((m) => m.id == _ownerMemberId) ? _ownerMemberId : null,
-            decoration: const InputDecoration(labelText: 'For'),
-            items: [
-              const DropdownMenuItem<String>(value: null, child: Text('Shared')),
-              ...widget.members.map((m) => DropdownMenuItem(value: m.id, child: Text(m.name))),
-            ],
-            onChanged: (value) => setState(() => _ownerMemberId = value),
-          ),
-          const SizedBox(height: 14),
-          InkWell(
-            onTap: _pickDate,
-            borderRadius: BorderRadius.circular(14),
+          const SizedBox(height: 22),
+          LabeledField(
+            label: 'Category',
             child: InputDecorator(
-              decoration: const InputDecoration(labelText: 'Date'),
-              child: Text(formatAppDate(_date, widget.dateFormat, widget.calendar), style: const TextStyle(fontFamily: 'SpaceGrotesk', color: AppColors.textPrimary)),
+              decoration: const InputDecoration(contentPadding: EdgeInsets.fromLTRB(12, 4, 8, 4)),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  key: const Key('category-field'),
+                  value: widget.categories.any((cat) => cat.id == _categoryId) ? _categoryId : null,
+                  hint: Text('Choose a category', style: text.bodyLarge!.copyWith(color: c.n500)),
+                  isExpanded: true,
+                  style: text.bodyLarge,
+                  dropdownColor: c.paper,
+                  items: [
+                    for (final category in widget.categories)
+                      DropdownMenuItem(value: category.id, child: Text(category.name)),
+                  ],
+                  onChanged: (value) => setState(() => _categoryId = value!),
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 14),
-          TextField(
-            key: const Key('note-field'),
-            controller: _noteController,
-            decoration: const InputDecoration(labelText: 'Note (optional)'),
+          if (quick.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final category in quick)
+                  _QuickChip(
+                    key: Key('quick-category-${category.id}'),
+                    label: category.name,
+                    selected: category.id == _categoryId,
+                    onTap: () => setState(() => _categoryId = category.id),
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 22),
+          LabeledField(
+            label: 'For',
+            child: Segmented<String?>(
+              key: const Key('owner-field'),
+              options: [
+                for (final member in people) (member.id, personLabel(member, widget.currentMemberId)),
+                (null, 'Shared'),
+              ],
+              value: _ownerMemberId,
+              onChanged: _chooseOwner,
+            ),
           ),
-          const SizedBox(height: 24),
-          FilledButton(
-            key: const Key('save-button'),
-            onPressed: _canSave ? _save : null,
-            child: _saving
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : const Text('Save'),
+          const SizedBox(height: 22),
+          LabeledField(
+            label: 'Paid by',
+            child: Segmented<String>(
+              key: const Key('paid-by-field'),
+              options: [for (final member in people) (member.id, personLabel(member, widget.currentMemberId))],
+              value: _paidByMemberId,
+              onChanged: (value) => setState(() => _paidByMemberId = value),
+            ),
+          ),
+          const SizedBox(height: 22),
+          LabeledField(
+            label: 'Date',
+            child: InkWell(
+              onTap: _pickDate,
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  suffixIcon: Icon(Icons.calendar_today_outlined, size: 18, color: c.n600),
+                ),
+                child: Text(formatAppDate(_date, widget.dateFormat, widget.calendar), style: text.bodyLarge),
+              ),
+            ),
+          ),
+          const SizedBox(height: 22),
+          LabeledField(
+            label: 'Note',
+            child: TextField(
+              key: const Key('note-field'),
+              controller: _noteController,
+              textCapitalization: TextCapitalization.sentences,
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// A one-tap category under the picker; the chosen one is filled with ink.
+class _QuickChip extends StatelessWidget {
+  const _QuickChip({super.key, required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.piko;
+    return Material(
+      color: selected ? c.ink : Colors.transparent,
+      shape: RoundedRectangleBorder(side: BorderSide(color: selected ? c.ink : c.n400)),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                  color: selected ? c.paper : c.n800,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                ),
+          ),
+        ),
       ),
     );
   }

@@ -65,6 +65,8 @@ class _BsDatePickerState extends State<_BsDatePicker> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.piko;
+    final text = Theme.of(context).textTheme;
     final calendar = widget.calendar;
     final today = calendar.adToBs(widget.todayAd);
     final firstAd = calendar.bsToAd(BsDate(_year, _month, 1)).split('-').map(int.parse).toList();
@@ -77,26 +79,28 @@ class _BsDatePickerState extends State<_BsDatePicker> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              IconButton(
-                key: const Key('bs-prev-month'),
-                onPressed: _canGoBack ? () => _shiftMonth(-1) : null,
-                icon: const Icon(Icons.chevron_left),
-              ),
-              Expanded(
-                child: Text(
-                  '${nepaliMonths[_month - 1]} $_year',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: AppColors.textPrimary),
+          Container(
+            padding: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(border: Border(bottom: BorderSide(color: c.rule, width: 2))),
+            child: Row(
+              children: [
+                IconButton(
+                  key: const Key('bs-prev-month'),
+                  tooltip: 'Previous month',
+                  onPressed: _canGoBack ? () => _shiftMonth(-1) : null,
+                  icon: const Icon(Icons.chevron_left),
                 ),
-              ),
-              IconButton(
-                key: const Key('bs-next-month'),
-                onPressed: _canGoForward ? () => _shiftMonth(1) : null,
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ],
+                Expanded(
+                  child: Text('${nepaliMonths[_month - 1]} $_year', textAlign: TextAlign.center, style: text.titleMedium),
+                ),
+                IconButton(
+                  key: const Key('bs-next-month'),
+                  tooltip: 'Next month',
+                  onPressed: _canGoForward ? () => _shiftMonth(1) : null,
+                  icon: const Icon(Icons.chevron_right),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 8),
           GridView.count(
@@ -104,8 +108,7 @@ class _BsDatePickerState extends State<_BsDatePicker> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             children: [
-              for (final d in _weekdays)
-                Center(child: Text(d, style: const TextStyle(color: AppColors.textMuted, fontSize: 12))),
+              for (final d in _weekdays) Center(child: Text(d.toUpperCase(), style: text.labelSmall)),
               for (var i = 0; i < leadingBlanks; i++) const SizedBox.shrink(),
               for (var day = 1; day <= dayCount; day++) _dayCell(BsDate(_year, _month, day), today),
             ],
@@ -126,23 +129,25 @@ class _BsDatePickerState extends State<_BsDatePicker> {
     );
   }
 
+  // Square cells: the chosen day filled with ink, today outlined in red.
   Widget _dayCell(BsDate date, BsDate today) {
+    final c = context.piko;
     final isSelected = date == _selected;
     final isToday = date == today;
     return Padding(
       padding: const EdgeInsets.all(2),
       child: Material(
-        color: isSelected ? AppColors.primary : Colors.transparent,
-        shape: const CircleBorder(),
+        color: isSelected ? c.ink : Colors.transparent,
+        shape: isToday && !isSelected ? RoundedRectangleBorder(side: BorderSide(color: c.signal, width: 1.5)) : null,
         child: InkWell(
-          customBorder: const CircleBorder(),
           onTap: () => Navigator.of(context).pop(widget.calendar.bsToAd(date)),
           child: Center(
             child: Text(
               '${date.day}',
               style: TextStyle(
-                color: isSelected ? Colors.white : (isToday ? AppColors.primary : AppColors.textPrimary),
-                fontWeight: isToday || isSelected ? FontWeight.w700 : FontWeight.w400,
+                fontFeatures: const [FontFeature.tabularFigures()],
+                color: isSelected ? c.paper : c.ink,
+                fontWeight: isToday || isSelected ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ),

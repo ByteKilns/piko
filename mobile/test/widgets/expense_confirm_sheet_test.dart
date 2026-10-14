@@ -1,4 +1,3 @@
-// mobile/test/widgets/expense_confirm_sheet_test.dart
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,6 +7,7 @@ import 'package:piko/models/category_option.dart';
 import 'package:piko/models/expense_draft.dart';
 import 'package:piko/models/member_option.dart';
 import 'package:piko/services/bs_calendar.dart';
+import 'package:piko/theme/app_theme.dart';
 import 'package:piko/widgets/expense_confirm_sheet.dart';
 
 void main() {
@@ -31,14 +31,23 @@ void main() {
     required ExpenseDraft initialDraft,
     required void Function(ExpenseDraft) onSave,
     AppDateFormat dateFormat = AppDateFormat.nepali,
+    String? currentMemberId = 'mem-1',
+    List<String> quickCategoryIds = const [],
   }) async {
+    // Tall enough that every field is on screen without scrolling.
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
+        theme: AppTheme.light,
         home: Scaffold(
           body: ExpenseConfirmSheet(
             initialDraft: initialDraft,
             categories: categories,
             members: members,
+            currentMemberId: currentMemberId,
+            quickCategoryIds: quickCategoryIds,
             dateFormat: dateFormat,
             calendar: calendar,
             onSave: (d) async => onSave(d),
@@ -47,6 +56,8 @@ void main() {
       ),
     );
   }
+
+  Finder inField(String key, String text) => find.descendant(of: find.byKey(Key(key)), matching: find.text(text));
 
   testWidgets('shows the prefilled amount and note', (tester) async {
     await pumpSheet(tester, initialDraft: draft(), onSave: (_) {});
@@ -79,14 +90,14 @@ void main() {
     expect(saved!.amount, 750);
   });
 
-  testWidgets('negative amount keeps Save disabled', (tester) async {
+  testWidgets("a minus sign can't be typed into the amount", (tester) async {
     await pumpSheet(tester, initialDraft: draft(), onSave: (_) {});
 
     await tester.enterText(find.byKey(const Key('amount-field')), '-5');
     await tester.pump();
 
-    final saveButton = tester.widget<FilledButton>(find.byKey(const Key('save-button')));
-    expect(saveButton.onPressed, isNull);
+    expect(find.text('5'), findsOneWidget);
+    expect(find.text('-5'), findsNothing);
   });
 
   testWidgets('Save is disabled when categoryId does not match any available category', (tester) async {
@@ -105,6 +116,57 @@ void main() {
 
     final saveButton = tester.widget<FilledButton>(find.byKey(const Key('save-button')));
     expect(saveButton.onPressed, isNull);
+  });
+
+  testWidgets('For and Paid by say Me for the signed-in person, listed first', (tester) async {
+    await pumpSheet(tester, initialDraft: draft(), onSave: (_) {}, currentMemberId: 'mem-2');
+
+    expect(inField('owner-field', 'Me'), findsOneWidget);
+    expect(inField('owner-field', 'Nirjal'), findsOneWidget);
+    expect(inField('owner-field', 'Shared'), findsOneWidget);
+    expect(inField('paid-by-field', 'Me'), findsOneWidget);
+    expect(
+      tester.getTopLeft(inField('owner-field', 'Me')).dx,
+      lessThan(tester.getTopLeft(inField('owner-field', 'Nirjal')).dx),
+    );
+  });
+
+  testWidgets('choosing someone under For makes them the payer too', (tester) async {
+    ExpenseDraft? saved;
+    await pumpSheet(tester, initialDraft: draft(), onSave: (d) => saved = d);
+
+    await tester.tap(inField('owner-field', 'Karuna'));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('save-button')));
+    await tester.pump();
+
+    expect(saved!.ownerMemberId, 'mem-2');
+    expect(saved!.paidByMemberId, 'mem-2');
+  });
+
+  testWidgets('choosing Shared keeps whoever paid', (tester) async {
+    ExpenseDraft? saved;
+    await pumpSheet(tester, initialDraft: draft(), onSave: (d) => saved = d);
+
+    await tester.tap(inField('owner-field', 'Shared'));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('save-button')));
+    await tester.pump();
+
+    expect(saved!.ownerMemberId, isNull);
+    expect(saved!.paidByMemberId, 'mem-1');
+  });
+
+  testWidgets('a quick category chip picks that category', (tester) async {
+    ExpenseDraft? saved;
+    await pumpSheet(tester, initialDraft: draft(), onSave: (d) => saved = d, quickCategoryIds: ['cat-2', 'cat-1']);
+
+    await tester.tap(find.byKey(const Key('quick-category-cat-2')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('save-button')));
+    await tester.pump();
+
+    expect(saved!.categoryId, 'cat-2');
   });
 
   testWidgets('shows the draft date in BS by default', (tester) async {
