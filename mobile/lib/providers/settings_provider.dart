@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/bs_calendar.dart';
@@ -50,4 +51,26 @@ class DateFormatNotifier extends StateNotifier<AppDateFormat> {
 
 final dateFormatProvider = StateNotifierProvider<DateFormatNotifier, AppDateFormat>(
   (ref) => DateFormatNotifier(ref.watch(settingsServiceProvider)),
+);
+
+class ThemeModeNotifier extends StateNotifier<ThemeMode> {
+  final SettingsService _service;
+
+  // Light until the stored choice loads — the same default the website uses.
+  ThemeModeNotifier(this._service) : super(ThemeMode.light) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    state = await _service.readThemeMode();
+  }
+
+  Future<void> setMode(ThemeMode mode) async {
+    state = mode;
+    await _service.writeThemeMode(mode);
+  }
+}
+
+final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>(
+  (ref) => ThemeModeNotifier(ref.watch(settingsServiceProvider)),
 );

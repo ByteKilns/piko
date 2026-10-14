@@ -105,10 +105,10 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
   fonts:
-    - family: SpaceGrotesk
+    - family: HostGrotesk
       fonts:
-        - asset: assets/fonts/SpaceGrotesk-Regular.ttf
-        - asset: assets/fonts/SpaceGrotesk-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/SpaceGrotesk-Bold.ttf
-          weight: 700
+        - asset: assets/fonts/HostGrotesk-Regular.ttf
+        - asset: assets/fonts/HostGrotesk-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/HostGrotesk-ExtraBold.ttf
+          weight: 800

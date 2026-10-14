@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers/auth_provider.dart';
 import 'providers/calendar_provider.dart';
+import 'providers/settings_provider.dart';
 import 'services/bs_calendar.dart';
 import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
@@ -43,7 +44,9 @@ class PikoApp extends ConsumerWidget {
     return MaterialApp(
       navigatorKey: navigatorKey,
       title: 'Piko',
-      theme: AppTheme.theme,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ref.watch(themeModeProvider),
       home: const SplashScreen(),
       debugShowCheckedModeBanner: false,
     );

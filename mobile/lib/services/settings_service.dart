@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'bs_calendar.dart';
@@ -5,6 +6,7 @@ import 'bs_calendar.dart';
 class SettingsService {
   static const _urlKey = 'piko_server_url';
   static const _dateFormatKey = 'piko_date_format';
+  static const _themeModeKey = 'piko_theme_mode';
   static const defaultUrl = 'https://piko-kn.vercel.app';
 
   Future<String> readServerUrl() async {
@@ -27,5 +29,17 @@ class SettingsService {
   Future<void> writeDateFormat(AppDateFormat format) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_dateFormatKey, format.name);
+  }
+
+  // Light until someone picks otherwise, as on the website.
+  Future<ThemeMode> readThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getString(_themeModeKey);
+    return ThemeMode.values.firstWhere((mode) => mode.name == stored, orElse: () => ThemeMode.light);
+  }
+
+  Future<void> writeThemeMode(ThemeMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_themeModeKey, mode.name);
   }
 }

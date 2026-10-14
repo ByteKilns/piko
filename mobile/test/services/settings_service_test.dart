@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:piko/services/bs_calendar.dart';
 import 'package:piko/services/settings_service.dart';
@@ -36,6 +37,21 @@ void main() {
       await service.writeDateFormat(AppDateFormat.english);
 
       expect(await service.readDateFormat(), AppDateFormat.english);
+    });
+
+    test('readThemeMode defaults to light', () async {
+      SharedPreferences.setMockInitialValues({});
+
+      expect(await SettingsService().readThemeMode(), ThemeMode.light);
+    });
+
+    test('writeThemeMode persists dark', () async {
+      SharedPreferences.setMockInitialValues({});
+      final service = SettingsService();
+
+      await service.writeThemeMode(ThemeMode.dark);
+
+      expect(await service.readThemeMode(), ThemeMode.dark);
     });
   });
 }
