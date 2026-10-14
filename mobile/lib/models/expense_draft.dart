@@ -1,3 +1,5 @@
+import 'categories_result.dart';
+
 class ExpenseDraft {
   final double amount;
   final String categoryId;
@@ -14,6 +16,20 @@ class ExpenseDraft {
     required this.date,
     this.note,
   });
+
+  // A new expense typed by hand on [today]: for and paid by the signed-in
+  // person, as on the website. A server too old to say who that is gives a
+  // shared expense paid by the first member instead.
+  factory ExpenseDraft.blank(CategoriesResult? options, {required String today}) {
+    final me = options?.currentMemberId;
+    return ExpenseDraft(
+      amount: 0,
+      categoryId: options?.categories.firstOrNull?.id ?? '',
+      ownerMemberId: me,
+      paidByMemberId: me ?? options?.members.firstOrNull?.id ?? '',
+      date: today,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'amount': amount,

@@ -1,8 +1,8 @@
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/categories_result.dart';
+import '../models/expense.dart';
 import '../models/expense_draft.dart';
 import '../providers/api_client_provider.dart';
 import '../providers/app_update_provider.dart';
@@ -12,10 +12,13 @@ import '../providers/expenses_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/api_client.dart';
 import '../services/bs_calendar.dart';
+import '../services/expense_list.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_update_sheet.dart';
+import '../widgets/brand_mark.dart';
 import '../widgets/expense_confirm_sheet.dart';
 import '../widgets/expense_list_tile.dart';
+import '../widgets/money_text.dart';
 import 'settings_screen.dart';
 import 'voice_capture_screen.dart';
 
@@ -49,26 +52,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  Future<void> _openManualEntry(BuildContext context, WidgetRef ref) async {
-    final categories = ref.read(categoriesProvider).valueOrNull;
-    final firstCategoryId = categories?.categories.firstOrNull?.id ?? '';
-    final firstMemberId = categories?.members.firstOrNull?.id ?? '';
-    final today = DateTime.now();
-    final dateStr =
-        '${today.year.toString().padLeft(4, '0')}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-
-    final draft = ExpenseDraft(
-      amount: 0,
-      categoryId: firstCategoryId,
-      ownerMemberId: null,
-      paidByMemberId: firstMemberId,
-      date: dateStr,
-      note: null,
-    );
-    await _openConfirmSheet(context, ref, draft);
-  }
-
-  Future<void> _openConfirmSheet(BuildContext context, WidgetRef ref, ExpenseDraft draft) async {
+  // A null draft means a new expense typed by hand.
+  Future<void> _openConfirmSheet(BuildContext context, WidgetRef ref, ExpenseDraft? draft) async {
     // Voice capture opens on launch, so categories may still be loading — wait rather than drop the draft.
     final CategoriesResult categoriesResult;
     try {
@@ -83,16 +68,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
     if (!context.mounted) return;
 
+    final recent = ref.read(recentExpensesProvider).valueOrNull ?? const <Expense>[];
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      useSafeArea: true,
       builder: (sheetContext) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
         child: ExpenseConfirmSheet(
-          initialDraft: draft,
+          initialDraft: draft ?? ExpenseDraft.blank(categoriesResult, today: formatAd(DateTime.now())),
           categories: categoriesResult.categories,
           members: categoriesResult.members,
+          currentMemberId: categoriesResult.currentMemberId,
+          quickCategoryIds: quickCategoryIds(recent, categoriesResult.categories),
           dateFormat: ref.read(dateFormatProvider),
           calendar: ref.read(bsCalendarProvider),
           onSave: (finalDraft) async {
@@ -112,13 +100,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  String _greeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'GOOD MORNING';
-    if (hour < 17) return 'GOOD AFTERNOON';
-    return 'GOOD EVENING';
-  }
-
   @override
   void dispose() {
     _lifecycle.dispose();
@@ -127,128 +108,180 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.piko;
+    final text = Theme.of(context).textTheme;
     final expensesAsync = ref.watch(recentExpensesProvider);
     final update = ref.watch(availableUpdateProvider).valueOrNull;
-    final categoriesAsync = ref.watch(categoriesProvider);
+    final options = ref.watch(categoriesProvider).valueOrNull;
     final dateFormat = ref.watch(dateFormatProvider);
     final calendar = ref.watch(bsCalendarProvider);
+    final today = formatAd(DateTime.now());
 
     return Scaffold(
-      body: SafeArea(
-        child: Column(
+      appBar: AppBar(
+        titleSpacing: 20,
+        title: const BrandMark(),
+        actions: [
+          IconButton(
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(recentExpensesProvider),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(_greeting(), style: AppTheme.eyebrow),
-                        const SizedBox(height: 4),
-                        const Text('Piko.', style: AppTheme.wordmark),
-                      ],
-                    ),
+            if (update != null) ...[AppUpdateBanner(release: update), const SizedBox(height: 20)],
+            Text('Recent expenses', style: text.headlineLarge),
+            const SizedBox(height: 6),
+            Text('The latest across the household', style: text.bodySmall),
+            const SizedBox(height: 20),
+            ...expensesAsync.when(
+              loading: () => [const LinearProgressIndicator()],
+              error: (error, _) => [
+                _Message(
+                  title: "Couldn't load expenses.",
+                  body: '$error',
+                  action: OutlinedButton(
+                    onPressed: () => ref.invalidate(recentExpensesProvider),
+                    child: const Text('Try again'),
                   ),
-                  IconButton(
-                    style: IconButton.styleFrom(backgroundColor: AppColors.surface, shape: const CircleBorder()),
-                    icon: const Icon(Icons.settings_outlined, color: AppColors.textPrimary),
-                    onPressed: () =>
-                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
-                  ),
-                ],
-              ),
-            ),
-            if (update != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-                child: AppUpdateBanner(release: update),
-              ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('ACTIVITY', style: AppTheme.eyebrow),
-                        SizedBox(height: 4),
-                        Text('Recent expenses', style: AppTheme.sectionHeading),
-                      ],
-                    ),
-                  ),
-                  expensesAsync.maybeWhen(
-                    data: (expenses) =>
-                        Text('${expenses.length} entries', style: const TextStyle(color: AppColors.textMuted)),
-                    orElse: () => const SizedBox.shrink(),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () async => ref.invalidate(recentExpensesProvider),
-                child: expensesAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => ListView(
-                    children: [
-                      const SizedBox(height: 80),
-                      Center(child: Text('Could not load expenses: $error')),
-                    ],
-                  ),
-                  data: (expenses) {
-                    if (expenses.isEmpty) {
-                      return ListView(
-                        children: const [
-                          SizedBox(height: 80),
-                          Center(child: Text('No expenses yet — tap the mic to add one.')),
-                        ],
-                      );
-                    }
-                    final categories = categoriesAsync.valueOrNull?.categories ?? [];
-                    return ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 120),
-                      itemCount: expenses.length,
-                      itemBuilder: (context, index) {
-                        final expense = expenses[index];
-                        final category = categories.firstWhereOrNull((c) => c.id == expense.categoryId);
-                        return ExpenseListTile(
-                          expense: expense,
-                          category: category,
-                          dateLabel: formatAppDate(expense.date, dateFormat, calendar),
-                        );
-                      },
-                    );
-                  },
                 ),
-              ),
+              ],
+              data: (expenses) {
+                if (expenses.isEmpty) {
+                  return [const _Message(title: 'No expenses yet.', body: 'Tap Add by voice and say what you spent.')];
+                }
+                return [
+                  // The 2px ink rule that tops every list on the website.
+                  Container(height: 2, color: c.ink),
+                  for (final group in groupByDay(expenses, limit: recentExpensesLimit)) ...[
+                    _DayHead(
+                      label: dayLabel(group.date, today),
+                      date: formatAppDate(group.date, dateFormat, calendar),
+                      total: group.total,
+                    ),
+                    for (final expense in group.expenses)
+                      ExpenseListTile(
+                        expense: expense,
+                        category: options?.categories.where((cat) => cat.id == expense.categoryId).firstOrNull,
+                        members: options?.members ?? const [],
+                        currentMemberId: options?.currentMemberId,
+                      ),
+                  ],
+                ];
+              },
             ),
           ],
         ),
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.end,
+      bottomNavigationBar: _CaptureBar(
+        onType: () => _openConfirmSheet(context, ref, null),
+        onVoice: () => _openVoiceFlow(context, ref),
+      ),
+    );
+  }
+}
+
+// A day's head in the list: "Today" and its date, with the day's total.
+class _DayHead extends StatelessWidget {
+  const _DayHead({required this.label, required this.date, required this.total});
+
+  final String label;
+  final String date;
+  final double? total;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.piko;
+    final text = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.only(top: 16, bottom: 8),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: c.rule))),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
         children: [
-          FloatingActionButton(
-            heroTag: 'manual-add',
-            backgroundColor: AppColors.accentLight,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            onPressed: () => _openManualEntry(context, ref),
-            child: const Icon(Icons.edit, color: AppColors.accentLightForeground),
-          ),
-          const SizedBox(height: 12),
-          FloatingActionButton(
-            heroTag: 'voice-add',
-            backgroundColor: AppColors.primary,
-            onPressed: () => _openVoiceFlow(context, ref),
-            child: const Icon(Icons.mic, color: Colors.white),
-          ),
+          Text(label, style: text.titleMedium),
+          const SizedBox(width: 8),
+          Expanded(child: Text(date, style: text.bodySmall)),
+          if (total != null) MoneyText(total!, style: text.titleMedium),
         ],
+      ),
+    );
+  }
+}
+
+// A heading, one sentence and an optional action — the website's EmptyState.
+class _Message extends StatelessWidget {
+  const _Message({required this.title, required this.body, this.action});
+
+  final String title;
+  final String body;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: text.titleLarge),
+          const SizedBox(height: 8),
+          Text(body, style: text.bodyMedium),
+          if (action != null) ...[const SizedBox(height: 20), action!],
+        ],
+      ),
+    );
+  }
+}
+
+// Pinned at the bottom: type an expense, or (the main action) say it.
+class _CaptureBar extends StatelessWidget {
+  const _CaptureBar({required this.onType, required this.onVoice});
+
+  final VoidCallback onType;
+  final VoidCallback onVoice;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.piko;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: c.paper,
+        border: Border(top: BorderSide(color: c.rule, width: 2)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+          child: Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: onType,
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: const Text('Type it'),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: onVoice,
+                  icon: const Icon(Icons.mic, size: 20),
+                  label: const Text('Add by voice'),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

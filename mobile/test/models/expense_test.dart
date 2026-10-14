@@ -1,6 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:piko/models/categories_result.dart';
+import 'package:piko/models/category_option.dart';
 import 'package:piko/models/expense.dart';
 import 'package:piko/models/expense_draft.dart';
+import 'package:piko/models/member_option.dart';
 
 void main() {
   group('Expense.fromJson', () {
@@ -93,6 +96,39 @@ void main() {
 
       expect(json.containsKey('note'), isFalse);
       expect(json['ownerMemberId'], 'mem-1');
+    });
+  });
+
+  group('ExpenseDraft.blank', () {
+    final members = [MemberOption(id: 'mem-1', name: 'Nirjal'), MemberOption(id: 'mem-2', name: 'Karuna')];
+    final categories = [CategoryOption(id: 'cat-1', name: 'Groceries')];
+
+    test('is for and paid by the signed-in person, dated today', () {
+      final draft = ExpenseDraft.blank(
+        CategoriesResult(categories: categories, members: members, currentMemberId: 'mem-2'),
+        today: '2026-10-14',
+      );
+
+      expect(draft.amount, 0);
+      expect(draft.categoryId, 'cat-1');
+      expect(draft.ownerMemberId, 'mem-2');
+      expect(draft.paidByMemberId, 'mem-2');
+      expect(draft.date, '2026-10-14');
+      expect(draft.note, isNull);
+    });
+
+    test('is shared and paid by the first member when the server does not say who is signed in', () {
+      final draft = ExpenseDraft.blank(CategoriesResult(categories: categories, members: members), today: '2026-10-14');
+
+      expect(draft.ownerMemberId, isNull);
+      expect(draft.paidByMemberId, 'mem-1');
+    });
+
+    test('still works before categories have loaded', () {
+      final draft = ExpenseDraft.blank(null, today: '2026-10-14');
+
+      expect(draft.categoryId, '');
+      expect(draft.paidByMemberId, '');
     });
   });
 }

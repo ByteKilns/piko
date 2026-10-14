@@ -2,55 +2,69 @@ import 'package:flutter/material.dart';
 
 import '../models/category_option.dart';
 import '../models/expense.dart';
+import '../models/member_option.dart';
+import '../services/people.dart';
 import '../theme/app_theme.dart';
-import '../theme/category_style.dart';
+import 'category_icon.dart';
+import 'money_text.dart';
+import 'monogram.dart';
 
+// One row of the recent list, like a row in the website's Expenses list: the
+// category's icon and name, who it was for (and who paid) with the note, and
+// the amount, over a 1px rule.
 class ExpenseListTile extends StatelessWidget {
+  const ExpenseListTile({
+    super.key,
+    required this.expense,
+    required this.category,
+    required this.members,
+    required this.currentMemberId,
+  });
+
   final Expense expense;
   final CategoryOption? category;
-  final String dateLabel;
-
-  const ExpenseListTile({super.key, required this.expense, required this.category, required this.dateLabel});
+  final List<MemberOption> members;
+  final String? currentMemberId;
 
   @override
   Widget build(BuildContext context) {
+    final c = context.piko;
+    final text = Theme.of(context).textTheme;
     final name = category?.name ?? 'Uncategorized';
-    final style = styleFor(name);
-    final subtitle = '$dateLabel${expense.note != null ? ' · ${expense.note}' : ''}';
+    final who = expenseWho(expense, members, currentMemberId);
+    final note = expense.note?.trim() ?? '';
+    // A note that only repeats the category adds nothing.
+    final details = [
+      if (who.label.isNotEmpty) who.label,
+      if (note.isNotEmpty && note.toLowerCase() != name.toLowerCase()) note,
+    ].join(' · ');
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: AppColors.textMuted.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4)),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: c.n300))),
       child: Row(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(color: style.background, shape: BoxShape.circle),
-            child: Center(child: Icon(style.icon, color: style.foreground, size: 22)),
-          ),
+          CategoryIcon(name: name, iconKey: category?.icon),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.titleMedium),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    if (who.people.isNotEmpty) ...[Monogram(people: who.people), const SizedBox(width: 6)],
+                    Expanded(
+                      child: Text(details, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.bodySmall),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-          Text(
-            'NPR ${expense.amount.toStringAsFixed(0)}',
-            style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-          ),
+          const SizedBox(width: 12),
+          MoneyText(expense.amount, style: text.titleMedium),
         ],
       ),
     );
