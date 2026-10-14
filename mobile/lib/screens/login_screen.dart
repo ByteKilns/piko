@@ -1,4 +1,3 @@
-// mobile/lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +6,8 @@ import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
+import '../widgets/brand_mark.dart';
+import '../widgets/labeled_field.dart';
 import 'home_screen.dart';
 import 'settings_screen.dart';
 
@@ -55,75 +56,61 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.piko;
+    final text = Theme.of(context).textTheme;
+
+    // The website's sign-in page at phone width: the brand over a 2px rule,
+    // then a big "Sign in" and the form.
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 24,
+        title: const BrandMark(size: 32),
         actions: [
           IconButton(
+            tooltip: 'Settings',
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
           ),
+          const SizedBox(width: 8),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(2),
+          child: Container(height: 2, color: c.rule),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(14)),
-                child: const Icon(Icons.auto_awesome, color: Colors.white),
-              ),
-              const SizedBox(height: 32),
-              const Text('PERSONAL SPENDING, SIMPLIFIED', style: AppTheme.eyebrow),
-              const SizedBox(height: 8),
-              RichText(
-                text: TextSpan(
-                  style: AppTheme.headline,
-                  children: [
-                    const TextSpan(text: 'Know where '),
-                    TextSpan(
-                      text: 'your money',
-                      style: AppTheme.headline.copyWith(color: AppColors.primary, fontStyle: FontStyle.italic),
-                    ),
-                    const TextSpan(text: ' goes.'),
-                  ],
+              Text('Sign in', style: text.displaySmall),
+              const SizedBox(height: 28),
+              LabeledField(
+                label: 'Email',
+                child: TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
                 ),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'A calmer way to capture everyday expenses — by voice or in a few taps.',
-                style: AppTheme.subtitle,
-              ),
-              const SizedBox(height: 32),
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email', hintText: 'you@example.com'),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'Password', hintText: '••••••••'),
-                obscureText: true,
-                onSubmitted: (_) => _submitting ? null : _submit(),
+              const SizedBox(height: 20),
+              LabeledField(
+                label: 'Password',
+                child: TextField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  onSubmitted: (_) => _submitting ? null : _submit(),
+                ),
               ),
               if (_error != null) ...[
-                const SizedBox(height: 12),
-                Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                const SizedBox(height: 16),
+                Text(_error!, style: text.bodyMedium!.copyWith(color: c.signalInk)),
               ],
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               FilledButton(
                 onPressed: _submitting ? null : _submit,
-                child: _submitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Text('Log in'),
+                child: Text(_submitting ? 'Signing in...' : 'Sign in'),
               ),
             ],
           ),
