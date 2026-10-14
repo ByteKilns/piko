@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     categories: categories.map((c) => ({ id: c.id, name: c.name, icon: c.icon })),
+    // Lets the app say "Me" and pick the signed-in person by default.
+    currentMemberId: auth.memberId,
     members: members.map((m) => ({ id: m.id, name: m.user.name })),
   });
 }

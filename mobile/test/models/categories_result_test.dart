@@ -20,4 +20,31 @@ void main() {
     expect(result.members, hasLength(2));
     expect(result.members.last.name, 'Karuna');
   });
+
+  test('CategoriesResult.fromJson reads the signed-in member and category icons', () {
+    final result = CategoriesResult.fromJson({
+      'categories': [
+        {'id': 'cat-1', 'name': 'Internet', 'icon': 'wifi'},
+        {'id': 'cat-2', 'name': 'Transport', 'icon': null},
+      ],
+      'currentMemberId': 'mem-2',
+      'members': [
+        {'id': 'mem-1', 'name': 'Nirjal'},
+        {'id': 'mem-2', 'name': 'Karuna'},
+      ],
+    });
+
+    expect(result.currentMemberId, 'mem-2');
+    expect(result.categories.first.icon, 'wifi');
+    expect(result.categories.last.icon, isNull);
+  });
+
+  test('CategoriesResult.fromJson leaves currentMemberId null for an older server', () {
+    final result = CategoriesResult.fromJson({
+      'categories': <dynamic>[],
+      'members': <dynamic>[],
+    });
+
+    expect(result.currentMemberId, isNull);
+  });
 }
