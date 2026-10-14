@@ -11,7 +11,9 @@ A household expense tracker for a small two-person household:
   Tailwind v4, shadcn/radix UI. Dashboard, expenses, budgets, income, loans, savings
   pots, paybacks, dhukus, recurring bills, reports, notifications.
 - **Mobile app** (`mobile/`) — Flutter companion for capturing expenses by voice.
-  Talks to the same Next.js backend over a small JSON API. See `mobile/README.md`.
+  Talks to the same Next.js backend over a small JSON API. Its look follows the
+  web's modernist design (palette in `mobile/lib/theme/piko_colors.dart`). See
+  `mobile/README.md`.
 
 Domain conventions that shape everything:
 

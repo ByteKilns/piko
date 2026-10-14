@@ -2,6 +2,24 @@
 
 Flutter companion app for Piko: capture expenses by voice on the go.
 
+## Design
+
+The app follows the website's modernist design
+(`docs/superpowers/specs/2026-10-07-modernist-redesign-design.md`): warm paper
+and ink, one red accent, square corners, rules instead of cards, Host Grotesk.
+
+- Colours: `lib/theme/piko_colors.dart`, a light and a dark palette copied from
+  the website's `src/app/globals.css`. Read them with `context.piko`; never
+  hard-code a colour in a screen.
+- Type scale and Material component styles: `lib/theme/app_theme.dart`. Use the
+  theme's text styles (`headlineLarge` page titles, `titleLarge` headings,
+  `titleMedium` row titles, `bodySmall` meta, `labelSmall` micro-labels).
+- Shared pieces in `lib/widgets/`, each the counterpart of a website component:
+  `MoneyText` (Money), `Monogram`, `Segmented`, `AmountField` (AmountInput),
+  `CategoryIcon`, `SheetFrame` (Modal), `LabeledField`, `BrandMark`.
+- Light, Dark or System is chosen in Settings and stored on the phone; the app
+  opens in Light, like the website.
+
 ## Publishing an update
 
 Installed apps check `GET /api/mobile/app-version` on launch and when brought

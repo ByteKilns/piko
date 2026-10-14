@@ -5,31 +5,10 @@ import 'piko_colors.dart';
 
 export 'piko_colors.dart';
 
-// Legacy purple palette, still read by screens that haven't moved to
-// `context.piko` yet. Removed once the last one has.
-class AppColors {
-  AppColors._();
-
-  static const background = Color(0xFFF5F1FA);
-  static const surface = Color(0xFFFFFFFF);
-  static const primary = Color(0xFF5B3FA6);
-  static const textPrimary = Color(0xFF1A1625);
-  static const textMuted = Color(0xFF8A8398);
-  static const accentLight = Color(0xFFF3E8FF);
-  static const accentLightForeground = Color(0xFF7C3AED);
-}
-
 class AppTheme {
   AppTheme._();
 
   static const font = 'HostGrotesk';
-
-  // Legacy text styles, removed with AppColors.
-  static const eyebrow = TextStyle(fontWeight: FontWeight.w600, fontSize: 12, letterSpacing: 1.5, color: AppColors.textMuted);
-  static const headline = TextStyle(fontWeight: FontWeight.w800, fontSize: 32, color: AppColors.textPrimary, height: 1.15);
-  static const wordmark = TextStyle(fontWeight: FontWeight.w800, fontSize: 32, color: AppColors.textPrimary);
-  static const sectionHeading = TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: AppColors.textPrimary);
-  static const subtitle = TextStyle(fontSize: 15, color: AppColors.textMuted);
 
   static ThemeData get light => _build(PikoColors.light, Brightness.light);
   static ThemeData get dark => _build(PikoColors.dark, Brightness.dark);
