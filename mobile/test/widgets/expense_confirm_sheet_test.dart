@@ -33,6 +33,7 @@ void main() {
     AppDateFormat dateFormat = AppDateFormat.nepali,
     String? currentMemberId = 'mem-1',
     List<String> quickCategoryIds = const [],
+    Map<String, String> noteWords = const {},
   }) async {
     // Tall enough that every field is on screen without scrolling.
     tester.view.physicalSize = const Size(800, 1400);
@@ -48,6 +49,7 @@ void main() {
             members: members,
             currentMemberId: currentMemberId,
             quickCategoryIds: quickCategoryIds,
+            noteWords: noteWords,
             dateFormat: dateFormat,
             calendar: calendar,
             onSave: (d) async => onSave(d),
@@ -58,6 +60,64 @@ void main() {
   }
 
   Finder inField(String key, String text) => find.descendant(of: find.byKey(Key(key)), matching: find.text(text));
+
+  group('the note suggests a category', () {
+    const noteWords = {'banana': 'cat-1', 'bus': 'cat-2', 'yango': 'cat-2'};
+
+    String categoryShown(WidgetTester tester) =>
+        tester.widget<DropdownButton<String>>(find.byKey(const Key('category-field'))).value!;
+
+    testWidgets('typing a known word picks its category and says why', (tester) async {
+      ExpenseDraft? saved;
+      await pumpSheet(tester, initialDraft: draft(), onSave: (d) => saved = d, noteWords: noteWords);
+      expect(find.byKey(const Key('category-suggested')), findsNothing);
+
+      await tester.enterText(find.byKey(const Key('note-field')), 'Yango to office');
+      await tester.pump();
+
+      expect(categoryShown(tester), 'cat-2');
+      expect(find.text('From your notes'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('save-button')));
+      await tester.pump();
+      expect(saved!.categoryId, 'cat-2');
+    });
+
+    testWidgets('a word it has never seen leaves the category alone', (tester) async {
+      await pumpSheet(tester, initialDraft: draft(), onSave: (_) {}, noteWords: noteWords);
+
+      await tester.enterText(find.byKey(const Key('note-field')), 'something new');
+      await tester.pump();
+
+      expect(categoryShown(tester), 'cat-1');
+      expect(find.byKey(const Key('category-suggested')), findsNothing);
+    });
+
+    testWidgets('a category picked by hand stays, whatever the note says', (tester) async {
+      await pumpSheet(
+        tester,
+        initialDraft: draft(),
+        onSave: (_) {},
+        noteWords: noteWords,
+        quickCategoryIds: const ['cat-1', 'cat-2'],
+      );
+
+      await tester.tap(find.byKey(const Key('quick-category-cat-1')));
+      await tester.pump();
+      await tester.enterText(find.byKey(const Key('note-field')), 'bus');
+      await tester.pump();
+
+      expect(categoryShown(tester), 'cat-1');
+      expect(find.byKey(const Key('category-suggested')), findsNothing);
+    });
+
+    testWidgets("a draft's category stays until the note is edited", (tester) async {
+      // The draft's own note ("groceries") isn't a known word; nothing changes on open.
+      await pumpSheet(tester, initialDraft: draft(), onSave: (_) {}, noteWords: const {'groceries': 'cat-2'});
+
+      expect(categoryShown(tester), 'cat-1');
+      expect(find.byKey(const Key('category-suggested')), findsNothing);
+    });
+  });
 
   testWidgets('shows the prefilled amount and note', (tester) async {
     await pumpSheet(tester, initialDraft: draft(), onSave: (_) {});

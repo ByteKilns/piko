@@ -4,6 +4,7 @@ import '../models/category_option.dart';
 import '../models/expense_draft.dart';
 import '../models/member_option.dart';
 import '../services/bs_calendar.dart';
+import '../services/note_suggest.dart';
 import '../services/people.dart';
 import '../theme/app_theme.dart';
 import 'amount_field.dart';
@@ -23,6 +24,8 @@ class ExpenseConfirmSheet extends StatefulWidget {
   final String? currentMemberId;
   // Categories offered as chips under the picker, most used first.
   final List<String> quickCategoryIds;
+  // Word → category id from the household's past notes (CategoriesResult.noteWords).
+  final Map<String, String> noteWords;
   final AppDateFormat dateFormat;
   final BsCalendar calendar;
   final Future<void> Function(ExpenseDraft draft) onSave;
@@ -34,6 +37,7 @@ class ExpenseConfirmSheet extends StatefulWidget {
     required this.members,
     this.currentMemberId,
     this.quickCategoryIds = const [],
+    this.noteWords = const {},
     required this.dateFormat,
     required this.calendar,
     required this.onSave,
@@ -51,6 +55,9 @@ class _ExpenseConfirmSheetState extends State<ExpenseConfirmSheet> {
   late String? _ownerMemberId; // null = shared
   late String _date;
   bool _saving = false;
+  // Once a category is picked by hand, the note stops changing it.
+  bool _categoryPicked = false;
+  bool _categorySuggested = false;
 
   double get _amount => double.tryParse(_amountController.text) ?? -1;
   bool get _canSave =>
@@ -80,6 +87,26 @@ class _ExpenseConfirmSheetState extends State<ExpenseConfirmSheet> {
     _amountController.dispose();
     _noteController.dispose();
     super.dispose();
+  }
+
+  void _pickCategory(String id) {
+    setState(() {
+      _categoryId = id;
+      _categoryPicked = true;
+      _categorySuggested = false;
+    });
+  }
+
+  // The category follows what the note says, from the household's past notes,
+  // until one is picked by hand. A note it can't place leaves it as it is.
+  void _noteChanged(String note) {
+    if (_categoryPicked) return;
+    final id = suggestCategoryId(note, widget.noteWords, widget.categories.map((c) => c.id));
+    if (id == null || id == _categoryId) return;
+    setState(() {
+      _categoryId = id;
+      _categorySuggested = true;
+    });
   }
 
   // Someone's own expense is usually paid by them; Shared keeps whoever was picked.
@@ -179,11 +206,15 @@ class _ExpenseConfirmSheetState extends State<ExpenseConfirmSheet> {
                     for (final category in widget.categories)
                       DropdownMenuItem(value: category.id, child: Text(category.name)),
                   ],
-                  onChanged: (value) => setState(() => _categoryId = value!),
+                  onChanged: (value) => _pickCategory(value!),
                 ),
               ),
             ),
           ),
+          if (_categorySuggested) ...[
+            const SizedBox(height: 6),
+            Text('From your notes', key: const Key('category-suggested'), style: text.bodySmall),
+          ],
           if (quick.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
@@ -195,7 +226,7 @@ class _ExpenseConfirmSheetState extends State<ExpenseConfirmSheet> {
                     key: Key('quick-category-${category.id}'),
                     label: category.name,
                     selected: category.id == _categoryId,
-                    onTap: () => setState(() => _categoryId = category.id),
+                    onTap: () => _pickCategory(category.id),
                   ),
               ],
             ),
@@ -243,6 +274,7 @@ class _ExpenseConfirmSheetState extends State<ExpenseConfirmSheet> {
               key: const Key('note-field'),
               controller: _noteController,
               textCapitalization: TextCapitalization.sentences,
+              onChanged: _noteChanged,
             ),
           ),
         ],

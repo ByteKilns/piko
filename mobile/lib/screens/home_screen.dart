@@ -81,6 +81,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           members: categoriesResult.members,
           currentMemberId: categoriesResult.currentMemberId,
           quickCategoryIds: quickCategoryIds(recent, categoriesResult.categories),
+          noteWords: categoriesResult.noteWords,
           dateFormat: ref.read(dateFormatProvider),
           calendar: ref.read(bsCalendarProvider),
           onSave: (finalDraft) async {

@@ -46,5 +46,16 @@ void main() {
     });
 
     expect(result.currentMemberId, isNull);
+    expect(result.noteWords, isEmpty);
+  });
+
+  test('CategoriesResult.fromJson reads the note word table', () {
+    final result = CategoriesResult.fromJson({
+      'categories': <dynamic>[],
+      'members': <dynamic>[],
+      'noteWords': {'banana': 'cat-1', 'petrol': 'cat-2'},
+    });
+
+    expect(result.noteWords, {'banana': 'cat-1', 'petrol': 'cat-2'});
   });
 }
