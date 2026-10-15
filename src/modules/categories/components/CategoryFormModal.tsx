@@ -30,6 +30,7 @@ export function CategoryFormModal({ category, defaultName, onCreated, onOpenChan
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
+    setError,
   } = useForm<CategoryInput>({
     defaultValues: category ?? { ...EMPTY, name: defaultName ?? "" },
     resolver: zodResolver(categorySchema),
@@ -38,12 +39,20 @@ export function CategoryFormModal({ category, defaultName, onCreated, onOpenChan
   const onSubmit = handleSubmit(async (values) => {
     try {
       if (category) {
-        await updateCategoryAction(category.id, values);
+        const taken = await updateCategoryAction(category.id, values);
+        if (taken) {
+          setError("name", { message: taken.error });
+          return;
+        }
         toast.success("Category updated");
       } else {
-        const created = await createCategoryAction(values);
+        const result = await createCategoryAction(values);
+        if (!result.ok) {
+          setError("name", { message: result.error });
+          return;
+        }
         toast.success("Category added");
-        if (created) onCreated?.(created);
+        onCreated?.(result.category);
       }
       onOpenChange(false);
     } catch (err) {

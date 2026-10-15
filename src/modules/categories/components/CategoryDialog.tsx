@@ -79,10 +79,18 @@ function CategoryFields({
     try {
       const payload = { budgetType, groupName, icon, name: name.trim() };
       if (category) {
-        await updateCategoryAction(category.id, payload);
+        const taken = await updateCategoryAction(category.id, payload);
+        if (taken) {
+          setError(taken.error);
+          return;
+        }
         toast.success("Category updated");
       } else {
-        await createCategoryAction(payload);
+        const result = await createCategoryAction(payload);
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
         toast.success("Category added");
       }
       onDone();

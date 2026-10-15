@@ -9,7 +9,15 @@ import { getCurrentMember } from "@/lib/session";
 import { activityActor, logActivity } from "@/modules/activity/api/activity";
 
 import { categoryChanges, categorySummary } from "../lib/category-activity";
+import { categoryNameClash } from "../lib/category-name";
 import { type CategoryInput, categorySchema } from "../schemas/category.schema";
+import { listCategories } from "./categories";
+
+type SavedCategory = { archived: boolean; budgetType: "fixed" | "flexible"; groupName: string; icon: null | string; id: string; name: string };
+
+// A name already in use is an expected error, so it comes back as a value:
+// Next hides the message of anything a server action throws in production.
+type NameTaken = { error: string; ok: false };
 
 function revalidateCategoryPaths() {
   revalidatePath("/categories");
@@ -26,10 +34,12 @@ async function findCategoryInHousehold(householdId: string, id: string) {
   return category;
 }
 
-export async function createCategoryAction(input: CategoryInput) {
+export async function createCategoryAction(input: CategoryInput): Promise<NameTaken | { category: SavedCategory; ok: true }> {
   const member = await getCurrentMember();
   const { householdId } = member;
   const parsed = categorySchema.parse(input);
+  const clash = categoryNameClash(parsed.name, await listCategories(householdId, { includeArchived: true }));
+  if (clash) return { error: clash, ok: false };
 
   const [row] = await db
     .insert(categories)
@@ -53,16 +63,19 @@ export async function createCategoryAction(input: CategoryInput) {
 
   revalidateCategoryPaths();
 
-  return category;
+  return { category, ok: true };
 }
 
-export async function updateCategoryAction(id: string, input: CategoryInput) {
+// Resolves to undefined once saved (or when there's no such category).
+export async function updateCategoryAction(id: string, input: CategoryInput): Promise<NameTaken | undefined> {
   const member = await getCurrentMember();
   const { householdId } = member;
   const parsed = categorySchema.parse(input);
 
   const before = await findCategoryInHousehold(householdId, id);
   if (!before) return;
+  const clash = categoryNameClash(parsed.name, await listCategories(householdId, { includeArchived: true }), id);
+  if (clash) return { error: clash, ok: false };
 
   const [updated] = await db
     .update(categories)
