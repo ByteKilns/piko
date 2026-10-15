@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../esewa/captured_notifications_screen.dart';
 import '../providers/auth_provider.dart';
+import '../providers/esewa_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/bs_calendar.dart';
 import '../theme/app_theme.dart';
@@ -16,17 +18,22 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late final TextEditingController _urlController;
+  // Notification access is switched on in Android's settings, so check again
+  // when the app comes back from there.
+  late final AppLifecycleListener _lifecycle;
   bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
     _urlController = TextEditingController();
+    _lifecycle = AppLifecycleListener(onResume: () => ref.invalidate(esewaAccessProvider));
   }
 
   @override
   void dispose() {
     _urlController.dispose();
+    _lifecycle.dispose();
     super.dispose();
   }
 
@@ -35,6 +42,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final c = context.piko;
     final serverUrl = ref.watch(serverUrlProvider);
     final isLoggedIn = ref.watch(authProvider).value != null;
+    final esewa = ref.watch(esewaServiceProvider);
 
     if (!_initialized && serverUrl.hasValue) {
       _urlController.text = serverUrl.value!;
@@ -98,6 +106,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ],
               ),
             ),
+            if (esewa != null && esewa.isSupported) ...[
+              const SizedBox(height: 36),
+              const _SectionHeading('eSewa'),
+              _SettingRow(
+                title: 'Auto-capture',
+                description: 'Lets Piko read eSewa notifications, so each payment arrives as a draft to review. '
+                    'On Android 13 or later, first allow it: phone Settings → Apps → Piko → ⋮ → Allow restricted settings.',
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        ref.watch(esewaAccessProvider).valueOrNull == true ? 'On' : 'Off',
+                        key: const Key('esewa-access'),
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    OutlinedButton(onPressed: esewa.openAccessSettings, child: const Text('Notification access')),
+                  ],
+                ),
+              ),
+              _SettingRow(
+                title: 'Captured notifications',
+                description: "The latest eSewa notifications this phone saw. Copy one when a payment wasn't read right.",
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const CapturedNotificationsScreen()),
+                    ),
+                    child: const Text('Show'),
+                  ),
+                ),
+              ),
+            ],
             if (isLoggedIn) ...[
               const SizedBox(height: 36),
               const _SectionHeading('Account'),

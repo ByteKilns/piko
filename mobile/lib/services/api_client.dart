@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/app_release.dart';
+import '../models/capture_event.dart';
 import '../models/categories_result.dart';
 import '../models/expense.dart';
 import '../models/expense_draft.dart';
@@ -142,6 +143,14 @@ class ApiClient {
 
   Future<void> saveCaptureEvent(Map<String, dynamic> event) async {
     await _authorizedPost('/api/mobile/capture-events', event);
+  }
+
+  // The latest notifications this person's phone captured, newest first.
+  Future<List<CaptureEvent>> fetchCaptureEvents() async {
+    final body = await _authorizedGet('/api/mobile/capture-events');
+    return [
+      for (final event in (body['events'] as List<dynamic>).cast<Map<String, dynamic>>()) CaptureEvent.fromJson(event),
+    ];
   }
 
   // Payee → category id.
