@@ -164,6 +164,11 @@ put the tenancy-agnostic logic in a `...ForHousehold` function so web and mobile
   `activity_logs` (append-only audit trail: actor, entity, action, display-ready
   summary + field diffs, web/mobile source; written by actions via `logActivity`,
   shown on `/activity`), `app_releases` (global, not per-household; published APK builds).
+- **eSewa captures** — `captured_payments` (each transaction a member's phone read from an
+  eSewa notification: `status` draft / approved / rejected / skipped, `expenseId` once
+  approved), `capture_events` (every notification as captured, OTP digits masked; unique
+  `(memberId, key, postedAt)`), `capture_rules` (payee → category, per member). Scoped by
+  household **and** member. See [eSewa capture](#esewa-capture).
 
 Conventions to keep when adding columns/tables:
 
@@ -242,6 +247,33 @@ of `docs/superpowers/plans/2026-10-12-budget-model.md`.
   decide on is always Home's Unallocated. Settling records deposits and loan repayments
   on the month's last day, fund money for that month, and the rest as a cushion entry;
   a month that went over is taken from the cushion.
+
+## eSewa capture
+
+The app turns eSewa's Android notifications into drafts that only become expenses once
+approved. The agreed design is in the "Design (agreed)" section of
+`docs/superpowers/plans/2026-10-14-esewa-capture.md`.
+
+- **On the phone** (`mobile/android/app/src/main/kotlin/com/nirjal/piko/esewa/`,
+  `mobile/lib/esewa/`) — a `NotificationListenerService` queues every eSewa notification
+  (`PendingStore`) until Dart acks it, so nothing is lost offline or while the app is
+  closed. All parsing is in Dart: `EsewaService` → `EsewaParser` → `Deduplicator` →
+  `Categorizer`, stored through `PikoTxnRepository`. Tune `ParserRules` from real
+  notification texts (Settings → Captured notifications), adding each as a case in
+  `mobile/test/esewa_parser_test.dart`.
+- **Drafts never count.** They live in `captured_payments`, never in `expenses`, so no
+  total, budget or alert sees them. Approving (`approveCaptureForMember`,
+  `captures/api/captures.ts`) claims the draft, then calls `createExpenseForHousehold`, so
+  an approved payment is an ordinary expense added from mobile: validated, notified,
+  activity-logged and revertible.
+- **Money coming in** (cashback, refunds, transfers received) is stored as `skipped`: the
+  duplicate check sees it, but it's never offered for review.
+- **Categories** — the categorizer's tables use the household's own category names; a
+  name the household doesn't have means no guess. A category changed while approving is
+  learned for that payee (`capture_rules`, add-or-update only).
+- **Note suggestions** — `GET /api/mobile/categories` also sends `noteWords` (word →
+  category from past notes, `expenses/lib/note-words.ts`), and the app's Add expense sheet
+  suggests a category from the note until one is picked by hand. None of this goes to an AI.
 
 ## Cross-cutting concerns
 

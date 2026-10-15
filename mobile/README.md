@@ -1,6 +1,7 @@
 # piko
 
-Flutter companion app for Piko: capture expenses by voice on the go.
+Flutter companion app for Piko: capture expenses by voice on the go, and eSewa
+payments automatically.
 
 ## Design
 
@@ -19,6 +20,29 @@ and ink, one red accent, square corners, rules instead of cards, Host Grotesk.
   `CategoryIcon`, `SheetFrame` (Modal), `LabeledField`, `BrandMark`.
 - Light, Dark or System is chosen in Settings and stored on the phone; the app
   opens in Light, like the website.
+
+## eSewa auto-capture
+
+eSewa payments arrive as drafts to review (Home → "N eSewa payments to review"); only
+approved ones become expenses. How it works: the "eSewa capture" section of
+`docs/architecture.md`.
+
+Phone setup, once, after installing a build with it:
+
+1. Phone Settings → Apps → Piko → ⋮ → **Allow restricted settings**. Android 13 and later
+   block notification access for apps installed from an APK until this is done.
+2. Open Piko → Settings → eSewa → **Notification access**, and turn it on for Piko.
+3. Battery: set Piko to **Unrestricted**. On Xiaomi, Oppo, Vivo or Realme, also turn on
+   **Autostart**.
+4. Check eSewa's package name: `adb shell pm list packages | grep -i esewa`. It should be
+   `com.f1soft.esewa`; if not, change `WATCHED_PACKAGES` in
+   `android/app/src/main/kotlin/com/nirjal/piko/esewa/EsewaNotificationListener.kt`.
+5. Make a small eSewa payment (e.g. a Rs. 10 top-up) and check that a draft appears.
+
+The notification wording in `lib/esewa/parser.dart` is a guess until real texts are
+collected. When a payment doesn't show up as a draft, open Settings → eSewa → Captured
+notifications, copy it, and add it as a case in `test/esewa_parser_test.dart` before
+changing `ParserRules`.
 
 ## Publishing an update
 
