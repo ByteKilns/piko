@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../esewa/models.dart';
+import '../esewa/review_screen.dart';
 import '../models/categories_result.dart';
 import '../models/expense.dart';
 import '../models/expense_draft.dart';
@@ -8,6 +12,7 @@ import '../providers/api_client_provider.dart';
 import '../providers/app_update_provider.dart';
 import '../providers/calendar_provider.dart';
 import '../providers/categories_provider.dart';
+import '../providers/esewa_provider.dart';
 import '../providers/expenses_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/api_client.dart';
@@ -16,6 +21,7 @@ import '../services/expense_list.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_update_sheet.dart';
 import '../widgets/brand_mark.dart';
+import '../widgets/esewa_review_banner.dart';
 import '../widgets/expense_confirm_sheet.dart';
 import '../widgets/expense_list_tile.dart';
 import '../widgets/money_text.dart';
@@ -32,15 +38,39 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   // Re-check for a new build whenever the app comes back to the foreground, not just on cold start.
   late final AppLifecycleListener _lifecycle;
+  StreamSubscription<Txn>? _newDrafts;
 
   @override
   void initState() {
     super.initState();
-    _lifecycle = AppLifecycleListener(onResume: () => ref.invalidate(availableUpdateProvider));
+    _lifecycle = AppLifecycleListener(
+      onResume: () {
+        ref.invalidate(availableUpdateProvider);
+        _startEsewa();
+      },
+    );
+    _startEsewa();
     // Capturing an expense is the app's main job, so jump straight into voice capture on launch.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _openVoiceFlow(context, ref);
     });
+  }
+
+  // eSewa auto-capture: store anything captured while the app was away (or
+  // offline), then keep the review count fresh as new payments arrive.
+  void _startEsewa() {
+    final esewa = ref.read(esewaServiceProvider);
+    if (esewa == null) return;
+    _newDrafts ??= esewa.onDraft.listen((_) => ref.invalidate(esewaDraftCountProvider));
+    esewa.start().catchError((_) {}).whenComplete(() {
+      if (mounted) ref.invalidate(esewaDraftCountProvider);
+    });
+  }
+
+  Future<void> _openReview(BuildContext context) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EsewaReviewScreen()));
+    ref.invalidate(esewaDraftCountProvider);
+    ref.invalidate(recentExpensesProvider);
   }
 
   Future<void> _openVoiceFlow(BuildContext context, WidgetRef ref) async {
@@ -104,6 +134,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void dispose() {
     _lifecycle.dispose();
+    _newDrafts?.cancel();
     super.dispose();
   }
 
@@ -113,6 +144,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final text = Theme.of(context).textTheme;
     final expensesAsync = ref.watch(recentExpensesProvider);
     final update = ref.watch(availableUpdateProvider).valueOrNull;
+    final toReview = ref.watch(esewaDraftCountProvider).valueOrNull ?? 0;
     final options = ref.watch(categoriesProvider).valueOrNull;
     final dateFormat = ref.watch(dateFormatProvider);
     final calendar = ref.watch(bsCalendarProvider);
@@ -137,6 +169,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           children: [
             if (update != null) ...[AppUpdateBanner(release: update), const SizedBox(height: 20)],
+            if (toReview > 0) ...[
+              EsewaReviewBanner(count: toReview, onTap: () => _openReview(context)),
+              const SizedBox(height: 20),
+            ],
             Text('Recent expenses', style: text.headlineLarge),
             const SizedBox(height: 6),
             Text('The latest across the household', style: text.bodySmall),

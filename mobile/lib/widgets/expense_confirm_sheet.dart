@@ -29,6 +29,9 @@ class ExpenseConfirmSheet extends StatefulWidget {
   final AppDateFormat dateFormat;
   final BsCalendar calendar;
   final Future<void> Function(ExpenseDraft draft) onSave;
+  // The same sheet approves an eSewa payment, under its own title and button.
+  final String title;
+  final String saveLabel;
 
   const ExpenseConfirmSheet({
     super.key,
@@ -41,6 +44,8 @@ class ExpenseConfirmSheet extends StatefulWidget {
     required this.dateFormat,
     required this.calendar,
     required this.onSave,
+    this.title = 'Add expense',
+    this.saveLabel = 'Add expense',
   });
 
   @override
@@ -165,14 +170,14 @@ class _ExpenseConfirmSheetState extends State<ExpenseConfirmSheet> {
     ];
 
     return SheetFrame(
-      title: 'Add expense',
+      title: widget.title,
       footer: Row(
         children: [
           Expanded(
             child: FilledButton(
               key: const Key('save-button'),
               onPressed: _canSave ? _save : null,
-              child: Text(_saving ? 'Saving...' : 'Add expense'),
+              child: Text(_saving ? 'Saving...' : widget.saveLabel),
             ),
           ),
           const SizedBox(width: 12),
