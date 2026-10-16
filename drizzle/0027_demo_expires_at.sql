@@ -1,0 +1,1 @@
+ALTER TABLE "households" ADD COLUMN "demo_expires_at" timestamp;

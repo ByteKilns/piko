@@ -10,5 +10,9 @@ export const households = pgTable("households", {
   // must agree on it or they'd compute different period boundaries for
   // the same shared budget/income data.
   dateFormat: dateFormatEnum("date_format").notNull().default("nepali"),
+  // Set only on a public demo's sandbox household (src/modules/demo): when it
+  // gets deleted. Null means a real household, and cleanup never touches a
+  // household without it.
+  demoExpiresAt: timestamp("demo_expires_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
