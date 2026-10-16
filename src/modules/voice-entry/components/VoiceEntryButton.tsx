@@ -36,9 +36,16 @@ export function VoiceEntryButton({ categories, className, currentMemberId, membe
   }, []);
 
   const resultModalOpen = draft !== null || manualAddOpen;
-  // A demo never sends speech to Gemini: the button only explains that.
+  // A demo never sends speech to Gemini: the button points to the demo's
+  // phone, whose voice screen uses ready-made phrases instead.
   const demo = useDemo();
   const usable = supported || demo !== null;
+
+  function sayDemoHasNoVoice() {
+    toast(`${DEMO_LOCKED_MESSAGE}. Try voice on the phone instead.`, {
+      action: { label: "Open phone", onClick: () => demo?.setPhoneOpen(true) },
+    });
+  }
 
   function closeResultModal() {
     setDraft(null);
@@ -51,7 +58,7 @@ export function VoiceEntryButton({ categories, className, currentMemberId, membe
         aria-label="Add expense by voice"
         className={cn(className, !usable && "cursor-not-allowed opacity-50")}
         disabled={!usable}
-        onClick={() => (demo ? toast(`${DEMO_LOCKED_MESSAGE}.`) : setListening(true))}
+        onClick={() => (demo ? sayDemoHasNoVoice() : setListening(true))}
         title={usable ? undefined : "Voice input isn't supported in this browser"}
         type="button"
       >

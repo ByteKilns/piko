@@ -2,29 +2,36 @@ import { cookies } from "next/headers";
 
 import { BottomNav } from "@/components/nav/BottomNav";
 import { SidebarNav } from "@/components/nav/SidebarNav";
+import { getDateFormatPref } from "@/lib/date-format-cookie";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { SIDEBAR_COLLAPSED_COOKIE_NAME } from "@/lib/sidebar-cookie";
+import { todayISO } from "@/lib/today";
 import { listCategories } from "@/modules/categories/api/categories";
 import { getDemoExpiry } from "@/modules/demo/api/demo";
 import { DemoBanner } from "@/modules/demo/components/DemoBanner";
+import { DemoPhone } from "@/modules/demo/components/DemoPhone";
 import { DemoProvider } from "@/modules/demo/components/DemoProvider";
 import { demoTimeLeft } from "@/modules/demo/lib/demo-constants";
 import { listRecentExpensesForHousehold } from "@/modules/expenses/api/expenses.actions";
 import { topCategoryIds } from "@/modules/expenses/lib/expense-view";
+import { buildRecentGroups } from "@/modules/expenses/lib/recent-groups";
 import { countUnreadNotifications } from "@/modules/notifications/api/notifications.actions";
 
 // How many recent expenses decide the quick-pick categories in Add expense.
 const QUICK_CATEGORY_SAMPLE = 60;
+// How many the demo's phone lists, as many as the mobile app does.
+const PHONE_RECENT = 20;
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const current = await getCurrentMember();
-  const [members, categories, unreadNotifications, recentExpenses, cookieStore, demoExpiresAt] = await Promise.all([
+  const [members, categories, unreadNotifications, recentExpenses, cookieStore, demoExpiresAt, dateFormat] = await Promise.all([
     getHouseholdMembers(current.householdId),
     listCategories(current.householdId),
     countUnreadNotifications(current.householdId),
     listRecentExpensesForHousehold(current.householdId, QUICK_CATEGORY_SAMPLE),
     cookies(),
     current.isDemo ? getDemoExpiry(current.householdId) : null,
+    current.isDemo ? getDateFormatPref(current.householdId) : null,
   ]);
 
   const expenseCategories = categories.map((c) => ({ groupName: c.groupName, id: c.id, name: c.name }));
@@ -32,6 +39,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const initialCollapsed = cookieStore.get(SIDEBAR_COLLAPSED_COOKIE_NAME)?.value === "true";
   const quickCategoryIds = topCategoryIds(recentExpenses, 5);
   const demo = demoExpiresAt ? { timeLeft: demoTimeLeft(demoExpiresAt, new Date()) } : null;
+  const phoneRecent =
+    demo && dateFormat ? buildRecentGroups(recentExpenses.slice(0, PHONE_RECENT), categories, { dateFormat, today: todayISO() }) : [];
 
   return (
     <DemoProvider demo={demo}>
@@ -49,6 +58,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {/* @container: composites lay out against the content width, not the window. */}
           <div className="@container max-w-280">{children}</div>
         </main>
+        {demo && (
+          <DemoPhone
+            categories={expenseCategories}
+            currentMemberId={current.memberId}
+            members={expenseMembers}
+            quickCategoryIds={quickCategoryIds}
+            recent={phoneRecent}
+          />
+        )}
         <BottomNav
           categories={expenseCategories}
           currentMemberId={current.memberId}

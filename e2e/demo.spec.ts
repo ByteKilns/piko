@@ -92,6 +92,35 @@ test.describe("public demo", () => {
     expect(await householdExists(householdId)).toBe(false);
   });
 
+  test("the phone adds an expense by voice, and the website shows it too", async ({ page }) => {
+    await startDemo(page);
+    await page.getByRole("button", { name: "Phone" }).click();
+    const phone = page.getByRole("region", { name: "Demo phone" });
+    await expect(phone.getByRole("heading", { name: "Recent expenses" })).toBeVisible();
+
+    await phone.getByRole("button", { name: "Add by voice" }).click();
+    await phone.getByRole("button", { name: "Momo with Sita, 450 rupees" }).click();
+    await expect(phone.getByRole("heading", { name: "Add expense" })).toBeVisible({ timeout: 10_000 });
+    await expect(phone.getByLabel("Amount", { exact: true })).toHaveValue("450");
+    await phone.getByRole("button", { name: "Save" }).click();
+
+    // Saving goes through the real action and refreshes the page: allow for a slow database.
+    await expect(phone.getByRole("heading", { name: "Recent expenses" })).toBeVisible({ timeout: 20_000 });
+    await expect(phone.getByText("Momo with Sita")).toBeVisible();
+    await expect(page.locator("main").getByText("Momo with Sita")).toBeVisible();
+  });
+
+  test("on a phone-sized screen the phone opens full screen and closes", async ({ page }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    await startDemo(page);
+    await page.getByRole("button", { name: "Phone" }).click();
+    const phone = page.getByRole("region", { name: "Demo phone" });
+    await expect(phone.getByRole("heading", { name: "Recent expenses" })).toBeVisible();
+
+    await phone.getByRole("button", { exact: true, name: "Close" }).click();
+    await expect(phone).toHaveCount(0);
+  });
+
   test("cleanup deletes an expired demo and leaves the real household alone", async ({ browser }) => {
     const first = await browser.newPage();
     await startDemo(first);

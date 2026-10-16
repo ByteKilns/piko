@@ -195,3 +195,28 @@
   animation: sidebar-enter 320ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
   animation-delay: calc(60ms + var(--enter-index, 0) * 22ms);
 }
+
+/* The demo phone's voice screen (src/modules/demo/components/phone): squares
+   spreading out from the mic, and the bouncing "listening" dots, as in the
+   mobile app. */
+@keyframes phone-ring {
+  from {
+    opacity: 0.45;
+    transform: scale(0.44);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@keyframes phone-dot {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-3px);
+  }
+}
