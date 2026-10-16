@@ -22,6 +22,13 @@ export async function newestDemoHouseholdId(): Promise<string> {
   });
 }
 
+export async function householdExists(id: string): Promise<boolean> {
+  return queryE2e(async (sql) => {
+    const [row] = await sql`select count(*)::int as n from households where id = ${id}`;
+    return row.n === 1;
+  });
+}
+
 export async function liveDemoCount(): Promise<number> {
   return queryE2e(async (sql) => {
     const [row] = await sql`select count(*)::int as n from households where demo_expires_at > now()`;

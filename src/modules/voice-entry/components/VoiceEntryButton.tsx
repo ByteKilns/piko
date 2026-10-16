@@ -3,9 +3,12 @@
 import { useEffect, useState } from "react";
 
 import { Mic } from "lucide-react";
+import { toast } from "sonner";
 
+import { DEMO_LOCKED_MESSAGE } from "@/lib/demo-account";
 import { isSpeechRecognitionSupported } from "@/lib/useSpeechRecognition";
 import { cn } from "@/lib/utils";
+import { useDemo } from "@/modules/demo/components/DemoProvider";
 import { ExpenseDialog } from "@/modules/expenses/components/ExpenseDialog";
 import { VoiceEntryModal } from "@/modules/voice-entry/components/VoiceEntryModal";
 import type { ExpenseDraft } from "@/modules/voice-entry/lib/sanitize-voice-expense";
@@ -33,6 +36,9 @@ export function VoiceEntryButton({ categories, className, currentMemberId, membe
   }, []);
 
   const resultModalOpen = draft !== null || manualAddOpen;
+  // A demo never sends speech to Gemini: the button only explains that.
+  const demo = useDemo();
+  const usable = supported || demo !== null;
 
   function closeResultModal() {
     setDraft(null);
@@ -43,10 +49,10 @@ export function VoiceEntryButton({ categories, className, currentMemberId, membe
     <>
       <button
         aria-label="Add expense by voice"
-        className={cn(className, !supported && "cursor-not-allowed opacity-50")}
-        disabled={!supported}
-        onClick={() => setListening(true)}
-        title={supported ? undefined : "Voice input isn't supported in this browser"}
+        className={cn(className, !usable && "cursor-not-allowed opacity-50")}
+        disabled={!usable}
+        onClick={() => (demo ? toast(`${DEMO_LOCKED_MESSAGE}.`) : setListening(true))}
+        title={usable ? undefined : "Voice input isn't supported in this browser"}
         type="button"
       >
         <Mic className="h-5 w-5" />

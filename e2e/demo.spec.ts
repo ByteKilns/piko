@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { queryE2e } from "./support/db";
-import { liveDemoCount, newestDemoHouseholdId, SIGNED_OUT, startDemo } from "./support/demo";
+import { householdExists, liveDemoCount, newestDemoHouseholdId, SIGNED_OUT, startDemo } from "./support/demo";
 import { expectNoErrorBoundary, gotoRoute } from "./support/nav";
 
 // One demo at a time, so "the newest demo household" is always this file's.
@@ -19,6 +19,7 @@ test.describe("public demo", () => {
     await startDemo(page);
     await expect(page.getByRole("heading", { name: "Home", exact: true })).toBeVisible();
     await expect(page.getByText("Birthday dinner").first()).toBeVisible();
+    await expect(page.getByText(/^Deleted in /)).toBeVisible();
     await expectNoErrorBoundary(page);
   });
 
@@ -66,14 +67,39 @@ test.describe("public demo", () => {
     expect(response.status()).toBe(403);
   });
 
+  test("locks the password, and the server refuses it even when forced", async ({ page }) => {
+    await startDemo(page);
+    await gotoRoute(page, "/settings");
+    await expect(page.getByRole("button", { name: "Change Password" })).toBeDisabled();
+    await expect(page.getByText("Not available in the demo.").first()).toBeVisible();
+
+    await page.locator("fieldset[disabled]").evaluateAll((sets) => sets.forEach((set) => set.removeAttribute("disabled")));
+    await page.getByLabel("Current password").fill("anything-at-all");
+    await page.getByLabel("New password", { exact: true }).fill("new-password-123");
+    await page.getByLabel("Confirm new password").fill("new-password-123");
+    await page.getByRole("button", { name: "Change Password" }).click();
+    await expect(page.locator("[data-sonner-toast][data-type='error']")).toBeVisible();
+    await expect(page.getByText("Password changed")).toHaveCount(0);
+  });
+
+  test("Exit demo deletes the copy and returns to /demo", async ({ page }) => {
+    await startDemo(page);
+    const householdId = await newestDemoHouseholdId();
+
+    await page.getByRole("button", { name: "Exit demo" }).click();
+    await page.waitForURL(/\/demo\?bye=1/);
+    await expect(page.getByText("Thanks for trying Piko.")).toBeVisible();
+    expect(await householdExists(householdId)).toBe(false);
+  });
+
   test("cleanup deletes an expired demo and leaves the real household alone", async ({ browser }) => {
     const first = await browser.newPage();
     await startDemo(first);
-    const { householdId, userIds } = await queryE2e(async (sql) => {
-      const [household] = await sql`select id from households where demo_expires_at is not null order by created_at desc limit 1`;
-      const members = await sql`select user_id from household_members where household_id = ${household.id}`;
-      await sql`update households set demo_expires_at = now() - interval '1 minute' where id = ${household.id}`;
-      return { householdId: household.id as string, userIds: members.map((m) => m.user_id as string) };
+    const householdId = await newestDemoHouseholdId();
+    const userIds = await queryE2e(async (sql) => {
+      const members = await sql`select user_id from household_members where household_id = ${householdId}`;
+      await sql`update households set demo_expires_at = now() - interval '1 minute' where id = ${householdId}`;
+      return members.map((m) => m.user_id as string);
     });
 
     // Starting another demo runs the cleanup.
@@ -81,15 +107,15 @@ test.describe("public demo", () => {
     await startDemo(second);
 
     const left = await queryE2e(async (sql) => {
-      const [demo] = await sql`select count(*)::int as n from households where id = ${householdId}`;
       const [demoUsers] = await sql`select count(*)::int as n from users where id in ${sql(userIds)}`;
       const [real] = await sql`
         select count(distinct m.user_id)::int as n
         from households h join household_members m on m.household_id = h.id join users u on u.id = m.user_id
         where h.name = 'E2E Household' and h.demo_expires_at is null`;
-      return { demo: demo.n, demoUsers: demoUsers.n, realUsers: real.n };
+      return { demoUsers: demoUsers.n, realUsers: real.n };
     });
-    expect(left).toEqual({ demo: 0, demoUsers: 0, realUsers: 2 });
+    expect(await householdExists(householdId)).toBe(false);
+    expect(left).toEqual({ demoUsers: 0, realUsers: 2 });
 
     // The first visitor's session outlived its household: back to /demo, not an error.
     await first.goto("/dashboard");
@@ -102,4 +128,11 @@ test("a signed-in owner can open /demo and is told it signs them out", async ({ 
   await page.goto("/demo");
   await expect(page.getByRole("heading", { name: "Try Piko" })).toBeVisible();
   await expect(page.getByText("Starting the demo signs you out of your own household.")).toBeVisible();
+});
+
+test("a real account sees no demo banner", async ({ page }) => {
+  await gotoRoute(page, "/dashboard");
+  await expect(page.getByRole("button", { name: "Exit demo" })).toHaveCount(0);
+  await gotoRoute(page, "/settings");
+  await expect(page.getByRole("button", { name: "Change Password" })).toBeEnabled();
 });

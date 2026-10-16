@@ -10,6 +10,7 @@ import { isReleaseAdmin } from "@/lib/release-admin";
 import { getCurrentMember } from "@/lib/session";
 import { listReleases } from "@/modules/app-releases/api/app-releases";
 import { AppReleasesSection } from "@/modules/app-releases/components/AppReleasesSection";
+import { DemoLocked } from "@/modules/demo/components/DemoLocked";
 import { AppearanceSection } from "@/modules/settings/components/AppearanceSection";
 import { DateFormatSection } from "@/modules/settings/components/DateFormatSection";
 import { PasswordSection } from "@/modules/settings/components/PasswordSection";
@@ -17,7 +18,7 @@ import { ProfilePictureSection } from "@/modules/settings/components/ProfilePict
 import { SettingsRow } from "@/modules/settings/components/SettingsRow";
 
 export async function SettingsPage() {
-  const { householdId, userId } = await getCurrentMember();
+  const { householdId, isDemo, userId } = await getCurrentMember();
   const [[user], dateFormat, canPublishReleases] = await Promise.all([
     db.select().from(users).where(eq(users.id, userId)),
     getDateFormatPref(householdId),
@@ -35,8 +36,12 @@ export async function SettingsPage() {
       <div className="flex flex-col gap-9">
         <AppearanceSection />
         <DateFormatSection initialFormat={dateFormat} />
-        <ProfilePictureSection initialImage={user?.image ?? null} name={user?.name ?? "?"} />
-        <PasswordSection />
+        <DemoLocked locked={isDemo}>
+          <ProfilePictureSection initialImage={user?.image ?? null} name={user?.name ?? "?"} />
+        </DemoLocked>
+        <DemoLocked locked={isDemo}>
+          <PasswordSection />
+        </DemoLocked>
         {canPublishReleases && <AppReleasesSection releases={releases} />}
 
         <section>

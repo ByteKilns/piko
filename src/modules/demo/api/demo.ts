@@ -139,3 +139,8 @@ export async function deleteExpiredDemos(now: Date): Promise<void> {
 export async function deleteDemoHousehold(householdId: string): Promise<void> {
   await deleteDemos(eq(households.id, householdId));
 }
+
+export async function getDemoExpiry(householdId: string): Promise<Date | null> {
+  const [row] = await db.select({ expiresAt: households.demoExpiresAt }).from(households).where(eq(households.id, householdId));
+  return row?.expiresAt ?? null;
+}
