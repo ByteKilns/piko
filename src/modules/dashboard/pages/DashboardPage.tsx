@@ -23,7 +23,6 @@ import {
   type HomeEssential,
   type HomeOwnerRow,
   type HomePacing,
-  type HomeRecentGroup,
   type HomeSavingsPot,
   type HomeSettle,
   HomeView,
@@ -36,8 +35,8 @@ import { walletSpentByMember } from "@/modules/dashboard/lib/wallet";
 import { listDhukuEntries, listDhukus } from "@/modules/dhuku/api/dhuku.actions";
 import { dhukuPosition } from "@/modules/dhuku/lib/dhuku-money";
 import { listExpensesForMonth, listRecentExpenses } from "@/modules/expenses/api/expenses.actions";
-import { groupByDay } from "@/modules/expenses/lib/expense-view";
 import { payRows } from "@/modules/expenses/lib/pay-amount";
+import { buildRecentGroups } from "@/modules/expenses/lib/recent-groups";
 import { listFundData } from "@/modules/funds/api/funds";
 import { fundBalances } from "@/modules/funds/lib/fund-math";
 import { listLoanPayments, listLoans } from "@/modules/loans/api/loans.actions";
@@ -149,7 +148,6 @@ export async function DashboardPage({ searchParams }: Props) {
   const expenses = toExpenseInputs(payExpenseRows);
   const prevIncomes = members.map((m) => ({ amount: monthIncome(incomeRows, m.id, prev).total, memberId: m.id }));
 
-  const category = (id: string) => categories.find((c) => c.id === id);
   const memberName = (id: string) => members.find((m) => m.id === id)?.user.name ?? "Member";
 
   // Each person's Spent is what left their own wallet: counted by who paid,
@@ -388,33 +386,7 @@ export async function DashboardPage({ searchParams }: Props) {
       : []),
   ];
 
-  const categoryName = (id: string) => category(id)?.name ?? "Unknown";
-  const recent: HomeRecentGroup[] = groupByDay(
-    recentExpenseRows.map((e) => ({
-      amount: Number(e.amount),
-      categoryId: e.categoryId,
-      categoryName: categoryName(e.categoryId),
-      date: e.date,
-      id: e.id,
-      note: e.note,
-      ownerMemberId: e.ownerMemberId,
-      paidByMemberId: e.paidByMemberId,
-    })),
-    { dateFormat, today: todayISO() },
-  ).map((group) => ({
-    key: group.date,
-    label: group.label,
-    rows: group.rows.map((row) => ({
-      amount: row.amount,
-      categoryGroupName: category(row.categoryId)?.groupName ?? "",
-      categoryIcon: category(row.categoryId)?.icon ?? null,
-      categoryName: row.categoryName,
-      id: row.id,
-      note: row.note,
-    })),
-    sub: group.sub,
-    total: group.total,
-  }));
+  const recent = buildRecentGroups(recentExpenseRows, categories, { dateFormat, today: todayISO() });
 
   const monthLabel = formatPeriodLabel(year, month, dateFormat);
 

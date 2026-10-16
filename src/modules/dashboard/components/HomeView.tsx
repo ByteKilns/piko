@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { useState } from "react";
 
 import { ArrowUpRight, ChevronDown, Plus } from "lucide-react";
 import Link from "next/link";
@@ -22,9 +22,10 @@ import type { MonthNavModel } from "@/lib/month-nav";
 import { cn } from "@/lib/utils";
 import { PayDialog } from "@/modules/budget/components/PayDialog";
 import type { ExtraIncome } from "@/modules/budget/lib/income";
-import { CategoryIcon } from "@/modules/categories/components/CategoryIcon";
 import { CushionDialog } from "@/modules/cushion/components/CushionDialog";
 import { SettleCard, type SettleOptions } from "@/modules/cushion/components/SettleCard";
+import { RecentExpensesList } from "@/modules/expenses/components/RecentExpensesList";
+import type { RecentGroup } from "@/modules/expenses/lib/recent-groups";
 import { deletePaybackAction } from "@/modules/paybacks/api/paybacks.actions";
 import { PaybackDialog } from "@/modules/paybacks/components/PaybackDialog";
 import type { PaybackBalance } from "@/modules/paybacks/lib/payback-balance";
@@ -41,17 +42,6 @@ export type HomeOwnerRow = {
   monogram: MonogramPerson[];
   spent: number;
 };
-
-export type HomeRecentRow = {
-  amount: number;
-  categoryGroupName: string;
-  categoryIcon: null | string;
-  categoryName: string;
-  id: string;
-  note: null | string;
-};
-
-export type HomeRecentGroup = { key: string; label: string; rows: HomeRecentRow[]; sub: string; total: number };
 
 export type HomeSavingsPot = { balance: number; id: string; name: string; next: null | string; reserveFull: boolean };
 
@@ -107,7 +97,7 @@ type Props = {
   pay: { amount: number; carriedFrom: null | string; extras: ExtraIncome[] };
   payback: null | PaybackBalance;
   prevMonthName: string;
-  recent: HomeRecentGroup[];
+  recent: RecentGroup[];
   recentPaybacks: HomePaybackRow[];
   savings: HomeSavingsPot[];
   settle: HomeSettle | null;
@@ -461,35 +451,7 @@ export function HomeView(props: Props) {
           {props.recent.length === 0 ? (
             <EmptyState body="Expenses you record will show up here." title="No expenses yet" />
           ) : (
-            props.recent.map((group) => (
-              <Fragment key={group.key}>
-                <div className="flex items-baseline justify-between border-b border-rule pt-3.5 pb-2">
-                  <span className="flex items-baseline gap-2.5">
-                    <span className="text-sm font-semibold">{group.label}</span>
-                    <span className="text-[13px] text-n-600">{group.sub}</span>
-                  </span>
-                  <span className="text-sm font-semibold">
-                    <Money value={group.total} />
-                  </span>
-                </div>
-                {group.rows.map((row) => (
-                  <Link
-                    className="grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-x-3.5 border-b border-n-300 py-2.5 text-ink no-underline hover:bg-ink/4"
-                    href="/expenses"
-                    key={row.id}
-                  >
-                    <CategoryIcon groupName={row.categoryGroupName} icon={row.categoryIcon} name={row.categoryName} />
-                    <span className="flex min-w-0 items-baseline gap-2.5">
-                      <span className="text-[15px]">{row.categoryName}</span>
-                      {row.note && <span className="truncate text-[13px] text-n-600">{row.note}</span>}
-                    </span>
-                    <span className="text-[15px]">
-                      <Money value={row.amount} />
-                    </span>
-                  </Link>
-                ))}
-              </Fragment>
-            ))
+            <RecentExpensesList groups={props.recent} rowHref="/expenses" />
           )}
         </section>
 
