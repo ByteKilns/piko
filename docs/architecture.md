@@ -49,6 +49,7 @@ src/
     (app)/        # authed route group; layout.tsx gates auth + renders nav
     api/          # route handlers: web (auth, app-releases) + mobile/*
     login/
+    demo/         # public: starts a private demo household (see Public demo)
   modules/        # feature slices (see below)
   components/     # shared UI: nav/, ui/ (shadcn), TextField, ErrorState, ...
   db/
@@ -274,6 +275,37 @@ approved. The agreed design is in the "Design (agreed)" section of
 - **Note suggestions** — `GET /api/mobile/categories` also sends `noteWords` (word →
   category from past notes, `expenses/lib/note-words.ts`), and the app's Add expense sheet
   suggests a category from the note until one is picked by hand. None of this goes to an AI.
+
+## Public demo
+
+`/demo` lets anyone try Piko without seeing real data. The design is in
+`docs/superpowers/specs/2026-10-15-public-demo-design.md`; the code is `src/modules/demo/`.
+
+- **A private copy per visitor, in the same database.** "Start the demo" (a form, so link
+  previews can't trigger it) runs `startDemoAction`: it deletes expired demos, refuses past
+  `MAX_LIVE_DEMOS` live ones, then `createDemoHousehold` inserts Aarav & Sita's household
+  (`lib/demo-fixture.ts`, built relative to today in BS months) in one transaction and
+  signs the visitor in as Aarav through the normal credentials provider.
+- **What marks a demo.** `households.demo_expires_at` (null = real) and accounts on
+  `DEMO_EMAIL_DOMAIN` (`src/lib/demo-account.ts`, a reserved `.invalid` domain).
+  `CurrentMember.isDemo` comes from the household. Every household-scoped rule applies
+  unchanged, so a demo can only ever see itself.
+- **Cleanup has two guards.** `deleteDemos` (`api/demo.ts`) only deletes households with
+  `demo_expires_at` set, and only accounts that belonged to them **and** are on the demo
+  domain. Never loosen either guard; the e2e test "cleanup deletes an expired demo and
+  leaves the real household alone" pins them.
+- **Expired sessions** go to `/demo?expired=1`: `getCurrentMember` redirects when the
+  session's email is a demo one and its household is gone.
+- **Turned off for demos (server-side, `assertNotDemo`)**: change password, profile photo,
+  voice entry (Gemini), and mobile sign-in (`/api/mobile/login`). The UI greys them out
+  (`DemoLocked`) or points to the demo phone instead.
+- **The banner, phone and tours** live in the `(app)` layout only for demo households
+  (`DemoProvider` is null otherwise). The phone (`components/DemoPhone.tsx`) is web
+  screens in a CSS frame, reusing `RecentExpensesList` and `ExpenseFields`; its voice
+  screen uses `lib/voice-phrases.ts`, never Gemini. Tours are driver.js
+  (`tour/DemoTour.tsx`, loaded only for demos) over sections marked `data-tour="…"`; when
+  you move or rename one of those sections, keep its `data-tour` so its step still finds
+  it. `tour/tour-steps.ts` lists every target.
 
 ## Cross-cutting concerns
 

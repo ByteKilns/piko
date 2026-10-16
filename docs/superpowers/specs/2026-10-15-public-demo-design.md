@@ -60,7 +60,8 @@ redirects to `/demo?bye=1`. Refuses when the caller isn't a demo user.
 
 ### 1.5 Expired sessions
 
-The JWT carries `demo: true` (set in the `jwt` callback from the email domain). When
+The session already carries the account's email, so a demo session is one whose email is on
+the demo domain (`isDemoEmail`); no extra JWT field is needed. When
 `getCurrentMember` finds no membership and the session is a demo, it calls
 `redirect("/demo?expired=1")` instead of throwing. Doing it there (not only in the layout) covers
 the layout, pages and server actions alike, which render in parallel. Real sessions keep today's
@@ -72,7 +73,7 @@ behaviour (the "User does not belong to a household" error).
 | --- | --- | --- |
 | Change password | `changePasswordAction` | refuse: "Not available in the demo" |
 | Profile photo | `updateProfileImageAction` | refuse |
-| Voice entry (Gemini) | `parseVoiceEntryAction` | refuse; the web voice button shows the message |
+| Voice entry (Gemini) | `parseVoiceEntryAction` | refuse; the web voice button says so and offers to open the demo phone |
 | Mobile app sign-in | `POST /api/mobile/login` | refuse demo emails (no token → no mobile voice route) |
 
 App-release publishing is already limited to `APP_RELEASE_ADMIN_EMAILS`. Everything else works
@@ -162,14 +163,19 @@ button shows the same message when tapped.
   more targets; the first visible one is used (sidebar vs bottom bar); steps with no visible
   target are skipped.
 - **Memory:** `localStorage` — which tours have been seen, and "skipped all". A tour auto-runs
-  once per page; **Skip all tours** stops all of them; Esc closes the current one (marked seen);
-  **Tour this page** always replays.
+  once per page and counts as seen when it starts (leaving mid-tour doesn't bring it back);
+  **Skip all tours** stops all of them; Esc closes the current one; **Tour this page** always
+  replays.
+- **Streaming:** the page streams in after the layout (`loading.tsx` first), so a tour keeps
+  looking for its sections for up to 5 s before starting without the missing ones.
 - **Home (8):** welcome (centred, no highlight) → Safe to spend today → Pay / Moved this month /
   Unallocated → Balances → Recent expenses → Add expense → Phone button → Budget/Savings/Dhuku in
   the nav ("each has a short tour the first time you open it").
 - **Budget (3):** Whose plan → Set aside first → Left to plan.
-- **Savings (3):** Balance + Emergency reserve → Saving for → Planned a month.
-- **Dhuku (3):** Status (+ means the group owes you) → Contributed / Received → Next payment.
+- **Savings (3):** the pot's figures (balance, emergency reserve, planned a month) → Saving for →
+  Add money.
+- **Dhuku (3):** the page's figures (due this month, contributed, received) → one group's months →
+  Log entry. (The Dhuku page has no plus/minus position; that's in Home's Balances step.)
 - Step copy: one or two plain sentences each.
 
 ## 6. Where the code lives
@@ -180,14 +186,17 @@ button shows the same message when tapped.
 - `api/demo.actions.ts` — `startDemoAction`, `exitDemoAction`.
 - `api/demo.ts` — create sandbox, live-demo count, cleanup.
 - `lib/demo-fixture.ts`, `lib/voice-phrases.ts`, `lib/demo-constants.ts` (email domain, 24 h, cap 100).
-- `components/DemoBanner.tsx`, `components/phone/*` (frame, Home, Voice, sheet).
-- `tour/` — step definitions, memory helpers, the driver.js runner.
+- `components/DemoProvider.tsx`, `DemoBanner.tsx`, `DemoLocked.tsx`, `DemoPhone.tsx`,
+  `components/phone/*` (frame, Home, Voice, sheet).
+- `tour/` — step definitions, memory helpers, the driver.js runner and its CSS.
 
-Touched elsewhere: `households` schema + migration, `src/lib/session.ts` (`isDemo`),
-`src/auth.ts` (JWT `demo` flag), `src/proxy.ts`, `src/app/(app)/layout.tsx` (banner, phone),
-settings and voice-entry actions, `/api/mobile/login`, `HomeView` (extract the
-list), `ExpenseDialog` (expose the fields), and `data-tour` attributes on Home, Budget, Savings,
-Dhuku and the nav.
+Touched elsewhere: `households` schema + migration, `src/lib/demo-account.ts` (demo email
+domain, `assertNotDemo`), `src/lib/session.ts` (`isDemo`, expired redirect), `src/proxy.ts`,
+`src/app/(app)/layout.tsx` (provider, banner, phone), `src/components/BrandSplit.tsx` (the login
+page's brand panel, shared), settings and voice-entry actions, `/api/mobile/login`,
+`RecentExpensesList` + `buildRecentGroups` (pulled out of Home), `ExpenseFields` (exported, with a
+`formId`, laid out against its own width), `Ledger` (passes `data-tour`), and `data-tour`
+attributes on Home, Budget, Savings, Dhuku and the nav.
 
 ## 7. Testing
 
@@ -205,6 +214,7 @@ resolution (visible target chosen, missing skipped) and memory (seen / skip all 
 5. Tours: shown on first Home visit; after Skip all tours, Budget shows none; Tour this page replays.
 6. Exit demo deletes the copy and returns to `/demo`.
 7. A real account sees no banner and no tour.
+8. Every page opens on the demo data; on a phone-sized screen the phone opens full screen.
 
 **By hand before sharing:** a real phone and a laptop; paste the link in WhatsApp and confirm the
 preview doesn't create a household.
