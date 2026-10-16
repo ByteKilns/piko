@@ -1,5 +1,6 @@
 "use server";
 
+import { assertNotDemo } from "@/lib/demo-account";
 import { parseExpenseTranscript } from "@/lib/gemini";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { todayISO } from "@/lib/today";
@@ -36,6 +37,8 @@ export async function parseVoiceEntry(
 }
 
 export async function parseVoiceEntryAction(transcript: string): Promise<VoiceParseResult> {
-  const { householdId, memberId } = await getCurrentMember();
-  return parseVoiceEntry(transcript, { householdId, memberId });
+  const member = await getCurrentMember();
+  // Strangers' words must never reach Gemini, or spend its quota.
+  assertNotDemo(member);
+  return parseVoiceEntry(transcript, { householdId: member.householdId, memberId: member.memberId });
 }

@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { households, users } from "@/db/schema";
 import { isDateFormat } from "@/lib/date-format-cookie";
+import { assertNotDemo } from "@/lib/demo-account";
 import { getCurrentMember } from "@/lib/session";
 import { activityActor, logActivity } from "@/modules/activity/api/activity";
 
@@ -16,6 +17,7 @@ import { profileImageSchema } from "../schemas/profile-image.schema";
 
 export async function changePasswordAction(input: ChangePasswordInput) {
   const member = await getCurrentMember();
+  assertNotDemo(member);
   const { userId } = member;
   const parsed = changePasswordSchema.parse(input);
 
@@ -39,6 +41,7 @@ export async function changePasswordAction(input: ChangePasswordInput) {
 
 export async function updateProfileImageAction(imageDataUrl: null | string) {
   const member = await getCurrentMember();
+  assertNotDemo(member);
   const { userId } = member;
   const parsed = profileImageSchema.parse(imageDataUrl);
 

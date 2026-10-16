@@ -1,35 +1,45 @@
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { db } from "@/db/client";
 import { householdMembers } from "@/db/schema";
+import { isDemoEmail } from "@/lib/demo-account";
 import { verifyMobileToken } from "@/lib/mobile-auth";
 import { VIEWING_AS_COOKIE_NAME } from "@/lib/viewing-as-cookie";
 
 export type CurrentMember = {
   householdId: string;
+  // A public demo's sandbox household (src/modules/demo).
+  isDemo: boolean;
   memberId: string;
   name: string;
   userId: string;
 };
 
-async function getMemberForUser(userId: string): Promise<CurrentMember> {
+async function findMemberForUser(userId: string): Promise<CurrentMember | null> {
   const member = await db.query.householdMembers.findFirst({
     where: eq(householdMembers.userId, userId),
     with: { household: true, user: true },
   });
-
-  if (!member) {
-    throw new Error("User does not belong to a household");
-  }
+  if (!member) return null;
 
   return {
     memberId: member.id,
     householdId: member.householdId,
+    isDemo: member.household.demoExpiresAt !== null,
     userId: member.userId,
     name: member.user.name,
   };
+}
+
+async function getMemberForUser(userId: string): Promise<CurrentMember> {
+  const member = await findMemberForUser(userId);
+  if (!member) {
+    throw new Error("User does not belong to a household");
+  }
+  return member;
 }
 
 export async function getCurrentMember(): Promise<CurrentMember> {
@@ -38,7 +48,13 @@ export async function getCurrentMember(): Promise<CurrentMember> {
     throw new Error("Not authenticated");
   }
 
-  return getMemberForUser(session.user.id);
+  const member = await findMemberForUser(session.user.id);
+  if (member) return member;
+  // A demo household is deleted after a day, taking its accounts with it. Its
+  // visitor goes back to the demo page instead of an error page. The session
+  // still carries the account's email, which is all this needs.
+  if (isDemoEmail(session.user.email)) redirect("/demo?expired=1");
+  throw new Error("User does not belong to a household");
 }
 
 export async function getCurrentMemberFromToken(token: string): Promise<CurrentMember | null> {
@@ -86,6 +102,7 @@ export async function getEffectiveMember(current?: CurrentMember): Promise<Curre
   return {
     memberId: target.id,
     householdId: resolvedCurrent.householdId,
+    isDemo: resolvedCurrent.isDemo,
     userId: target.userId,
     name: target.user.name,
   };
