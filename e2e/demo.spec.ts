@@ -121,6 +121,54 @@ test.describe("public demo", () => {
     await expect(phone).toHaveCount(0);
   });
 
+  test("the Home tour runs once; Skip all tours stops the rest; Tour this page replays", async ({ page }) => {
+    await startDemo(page, { tours: true });
+    const popover = page.locator(".driver-popover");
+    const title = popover.locator(".driver-popover-title");
+    await expect(title).toHaveText("Welcome to Piko");
+    await popover.getByRole("button", { name: "Next" }).click();
+    await expect(title).toHaveText("Safe to spend today");
+    await popover.getByRole("button", { name: "Skip all tours" }).click();
+    await expect(popover).toHaveCount(0);
+
+    await gotoRoute(page, "/budget");
+    await expect(page.getByRole("button", { name: "Tour this page" })).toBeVisible();
+    await page.waitForTimeout(1000);
+    await expect(popover).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Tour this page" }).click();
+    await expect(title).toHaveText("Whose plan");
+  });
+
+  test("a page's tour runs by itself the first time it's opened, then not again", async ({ page }) => {
+    await startDemo(page, { tours: true });
+    const popover = page.locator(".driver-popover");
+    const title = popover.locator(".driver-popover-title");
+    await expect(title).toHaveText("Welcome to Piko");
+    await page.keyboard.press("Escape");
+    await expect(popover).toHaveCount(0);
+
+    await gotoRoute(page, "/savings");
+    await expect(title).toHaveText("The pot");
+    await popover.getByRole("button", { name: "Next" }).click();
+    await popover.getByRole("button", { name: "Next" }).click();
+    await expect(title).toHaveText("Add money");
+    await popover.getByRole("button", { name: "Done" }).click();
+    await expect(popover).toHaveCount(0);
+
+    await gotoRoute(page, "/savings");
+    await page.waitForTimeout(1000);
+    await expect(popover).toHaveCount(0);
+  });
+
+  test("on a phone-sized screen the Home tour finds all eight of its sections", async ({ page }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    await startDemo(page, { tours: true });
+    const popover = page.locator(".driver-popover");
+    await expect(popover.locator(".driver-popover-title")).toHaveText("Welcome to Piko");
+    await expect(popover.locator(".driver-popover-progress-text")).toHaveText("1 of 8");
+  });
+
   test("cleanup deletes an expired demo and leaves the real household alone", async ({ browser }) => {
     const first = await browser.newPage();
     await startDemo(first);
@@ -159,9 +207,11 @@ test("a signed-in owner can open /demo and is told it signs them out", async ({ 
   await expect(page.getByText("Starting the demo signs you out of your own household.")).toBeVisible();
 });
 
-test("a real account sees no demo banner", async ({ page }) => {
+test("a real account sees no demo banner and no tour", async ({ page }) => {
   await gotoRoute(page, "/dashboard");
   await expect(page.getByRole("button", { name: "Exit demo" })).toHaveCount(0);
+  await page.waitForTimeout(1000);
+  await expect(page.locator(".driver-popover")).toHaveCount(0);
   await gotoRoute(page, "/settings");
   await expect(page.getByRole("button", { name: "Change Password" })).toBeEnabled();
 });

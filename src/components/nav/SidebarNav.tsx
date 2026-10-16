@@ -323,6 +323,7 @@ export function SidebarNav({ categories, currentMemberId, initialCollapsed, memb
       <div className="flex" data-enter="" style={enterStyle(addEnter)}>
         <Button
           className="h-10 min-w-0 flex-1 justify-start px-2.5"
+          data-tour="add-expense"
           onClick={openAddExpense}
           title="Add expense (N)"
           type="button"
@@ -354,7 +355,7 @@ export function SidebarNav({ categories, currentMemberId, initialCollapsed, memb
         </div>
       </div>
 
-      <nav aria-label="Main" className="relative flex flex-1 flex-col gap-4.5" onMouseLeave={handleNavLeave}>
+      <nav aria-label="Main" className="relative flex flex-1 flex-col gap-4.5" data-tour="nav-main" onMouseLeave={handleNavLeave}>
         <span
           aria-hidden
           className="pointer-events-none absolute inset-x-0 top-0 h-9 bg-surface opacity-0"

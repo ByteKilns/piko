@@ -145,7 +145,13 @@ export function SavingsView(props: Props) {
             <SectionHeading
               aside={
                 <span className="flex items-center gap-1">
-                  <Button className="h-auto px-2.5 py-1.25 text-[13px]" onClick={() => setDepositPot(pot)} type="button" variant="outline">
+                  <Button
+                    className="h-auto px-2.5 py-1.25 text-[13px]"
+                    data-tour="savings-add"
+                    onClick={() => setDepositPot(pot)}
+                    type="button"
+                    variant="outline"
+                  >
                     Add money
                   </Button>
                   <RowMenu items={[{ label: "Pot settings", onSelect: () => setPotDialog({ editing: pot, open: true, ownerKey: pot.ownerKey }) }]} />
@@ -156,7 +162,7 @@ export function SavingsView(props: Props) {
               {pot.name}
             </SectionHeading>
 
-            <Ledger>
+            <Ledger data-tour="savings-ledger">
               <LedgerCell label="Balance" lead note={`${pot.items.length} on the list`}>
                 <Money size="lead" value={pot.balance} />
               </LedgerCell>
@@ -178,7 +184,7 @@ export function SavingsView(props: Props) {
               </LedgerCell>
             </Ledger>
 
-            <div className="mt-8">
+            <div className="mt-8" data-tour="savings-list">
               <RowsHeader columns={COLUMNS}>
                 <span>#</span>
                 <span>Saving for</span>

@@ -156,7 +156,10 @@ export function HomeView(props: Props) {
 
       {props.settle && <SettleCard {...props.settle} />}
 
-      <section className="grid grid-cols-1 gap-x-14 gap-y-5 border-t-2 border-ink pt-5 pb-2 @min-[780px]:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+      <section
+        className="grid grid-cols-1 gap-x-14 gap-y-5 border-t-2 border-ink pt-5 pb-2 @min-[780px]:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]"
+        data-tour="home-safe"
+      >
         <div className="flex min-w-0 flex-col gap-2.5">
           {pacing ? (
             <>
@@ -234,7 +237,7 @@ export function HomeView(props: Props) {
         )}
       </section>
 
-      <Ledger className="mt-9">
+      <Ledger className="mt-9" data-tour="home-ledger">
         <LedgerCell
           bar={<Meter label={`Spent ${ledger.spentPctOfPay ?? 0}% of pay`} ratio={ledger.spentMeterRatio} />}
           label={`Spent in ${props.spentMonthName}`}
@@ -412,7 +415,7 @@ export function HomeView(props: Props) {
         })}
       </section>
 
-      <section className="mt-13 max-w-160">
+      <section className="mt-13 max-w-160" data-tour="home-balances">
         <SectionHeading sub="Where your money stands, apart from this month's spending">Balances</SectionHeading>
         <div className="flex items-baseline justify-between gap-4 border-b border-n-300 py-3">
           <span className="flex min-w-0 flex-col gap-0.5">
@@ -446,7 +449,7 @@ export function HomeView(props: Props) {
       </section>
 
       <div className="mt-13 grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-12">
-        <section className="min-w-0">
+        <section className="min-w-0" data-tour="home-recent">
           <SectionHeading aside={<ArrowLink href="/expenses">All expenses</ArrowLink>}>Recent expenses</SectionHeading>
           {props.recent.length === 0 ? (
             <EmptyState body="Expenses you record will show up here." title="No expenses yet" />

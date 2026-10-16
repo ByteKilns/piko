@@ -136,7 +136,7 @@ export function DhukuView(props: Props) {
         title="Dhuku"
       />
 
-      <Ledger>
+      <Ledger data-tour="dhuku-ledger">
         <LedgerCell label="Due this month" lead note={props.ledger.dueSub}>
           <Money size="lead" value={props.ledger.due} />
         </LedgerCell>
@@ -190,7 +190,7 @@ export function DhukuView(props: Props) {
       {visible.map((row) => {
         const open = expanded[row.id] ?? false;
         return (
-          <div key={row.id}>
+          <div data-tour="dhuku-group" key={row.id}>
             <Row columns={COLUMNS} onClick={() => setExpanded((prev) => ({ ...prev, [row.id]: !open }))}>
               <div className="flex min-w-0 flex-col gap-1">
                 <span className={cn("truncate text-[15px] font-semibold", row.completed && "text-n-600")}>{row.name}</span>
@@ -236,6 +236,7 @@ export function DhukuView(props: Props) {
                 {row.active && (
                   <Button
                     className="h-auto px-2.5 py-1.25 text-[13px]"
+                    data-tour="dhuku-log"
                     onClick={() => setLogTarget({ id: row.id, monthly: row.nextAmount, name: row.name, pot: row.pot })}
                     type="button"
                     variant="outline"

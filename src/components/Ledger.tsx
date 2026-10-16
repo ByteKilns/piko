@@ -5,13 +5,15 @@ import { cn } from "@/lib/utils";
 // Headline-figure row at the top of most pages: one large lead figure and up
 // to three smaller ones. Lays out against the page's @container (set in the
 // (app) layout): side by side from 780px, lead on its own row below that.
-export function Ledger({ children, className }: { children: ReactNode; className?: string }) {
+// `data-tour` marks it for the demo's guided tours (src/modules/demo/tour).
+export function Ledger({ children, className, "data-tour": tour }: { children: ReactNode; className?: string; "data-tour"?: string }) {
   return (
     <div
       className={cn(
         "grid grid-cols-3 border-t-2 border-b border-t-ink border-b-rule @min-[780px]:grid-cols-[minmax(0,1.55fr)_repeat(3,minmax(0,1fr))]",
         className,
       )}
+      data-tour={tour}
     >
       {children}
     </div>

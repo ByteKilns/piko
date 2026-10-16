@@ -70,6 +70,7 @@ export function BottomNav({ categories, currentMemberId, members, quickCategoryI
           "fixed right-4 bottom-20 z-10 grid size-12 place-items-center bg-signal-fill text-white shadow-dialog transition-[transform,opacity] duration-200 md:hidden",
           fabHiddenClass,
         )}
+        data-tour="add-expense-mobile"
         onClick={() => setAddExpenseOpen(true)}
         type="button"
       >
@@ -86,7 +87,11 @@ export function BottomNav({ categories, currentMemberId, members, quickCategoryI
         quickCategoryIds={quickCategoryIds}
       />
 
-      <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-10 flex border-t-2 border-rule bg-paper pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav
+        aria-label="Primary"
+        className="fixed inset-x-0 bottom-0 z-10 flex border-t-2 border-rule bg-paper pb-[env(safe-area-inset-bottom)] md:hidden"
+        data-tour="nav-bottom"
+      >
         {BOTTOM_BAR.map((item) => {
           const Icon = item.icon;
           const active = isActivePath(pathname, item.href);

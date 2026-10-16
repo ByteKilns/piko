@@ -1,15 +1,18 @@
 "use client";
 
 import { Smartphone } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 
 import { exitDemoAction } from "../api/demo.actions";
+import { tourForPath } from "../tour/tour-steps";
 import { useDemo } from "./DemoProvider";
 
 // The thin bar on every page of a demo. Real accounts render nothing.
 export function DemoBanner() {
   const demo = useDemo();
+  const pathname = usePathname();
   if (!demo) return null;
 
   return (
@@ -17,10 +20,22 @@ export function DemoBanner() {
       <span className="font-semibold">Demo</span>
       <span className="text-n-700">Deleted in {demo.timeLeft}</span>
       <div className="ml-auto flex items-center gap-1">
-        <Button aria-pressed={demo.phoneOpen} onClick={() => demo.setPhoneOpen(!demo.phoneOpen)} size="sm" type="button" variant="ghost">
+        <Button
+          aria-pressed={demo.phoneOpen}
+          data-tour="phone-button"
+          onClick={() => demo.setPhoneOpen(!demo.phoneOpen)}
+          size="sm"
+          type="button"
+          variant="ghost"
+        >
           <Smartphone />
           Phone
         </Button>
+        {tourForPath(pathname) && (
+          <Button onClick={demo.requestTour} size="sm" type="button" variant="ghost">
+            Tour this page
+          </Button>
+        )}
         <form action={exitDemoAction}>
           <Button size="sm" type="submit" variant="ghost">
             Exit demo

@@ -164,7 +164,7 @@ export function BudgetView(props: Props) {
             {person.lead.rest}
           </p>
 
-          <Ledger>
+          <Ledger data-tour="budget-ledger">
             <LedgerCell
               bar={<Meter ratio={person.ledger.plannedRatio} />}
               label="Left to plan"
@@ -186,14 +186,16 @@ export function BudgetView(props: Props) {
         </>
       )}
 
-      <LineTabs
-        aside={person ? "Click a row to change its budget" : undefined}
-        className="mt-5.5 mb-6.5"
-        label="Whose plan"
-        onChange={(value) => setTab(value)}
-        tabs={tabs}
-        value={tab}
-      />
+      <div data-tour="budget-whose">
+        <LineTabs
+          aside={person ? "Click a row to change its budget" : undefined}
+          className="mt-5.5 mb-6.5"
+          label="Whose plan"
+          onChange={(value) => setTab(value)}
+          tabs={tabs}
+          value={tab}
+        />
+      </div>
 
       {person?.carriedFrom && (
         <p className="mb-4 text-[13px] text-n-700">
@@ -312,7 +314,7 @@ export function BudgetView(props: Props) {
 function SetAsideRows({ setAside }: { setAside: PersonView["setAside"] }) {
   const ratio = setAside.planned > 0 ? setAside.done / setAside.planned : 0;
   return (
-    <>
+    <div data-tour="budget-set-aside">
       <RowGroupHead columns={COLUMNS} first>
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="text-[15px] font-semibold whitespace-nowrap">Set aside first</span>
@@ -356,7 +358,7 @@ function SetAsideRows({ setAside }: { setAside: PersonView["setAside"] }) {
           </Row>
         );
       })}
-    </>
+    </div>
   );
 }
 
