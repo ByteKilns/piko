@@ -86,12 +86,21 @@ export function ExpenseDialog({ expenseId, onOpenChange, open, ...rest }: Props)
   );
 }
 
-type FieldsProps = Omit<Props, "onOpenChange" | "open"> & { onDone: () => void; onPendingChange: (pending: boolean) => void };
+export type ExpenseFieldsProps = Omit<Props, "onOpenChange" | "open"> & {
+  // Ties the form to a submit button outside it. Two forms on one page (the
+  // dialog and the demo's phone) need different ids.
+  formId?: string;
+  onDone: () => void;
+  onPendingChange: (pending: boolean) => void;
+};
 
-function ExpenseFields({
+// The form inside the dialog, also used on its own (the demo's phone). It lays
+// out against its own width, so it fits a narrow panel on a wide screen.
+export function ExpenseFields({
   categories,
   currentMemberId,
   expenseId,
+  formId = FORM_ID,
   funds = [],
   initial,
   members,
@@ -99,7 +108,7 @@ function ExpenseFields({
   onPendingChange,
   quickCategoryIds = [],
   savingsPots = [],
-}: FieldsProps) {
+}: ExpenseFieldsProps) {
   const router = useRouter();
   const [categoryOptions, setCategoryOptions] = useState(categories);
   const [payBack, setPayBack] = useState(initial?.payBackAmount != null);
@@ -201,7 +210,7 @@ function ExpenseFields({
   });
 
   return (
-    <form className="flex flex-col gap-5.5" id={FORM_ID} noValidate onSubmit={onSubmit}>
+    <form className="@container flex flex-col gap-5.5" id={formId} noValidate onSubmit={onSubmit}>
       <AmountInput
         data-autofocus
         error={errors.amount ? "Enter an amount to continue" : undefined}
@@ -247,7 +256,7 @@ function ExpenseFields({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 @min-[420px]:grid-cols-2">
         <Segmented
           label="For"
           onChange={chooseOwner}
@@ -292,7 +301,7 @@ function ExpenseFields({
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+      <div className="grid grid-cols-1 gap-4 @min-[420px]:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <Controller
           control={control}
           name="date"
