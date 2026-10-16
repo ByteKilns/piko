@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 import { config as loadEnv } from "dotenv";
 
+import { e2eDatabaseUrl } from "./e2e/support/db";
+
 // e2e credentials (SEED_USER*) come from .env.local.
 loadEnv({ path: ".env.local" });
 
@@ -8,17 +10,6 @@ loadEnv({ path: ".env.local" });
 // server on 3000 — reusing one would silently miss the env below.
 const port = process.env.PLAYWRIGHT_PORT ?? "3100";
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
-
-// e2e runs against its own database (reset + seeded by scripts/seed-e2e.ts),
-// so tests can write freely without touching the dev DB. Defaults to the
-// .env.local DATABASE_URL with the database name swapped for "piko_e2e".
-function withDatabaseName(url: string | undefined, name: string): string | undefined {
-  if (!url) return undefined;
-  const parsed = new URL(url);
-  parsed.pathname = `/${name}`;
-  return parsed.toString();
-}
-const e2eDatabaseUrl = process.env.E2E_DATABASE_URL ?? withDatabaseName(process.env.DATABASE_URL, "piko_e2e");
 
 export default defineConfig({
   expect: { timeout: 10_000 },

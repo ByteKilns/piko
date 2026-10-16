@@ -2,14 +2,18 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 
+// Open without a session. /demo stays open to signed-in people too, so the
+// owner can try their own demo link.
+const PUBLIC_PATHS = ["/login", "/demo"];
+
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
-  const isLoginPage = req.nextUrl.pathname === "/login";
+  const { pathname } = req.nextUrl;
 
-  if (!isLoggedIn && !isLoginPage) {
+  if (!isLoggedIn && !PUBLIC_PATHS.includes(pathname)) {
     return NextResponse.redirect(new URL("/login", req.nextUrl));
   }
-  if (isLoggedIn && isLoginPage) {
+  if (isLoggedIn && pathname === "/login") {
     return NextResponse.redirect(new URL("/dashboard", req.nextUrl));
   }
 });
