@@ -16,17 +16,23 @@ class RawEvent {
   final String text;
   final DateTime postedAt;
 
+  /// Piko: the phone queue's name for this notification ("key@postedAt");
+  /// empty when it didn't come from the queue.
+  final String id;
+
   RawEvent({
     required this.source,
     required this.key,
     required this.title,
     required this.text,
     required this.postedAt,
+    this.id = '',
   });
 
   String get body => '$title $text'.trim();
 
   factory RawEvent.fromJson(Map<String, dynamic> j) => RawEvent(
+        id: j['id'] as String? ?? '',
         source: j['source'] as String? ?? 'notification',
         key: j['key'] as String? ?? '',
         title: j['title'] as String? ?? '',
@@ -50,6 +56,10 @@ class Txn {
   double categoryConfidence;
   TxnStatus status;
 
+  /// Piko: the [RawEvent.id] it was read from, so the server keeps one draft
+  /// per notification. Null when it didn't come from the phone queue.
+  final String? eventId;
+
   Txn({
     required this.amount,
     required this.direction,
@@ -62,6 +72,7 @@ class Txn {
     this.category = 'Uncategorized',
     this.categoryConfidence = 0,
     this.status = TxnStatus.draft,
+    this.eventId,
   });
 
   bool get isExpense => direction == TxnDirection.debit;

@@ -98,6 +98,45 @@ void main() {
     expect(sent['category'], 'Groceries');
   });
 
+  test('sends the notification id and reports a capture the server stored now', () async {
+    final t = Txn(
+      amount: 500,
+      direction: TxnDirection.debit,
+      kind: TxnKind.payment,
+      occurredAt: DateTime(2026, 10, 14, 12),
+      source: 'notification',
+      rawText: 'You have paid Rs. 500 to Daraz',
+      eventId: 'k@1792036530250',
+    );
+    replies['/api/mobile/captures'] = {
+      'capture': {'id': 'cap-1'},
+      'created': true,
+    };
+
+    expect(await repo().insert(t), isTrue);
+    expect(bodyOf('/api/mobile/captures')['eventId'], 'k@1792036530250');
+  });
+
+  test('reports a capture the server already had, and still knows its id', () async {
+    final r = repo();
+    final t = paid();
+    replies['/api/mobile/captures'] = {
+      'capture': {'id': 'cap-1'},
+      'created': false,
+    };
+
+    expect(await r.insert(t), isFalse);
+    t.status = TxnStatus.rejected;
+    await r.update(t);
+    expect(bodyOf('/api/mobile/captures/reject'), {'id': 'cap-1'});
+  });
+
+  test('leaves the notification id out when there is none, and an older server means stored', () async {
+    // The default reply has no `created`, like the server before this change.
+    expect(await repo().insert(paid()), isTrue);
+    expect(bodyOf('/api/mobile/captures').containsKey('eventId'), isFalse);
+  });
+
   test('approving files it for and paid by me, on the day it was paid, with the payee as the note', () async {
     final r = repo();
     final t = paid();

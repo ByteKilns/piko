@@ -17,7 +17,36 @@ void main() {
   final parser = EsewaParser();
   final cat = Categorizer();
 
+  group('isUnreadable', () {
+    test('a message with no payment in it, not on the ignore list', () {
+      expect(parser.isUnreadable(ev('Your eSewa balance is low. Load fund now.')), isTrue);
+    });
+
+    test('not a payment it can read', () {
+      expect(parser.isUnreadable(ev('You have paid Rs. 500 to Daraz.')), isFalse);
+    });
+
+    test('not an OTP, login or promo message', () {
+      expect(parser.isUnreadable(ev('Your OTP for payment of Rs. 500 is 123456')), isFalse);
+      expect(parser.isUnreadable(ev('New login to your eSewa account')), isFalse);
+      expect(parser.isUnreadable(ev('Congratulations! Big offer this Dashain')), isFalse);
+    });
+  });
+
   group('parser', () {
+    test('a payment from the phone queue keeps the notification id', () {
+      final e = RawEvent(
+        source: 'notification',
+        key: 'k',
+        title: 'eSewa',
+        text: 'You have paid Rs. 500 to Daraz.',
+        postedAt: DateTime(2026, 10, 14, 12),
+        id: 'k@1792036530250',
+      );
+      expect(parser.parse(e)!.eventId, 'k@1792036530250');
+      expect(parser.parse(ev('You have paid Rs. 500 to Daraz.'))!.eventId, isNull);
+    });
+
     test('merchant payment', () {
       final t = parser.parse(ev('You have paid Rs. 1,250.50 to Bhatbhateni Supermarket on 14-10-2026. Ref ID: 0ABC12345'))!;
       expect(t.amount, 1250.50);

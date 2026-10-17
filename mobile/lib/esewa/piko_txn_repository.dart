@@ -89,19 +89,22 @@ class PikoTxnRepository implements TxnRepository {
   Future<List<Txn>> drafts() async => (await client.fetchCaptureDrafts()).map(_fromJson).toList();
 
   @override
-  Future<void> insert(Txn t) async {
-    _ids[t] = await client.createCapture({
+  Future<bool> insert(Txn t) async {
+    final stored = await client.createCapture({
       'amount': t.amount,
       'category': t.category,
       'categoryConfidence': t.categoryConfidence,
       'counterparty': t.counterparty,
       'direction': t.direction.name,
+      'eventId': ?t.eventId,
       'kind': t.kind.name,
       'occurredAt': t.occurredAt.toUtc().toIso8601String(),
       'rawText': t.rawText,
       'refId': t.refId,
       'source': t.source,
     });
+    _ids[t] = stored.id;
+    return stored.created;
   }
 
   @override

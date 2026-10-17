@@ -126,10 +126,15 @@ class ApiClient {
     return (body['captures'] as List<dynamic>).cast<Map<String, dynamic>>();
   }
 
-  // Returns the new capture's id.
-  Future<String> createCapture(Map<String, dynamic> capture) async {
+  // The capture's id, and whether the server stored it now (false when it
+  // already had one from the same notification). A server without the
+  // `created` field always stored it.
+  Future<({String id, bool created})> createCapture(Map<String, dynamic> capture) async {
     final body = await _authorizedPost('/api/mobile/captures', capture);
-    return (body['capture'] as Map<String, dynamic>)['id'] as String;
+    return (
+      id: (body['capture'] as Map<String, dynamic>)['id'] as String,
+      created: body['created'] as bool? ?? true,
+    );
   }
 
   Future<Expense> approveCapture(String id, ExpenseDraft expense) async {

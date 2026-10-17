@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/services.dart';
 
+import '../services/money.dart';
 import 'categorizer.dart';
 import 'deduplicator.dart';
 import 'models.dart';
@@ -21,11 +22,36 @@ abstract class TxnRepository {
   /// Drafts waiting for review, newest first.
   Future<List<Txn>> drafts();
 
-  Future<void> insert(Txn t);
+  /// Piko: false when the server already had a draft from the same
+  /// notification (two drains at once, or a retry), so nothing new was stored.
+  Future<bool> insert(Txn t);
   Future<void> update(Txn t);
   Future<void> saveRaw(RawEvent e); // keep raw events for re-parsing
   Future<Map<String, String>> loadUserRules();
   Future<void> saveUserRules(Map<String, String> rules);
+}
+
+/// Piko: what one drain of the phone queue did, for the draft alerts.
+class DrainResult {
+  const DrainResult({this.drafts = const [], this.unreadable = 0});
+
+  /// New drafts (money going out), oldest first.
+  final List<Txn> drafts;
+
+  /// Notifications that weren't ignored (OTP, login...) but held no payment.
+  final int unreadable;
+
+  bool get isEmpty => drafts.isEmpty && unreadable == 0;
+
+  /// What the native notifier shows: one line per draft, e.g. "Rs 500 to Daraz".
+  Map<String, Object> toJson() => {'drafts': drafts.map(draftLine).toList(), 'unreadable': unreadable};
+
+  static String draftLine(Txn t) {
+    final amount = splitAmount(t.amount);
+    final rupees = 'Rs ${amount.integer}${amount.decimals == '.00' ? '' : amount.decimals}';
+    final payee = t.counterparty;
+    return payee == null ? '$rupees eSewa payment' : '$rupees to $payee';
+  }
 }
 
 /// Wires native capture -> parse -> dedupe -> categorize -> store.
@@ -71,34 +97,63 @@ class EsewaService {
     await drainPending();
   }
 
-  Future<void> _draining = Future.value();
+  Future<DrainResult> _draining = Future.value(const DrainResult());
 
   /// Piko: ingests every queued event, oldest first, and acks each one only
   /// once it has been stored, so nothing is lost when the phone is offline or
   /// the app is killed half way. Drains run one at a time, so a live event
-  /// arriving mid-drain can't be stored twice. Never throws.
-  Future<void> drainPending() => _draining = _draining.then((_) => _drainOnce());
+  /// arriving mid-drain can't be stored twice. Hands what it did to the
+  /// native notifier, which decides whether to alert. Never throws.
+  Future<DrainResult> drainPending() => _draining = _draining.then((_) => _drainOnce());
 
-  Future<void> _drainOnce() async {
+  /// Piko: completes once no drain is running or waiting, including drains
+  /// that live events start meanwhile.
+  Future<void> idle() async {
+    Future<DrainResult> last;
+    do {
+      last = _draining;
+      await last;
+    } while (!identical(last, _draining));
+  }
+
+  Future<DrainResult> _drainOnce() async {
     final List<dynamic> queued;
     try {
       queued = jsonDecode(await _method.invokeMethod<String>('pending') ?? '[]') as List<dynamic>;
     } catch (_) {
-      return;
+      return const DrainResult();
     }
+    final drafts = <Txn>[];
+    var unreadable = 0;
     for (final e in queued) {
       final event = Map<String, dynamic>.from(e as Map);
+      final raw = RawEvent.fromJson(event);
       try {
-        await ingest(RawEvent.fromJson(event));
+        final txn = await ingest(raw);
         await _method.invokeMethod('ack', [event['id']]);
+        if (txn != null && txn.isExpense) {
+          drafts.add(txn);
+        } else if (txn == null && parser.isUnreadable(raw)) {
+          unreadable++;
+        }
       } catch (_) {
         // Left queued (offline, or the server failed): tried again next drain.
       }
     }
+    final result = DrainResult(drafts: drafts, unreadable: unreadable);
+    if (!result.isEmpty) {
+      try {
+        await _method.invokeMethod('notify', result.toJson());
+      } catch (_) {
+        // No alert this time; the drafts are stored and Home still shows them.
+      }
+    }
+    return result;
   }
 
   /// Single entry point for every source (also call this from statement
-  /// import, OCR, or SMS code paths).
+  /// import, OCR, or SMS code paths). Piko: null unless a new transaction was
+  /// stored (not a payment, a duplicate, or already on the server).
   Future<Txn?> ingest(RawEvent e) async {
     await repo.saveRaw(e);
     final txn = parser.parse(e);
@@ -109,7 +164,7 @@ class EsewaService {
 
     categorizer.categorize(txn);
     txn.status = TxnStatus.draft; // never straight to real data
-    await repo.insert(txn);
+    if (!await repo.insert(txn)) return null;
     _newTxns.add(txn);
     return txn;
   }

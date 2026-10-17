@@ -96,7 +96,16 @@ class EsewaParser {
       occurredAt: e.postedAt,
       source: e.source,
       rawText: e.body,
+      eventId: e.id.isEmpty ? null : e.id,
     );
+  }
+
+  /// Piko: true for a message that isn't on the ignore list (OTP, login,
+  /// promos) but holds no payment the parser can read: the ones worth a
+  /// "couldn't read" alert, so the rules can be taught them.
+  bool isUnreadable(RawEvent e) {
+    final text = _normalize(e.body);
+    return text.isNotEmpty && !rules.ignore.hasMatch(text) && parse(e) == null;
   }
 
   String? _counterparty(String text) {
