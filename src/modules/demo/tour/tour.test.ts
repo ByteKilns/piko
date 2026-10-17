@@ -5,17 +5,27 @@ import { tourForPath, TOURS } from "./tour-steps";
 import { resolveSteps } from "./tour-targets";
 
 describe("TOURS", () => {
-  it("has the Home tour of eight steps and three-step page tours", () => {
+  it("has a Home tour of eight steps and a short tour for every other page", () => {
     expect(TOURS.home).toHaveLength(8);
     expect(TOURS.budget).toHaveLength(3);
     expect(TOURS.savings).toHaveLength(3);
     expect(TOURS.dhuku).toHaveLength(3);
+    expect(TOURS.expenses).toHaveLength(2);
+    expect(TOURS.recurring).toHaveLength(3);
+    expect(TOURS.loans).toHaveLength(2);
+    expect(TOURS.reports).toHaveLength(2);
+    expect(TOURS.categories).toHaveLength(2);
+    expect(TOURS.notifications).toHaveLength(2);
+    expect(TOURS.activity).toHaveLength(2);
+    expect(TOURS.settings).toHaveLength(2);
   });
 
   it("finds a page's tour from its path", () => {
     expect(tourForPath("/dashboard")).toBe("home");
     expect(tourForPath("/budget")).toBe("budget");
-    expect(tourForPath("/expenses")).toBeNull();
+    expect(tourForPath("/expenses")).toBe("expenses");
+    expect(tourForPath("/settings")).toBe("settings");
+    expect(tourForPath("/loans/123")).toBeNull();
   });
 });
 

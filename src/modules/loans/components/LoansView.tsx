@@ -116,7 +116,7 @@ export function LoansView(props: Props) {
         title="Loans"
       />
 
-      <Ledger>
+      <Ledger data-tour="loans-ledger">
         <LedgerCell bar={<Meter ratio={props.ledger.owedRatio} />} label="Owed to you" lead note="Still to come back">
           <Money size="lead" value={props.ledger.owed} />
         </LedgerCell>
@@ -133,6 +133,7 @@ export function LoansView(props: Props) {
 
       <LineTabs
         className="mt-5.5 mb-6.5"
+        data-tour="loans-tabs"
         label="Direction"
         onChange={(value) => setTab(value)}
         tabs={[

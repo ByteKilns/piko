@@ -45,7 +45,7 @@ export function CategoriesView({ categories }: { categories: CategoryEditing[] }
     <div>
       <PageHeader
         actions={
-          <Button className="h-9.5" onClick={() => setDialog({ editing: null, open: true })} variant="outline">
+          <Button className="h-9.5" data-tour="categories-add" onClick={() => setDialog({ editing: null, open: true })} variant="outline">
             <Plus />
             Add category
           </Button>
@@ -56,6 +56,7 @@ export function CategoriesView({ categories }: { categories: CategoryEditing[] }
 
       <LineTabs
         className="mb-6"
+        data-tour="categories-tabs"
         label="Status"
         onChange={(value) => setTab(value)}
         tabs={[

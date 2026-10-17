@@ -11,6 +11,7 @@ import { draftForPhrase, type VoicePhrase } from "../lib/voice-phrases";
 import { useDemo } from "./DemoProvider";
 import { PhoneFrame } from "./phone/PhoneFrame";
 import { PhoneHome } from "./phone/PhoneHome";
+import { PhoneSettings } from "./phone/PhoneSettings";
 import { PhoneSheet } from "./phone/PhoneSheet";
 import { PhoneVoice } from "./phone/PhoneVoice";
 
@@ -22,12 +23,12 @@ type Props = {
   recent: RecentGroup[];
 };
 
-// The mobile app, on screen: docked beside the website on wide screens, full
-// screen on a phone. Saving refreshes the page, so both sides show the new
-// expense at once.
+// The mobile app, on screen: a Pixel-shaped phone in a modal over the website.
+// Saving goes through the same action and refreshes the page, so both sides
+// show the new expense at once.
 export function DemoPhone({ categories, currentMemberId, members, quickCategoryIds, recent }: Props) {
   const demo = useDemo();
-  const [screen, setScreen] = useState<"home" | "sheet" | "voice">("home");
+  const [screen, setScreen] = useState<"home" | "settings" | "sheet" | "voice">("home");
   const [draft, setDraft] = useState<ExpenseDraft | null>(null);
   const partnerId = members.find((m) => m.id !== currentMemberId)?.id ?? null;
 
@@ -43,30 +44,31 @@ export function DemoPhone({ categories, currentMemberId, members, quickCategoryI
   if (!demo?.phoneOpen) return null;
 
   return (
-    <section
-      aria-label="Demo phone"
-      className="fixed inset-0 z-50 flex flex-col bg-paper xl:sticky xl:top-0 xl:z-auto xl:h-screen xl:w-110 xl:shrink-0 xl:items-center xl:justify-center xl:gap-3 xl:border-l-2 xl:border-rule xl:bg-surface"
-    >
-      <div className="flex items-center justify-between border-b-2 border-ink px-4 py-2 xl:w-98 xl:border-0 xl:px-1 xl:py-0">
-        <span className="text-sm font-semibold">The Piko phone app</span>
-        <Button onClick={() => demo.setPhoneOpen(false)} size="sm" type="button" variant="ghost">
-          Close
-        </Button>
-      </div>
-      <PhoneFrame>
-        {screen === "home" && <PhoneHome onType={() => openSheet(null)} onVoice={() => setScreen("voice")} recent={recent} />}
-        {screen === "voice" && <PhoneVoice onCancel={() => setScreen("home")} onHeard={onHeard} onTypeInstead={() => openSheet(null)} />}
-        {screen === "sheet" && (
-          <PhoneSheet
-            categories={categories}
-            currentMemberId={currentMemberId}
-            draft={draft}
-            members={members}
-            onClose={() => setScreen("home")}
-            quickCategoryIds={quickCategoryIds}
-          />
-        )}
-      </PhoneFrame>
-    </section>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-3 sm:p-5">
+      <section aria-label="Demo phone" className="flex h-full max-h-full flex-col items-center gap-2">
+        <div className="flex w-full shrink-0 justify-end">
+          <Button className="text-paper hover:bg-paper/10" onClick={() => demo.setPhoneOpen(false)} size="sm" type="button" variant="ghost">
+            Close
+          </Button>
+        </div>
+        <PhoneFrame>
+          {screen === "home" && (
+            <PhoneHome onSettings={() => setScreen("settings")} onType={() => openSheet(null)} onVoice={() => setScreen("voice")} recent={recent} />
+          )}
+          {screen === "settings" && <PhoneSettings onBack={() => setScreen("home")} />}
+          {screen === "voice" && <PhoneVoice onCancel={() => setScreen("home")} onHeard={onHeard} onTypeInstead={() => openSheet(null)} />}
+          {screen === "sheet" && (
+            <PhoneSheet
+              categories={categories}
+              currentMemberId={currentMemberId}
+              draft={draft}
+              members={members}
+              onClose={() => setScreen("home")}
+              quickCategoryIds={quickCategoryIds}
+            />
+          )}
+        </PhoneFrame>
+      </section>
+    </div>
   );
 }

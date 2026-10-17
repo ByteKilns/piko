@@ -318,7 +318,7 @@ export function ExpensesView(props: Props) {
         title="Expenses"
       />
 
-      <Ledger>
+      <Ledger data-tour="expenses-ledger">
         <LedgerCell
           bar={
             <Meter
@@ -370,7 +370,7 @@ export function ExpensesView(props: Props) {
         </LedgerCell>
       </Ledger>
 
-      <div className="flex flex-wrap items-center gap-1 pt-4 pb-7.5">
+      <div className="flex flex-wrap items-center gap-1 pt-4 pb-7.5" data-tour="expenses-filters">
         <div className="relative mr-2.5 min-w-50 flex-[0_1_290px]">
           <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-n-600" />
           <Input

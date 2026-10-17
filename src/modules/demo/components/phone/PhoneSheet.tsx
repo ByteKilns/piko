@@ -27,16 +27,16 @@ export function PhoneSheet({ draft, onClose, ...fields }: Props) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b-2 border-ink px-5 py-3">
+      <div className="flex items-center justify-between border-b-2 border-ink px-4 py-2.5">
         <h2 className="text-lg font-extrabold">Add expense</h2>
         <Button aria-label="Close" onClick={onClose} size="icon-sm" type="button" variant="ghost">
           <X />
         </Button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         <ExpenseFields {...fields} formId={FORM_ID} initial={draft ?? undefined} onDone={onClose} onPendingChange={setPending} />
       </div>
-      <div className="border-t-2 border-rule px-5 py-3">
+      <div className="border-t-2 border-rule px-4 py-2.5">
         <Button className="w-full" disabled={pending} form={FORM_ID} type="submit">
           {pending ? "Saving..." : "Save"}
         </Button>

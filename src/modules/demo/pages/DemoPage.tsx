@@ -1,5 +1,8 @@
+import Link from "next/link";
+
 import { auth } from "@/auth";
 import { BrandSplit } from "@/components/BrandSplit";
+import { Button } from "@/components/ui/button";
 import { isDemoEmail } from "@/lib/demo-account";
 
 import { DemoStart } from "../components/DemoStart";
@@ -40,6 +43,11 @@ export async function DemoPage({ searchParams }: Props) {
           You get a private copy made just for you. Nobody else sees what you enter, and it&apos;s deleted after 24 hours.
         </p>
         <DemoStart signedInAsSelf={signedInAsSelf} />
+        {!signedInAsSelf && (
+          <Button asChild className="h-10 w-full" variant="outline">
+            <Link href="/login">Sign in</Link>
+          </Button>
+        )}
       </div>
     </BrandSplit>
   );

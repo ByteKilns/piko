@@ -121,6 +121,18 @@ test.describe("public demo", () => {
     await expect(phone).toHaveCount(0);
   });
 
+  test("the phone's Settings screen opens from Home", async ({ page }) => {
+    await startDemo(page);
+    await page.getByRole("button", { name: "Phone" }).click();
+    const phone = page.getByRole("region", { name: "Demo phone" });
+    await phone.getByRole("button", { name: "Settings" }).click();
+    await expect(phone.getByRole("heading", { name: "Settings" })).toBeVisible();
+    await expect(phone.getByText("https://piko-kn.vercel.app")).toBeVisible();
+
+    await phone.getByRole("button", { name: "Back" }).click();
+    await expect(phone.getByRole("heading", { name: "Recent expenses" })).toBeVisible();
+  });
+
   test("the Home tour runs once; Skip all tours stops the rest; Tour this page replays", async ({ page }) => {
     await startDemo(page, { tours: true });
     const popover = page.locator(".driver-popover");
