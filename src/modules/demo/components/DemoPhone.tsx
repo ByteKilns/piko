@@ -23,9 +23,9 @@ type Props = {
   recent: RecentGroup[];
 };
 
-// The mobile app, on screen: docked beside the website on wide screens, full
-// screen on a phone. Saving refreshes the page, so both sides show the new
-// expense at once.
+// The mobile app, on screen: a Pixel-shaped phone in a modal over the website.
+// Saving goes through the same action and refreshes the page, so both sides
+// show the new expense at once.
 export function DemoPhone({ categories, currentMemberId, members, quickCategoryIds, recent }: Props) {
   const demo = useDemo();
   const [screen, setScreen] = useState<"home" | "settings" | "sheet" | "voice">("home");
@@ -44,33 +44,32 @@ export function DemoPhone({ categories, currentMemberId, members, quickCategoryI
   if (!demo?.phoneOpen) return null;
 
   return (
-    <section
-      aria-label="Demo phone"
-      className="fixed inset-0 z-50 flex flex-col bg-paper xl:sticky xl:top-0 xl:z-auto xl:h-screen xl:w-110 xl:shrink-0 xl:items-center xl:justify-center xl:gap-3 xl:border-l-2 xl:border-rule xl:bg-surface"
-    >
-      <div className="flex items-center justify-between border-b-2 border-ink px-4 py-2 xl:w-98 xl:border-0 xl:px-1 xl:py-0">
-        <span className="text-sm font-semibold">The Piko phone app</span>
-        <Button onClick={() => demo.setPhoneOpen(false)} size="sm" type="button" variant="ghost">
-          Close
-        </Button>
-      </div>
-      <PhoneFrame>
-        {screen === "home" && (
-          <PhoneHome onSettings={() => setScreen("settings")} onType={() => openSheet(null)} onVoice={() => setScreen("voice")} recent={recent} />
-        )}
-        {screen === "settings" && <PhoneSettings onBack={() => setScreen("home")} />}
-        {screen === "voice" && <PhoneVoice onCancel={() => setScreen("home")} onHeard={onHeard} onTypeInstead={() => openSheet(null)} />}
-        {screen === "sheet" && (
-          <PhoneSheet
-            categories={categories}
-            currentMemberId={currentMemberId}
-            draft={draft}
-            members={members}
-            onClose={() => setScreen("home")}
-            quickCategoryIds={quickCategoryIds}
-          />
-        )}
-      </PhoneFrame>
-    </section>
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-ink/60 p-4">
+      <section aria-label="Demo phone" className="flex max-h-full flex-col items-center gap-3">
+        <div className="flex w-full items-center justify-between gap-4">
+          <span className="text-sm font-semibold text-paper">The Piko phone app</span>
+          <Button className="text-paper hover:bg-paper/10" onClick={() => demo.setPhoneOpen(false)} size="sm" type="button" variant="ghost">
+            Close
+          </Button>
+        </div>
+        <PhoneFrame>
+          {screen === "home" && (
+            <PhoneHome onSettings={() => setScreen("settings")} onType={() => openSheet(null)} onVoice={() => setScreen("voice")} recent={recent} />
+          )}
+          {screen === "settings" && <PhoneSettings onBack={() => setScreen("home")} />}
+          {screen === "voice" && <PhoneVoice onCancel={() => setScreen("home")} onHeard={onHeard} onTypeInstead={() => openSheet(null)} />}
+          {screen === "sheet" && (
+            <PhoneSheet
+              categories={categories}
+              currentMemberId={currentMemberId}
+              draft={draft}
+              members={members}
+              onClose={() => setScreen("home")}
+              quickCategoryIds={quickCategoryIds}
+            />
+          )}
+        </PhoneFrame>
+      </section>
+    </div>
   );
 }

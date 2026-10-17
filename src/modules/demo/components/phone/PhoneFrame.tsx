@@ -2,21 +2,25 @@ import type { ReactNode } from "react";
 
 import { BatteryFull, Signal, Wifi } from "lucide-react";
 
-// A phone drawn in CSS on wide screens. On a narrow screen (a real phone) the
-// frame would be silly, so the screens simply fill it.
+// A Pixel-shaped phone drawn in CSS: a slim bezel, a centred punch-hole camera,
+// Android's status bar and the gesture pill at the bottom. Shown in a modal
+// over the website (see DemoPhone).
 export function PhoneFrame({ children }: { children: ReactNode }) {
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-paper text-ink xl:aspect-[9/19.5] xl:h-[min(844px,calc(100vh-8rem))] xl:w-auto xl:flex-none xl:rounded-[44px] xl:border-[10px] xl:border-ink xl:shadow-dialog">
-      <div aria-hidden className="hidden h-8 shrink-0 items-center justify-between px-7 text-xs font-semibold xl:flex">
+    <div className="relative flex h-[min(768px,80vh)] aspect-[9/20] flex-col overflow-hidden rounded-[34px] border-[9px] border-ink bg-paper text-ink shadow-dialog">
+      <div aria-hidden className="relative flex h-7 shrink-0 items-center justify-between px-4 text-[11px] font-semibold">
         <span>9:41</span>
-        <span className="absolute top-0 left-1/2 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-ink" />
+        <span className="absolute top-1.5 left-1/2 size-2.5 -translate-x-1/2 rounded-full bg-ink" />
         <span className="flex items-center gap-1">
-          <Signal className="size-3.5" />
-          <Wifi className="size-3.5" />
-          <BatteryFull className="size-4" />
+          <Signal className="size-3" />
+          <Wifi className="size-3" />
+          <BatteryFull className="size-3.5" />
         </span>
       </div>
       <div className="min-h-0 flex-1">{children}</div>
+      <div aria-hidden className="flex h-5 shrink-0 items-center justify-center">
+        <span className="h-1 w-24 rounded-full bg-ink/25" />
+      </div>
     </div>
   );
 }
