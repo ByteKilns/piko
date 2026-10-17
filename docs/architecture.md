@@ -167,7 +167,7 @@ put the tenancy-agnostic logic in a `...ForHousehold` function so web and mobile
   shown on `/activity`), `app_releases` (global, not per-household; published APK builds).
 - **eSewa captures** — `captured_payments` (each transaction a member's phone read from an
   eSewa notification: `status` draft / approved / rejected / skipped, `expenseId` once
-  approved), `capture_events` (every notification as captured, OTP digits masked; unique
+  approved, `eventId` the notification it came from, unique per member), `capture_events` (every notification as captured, OTP digits masked; unique
   `(memberId, key, postedAt)`), `capture_rules` (payee → category, per member). Scoped by
   household **and** member. See [eSewa capture](#esewa-capture).
 
@@ -262,6 +262,21 @@ approved. The agreed design is in the "Design (agreed)" section of
   `Categorizer`, stored through `PikoTxnRepository`. Tune `ParserRules` from real
   notification texts (Settings → Captured notifications), adding each as a case in
   `mobile/test/esewa_parser_test.dart`.
+- **With Piko closed** (design: `docs/superpowers/specs/2026-10-17-esewa-draft-alerts-design.md`)
+  — the listener hands each queued notification to the app's Dart if a Piko screen's
+  engine is listening, otherwise `EsewaBackgroundRunner` starts a headless engine running
+  `esewaBackgroundMain` (`mobile/lib/main.dart` → `lib/esewa/background.dart`), which
+  drains the queue the same way and stops. One draft per notification is enforced by the
+  server (`captured_payments.event_id`), so two drains at once can't double it.
+- **Draft alerts** — each drain returns a `DrainResult` (new drafts, notifications it
+  couldn't read) and hands it to `DraftNotifier`, which shows "Draft: Rs 500 to Daraz" /
+  "N eSewa drafts to review" and "Piko couldn't read an eSewa notification" on the
+  "eSewa drafts" channel, unless a Piko screen is in front. Tapping opens the review
+  screen or Captured notifications (`EsewaAlerts.takeOpenTarget`). Android 13+ asks for
+  the permission once; Settings → eSewa → Draft alerts shows and changes it.
+- **Listener reconnects** — Android can keep notification access on but stop delivering;
+  `MainActivity.onResume` asks it to rebind, and on connecting the listener re-reads
+  eSewa notifications still in the shade.
 - **Drafts never count.** They live in `captured_payments`, never in `expenses`, so no
   total, budget or alert sees them. Approving (`approveCaptureForMember`,
   `captures/api/captures.ts`) claims the draft, then calls `createExpenseForHousehold`, so

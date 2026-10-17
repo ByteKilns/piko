@@ -38,6 +38,25 @@ Phone setup, once, after installing a build with it:
    `com.f1soft.esewa`; if not, change `WATCHED_PACKAGES` in
    `android/app/src/main/kotlin/com/nirjal/piko/esewa/EsewaNotificationListener.kt`.
 5. Make a small eSewa payment (e.g. a Rs. 10 top-up) and check that a draft appears.
+6. Allow Piko's notifications when it asks (Android 13+), or later in Settings → eSewa →
+   **Draft alerts**. Without them capture still works, just without alerts.
+
+If captures stop (often after an update) while Notification access still shows On, open
+Piko once: it asks Android to reconnect. If that doesn't help, switch Piko's notification
+access off and on.
+
+### Checking draft alerts on a phone
+
+Not covered by the automated tests; do these after installing a build that changes them:
+
+1. Piko fully closed (swiped away) → pay with eSewa → within seconds, "Draft: Rs … to …";
+   tapping it opens the review screen, and the alert is gone.
+2. Two payments with Piko closed → one alert, "2 eSewa drafts to review".
+3. Phone offline → pay → no alert. Back online, open Piko → the draft is there.
+4. Piko open on screen → pay → no alert; Home's "to review" banner updates.
+5. A message Piko can't read → "Piko couldn't read an eSewa notification"; tapping it
+   opens Captured notifications.
+6. Notifications turned off for Piko → pay → no alert, but the draft is still made.
 
 The notification wording in `lib/esewa/parser.dart` is a guess until real texts are
 collected. When a payment doesn't show up as a draft, open Settings → eSewa → Captured
