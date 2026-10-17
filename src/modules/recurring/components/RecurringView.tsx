@@ -155,7 +155,7 @@ export function RecurringView(props: Props) {
         title="Recurring"
       />
 
-      <Ledger>
+      <Ledger data-tour="recurring-ledger">
         <LedgerCell label="Monthly commitments" lead note={props.ledger.monthlySub}>
           <Money size="lead" value={props.ledger.monthly} />
         </LedgerCell>
@@ -170,7 +170,7 @@ export function RecurringView(props: Props) {
         </LedgerCell>
       </Ledger>
 
-      <section className="mt-8">
+      <section className="mt-8" data-tour="recurring-timeline">
         <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-4">
           <span className="micro-label text-n-600">{props.monthName}, day by day</span>
             <span className="flex items-center gap-4 text-xs text-n-700">
@@ -246,6 +246,7 @@ export function RecurringView(props: Props) {
           </div>
         }
         className="mt-9 mb-5.5"
+        data-tour="recurring-tabs"
         label="Status"
         onChange={(value) => setTab(value)}
         tabs={[

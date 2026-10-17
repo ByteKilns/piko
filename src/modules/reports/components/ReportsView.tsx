@@ -109,6 +109,7 @@ export function ReportsView(props: Props) {
 
       <LineTabs
         className="mb-7"
+        data-tour="reports-tabs"
         label="Report"
         onChange={(value) => setTab(value)}
         tabs={[
@@ -154,7 +155,7 @@ function ExpensesReport({
         {lead.exceptionRest}
       </p>
 
-      <Ledger>
+      <Ledger data-tour="reports-ledger">
         <LedgerCell
           bar={
             <Meter

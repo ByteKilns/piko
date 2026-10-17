@@ -9,6 +9,7 @@ export type LineTab<T extends string> = { count?: number; label: string; value: 
 type Props<T extends string> = {
   aside?: ReactNode;
   className?: string;
+  "data-tour"?: string;
   label: string;
   onChange: (value: T) => void;
   tabs: LineTab<T>[];
@@ -16,9 +17,9 @@ type Props<T extends string> = {
 };
 
 // Text tabs on a 1px rule; the selected one is semibold with a red underline.
-export function LineTabs<T extends string>({ aside, className, label, onChange, tabs, value }: Props<T>) {
+export function LineTabs<T extends string>({ aside, className, "data-tour": tour, label, onChange, tabs, value }: Props<T>) {
   return (
-    <div className={cn("flex flex-wrap items-end justify-between gap-4 border-b border-n-300", className)}>
+    <div className={cn("flex flex-wrap items-end justify-between gap-4 border-b border-n-300", className)} data-tour={tour}>
       <div aria-label={label} className="flex flex-wrap gap-x-6.5" role="tablist">
         {tabs.map((tab) => {
           const selected = tab.value === value;

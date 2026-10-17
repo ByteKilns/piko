@@ -1,4 +1,4 @@
-import { Mic, Pencil } from "lucide-react";
+import { Mic, Pencil, Settings } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { RecentExpensesList } from "@/modules/expenses/components/RecentExpensesList";
@@ -6,7 +6,7 @@ import type { RecentGroup } from "@/modules/expenses/lib/recent-groups";
 
 // The mobile app's Home: the household's latest expenses by day, and the two
 // ways to add one pinned at the bottom.
-export function PhoneHome({ onType, onVoice, recent }: { onType: () => void; onVoice: () => void; recent: RecentGroup[] }) {
+export function PhoneHome({ onSettings, onType, onVoice, recent }: { onSettings: () => void; onType: () => void; onVoice: () => void; recent: RecentGroup[] }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2.5 px-5 pt-3 pb-2">
@@ -14,6 +14,9 @@ export function PhoneHome({ onType, onVoice, recent }: { onType: () => void; onV
           P
         </span>
         <span className="text-base font-extrabold">Piko</span>
+        <Button aria-label="Settings" className="ml-auto" onClick={onSettings} size="icon-sm" type="button" variant="ghost">
+          <Settings />
+        </Button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-2 pb-6">

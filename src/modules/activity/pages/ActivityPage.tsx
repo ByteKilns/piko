@@ -37,17 +37,21 @@ export async function ActivityPage({ searchParams }: Props) {
     <>
       <PageHeader subtitle="Who added, edited or deleted what" title="Activity" />
 
-      <ActivityFilters members={members.map((m) => ({ id: m.id, name: m.user.name }))} realMemberId={memberId} value={params} />
+      <div data-tour="activity-filters">
+        <ActivityFilters members={members.map((m) => ({ id: m.id, name: m.user.name }))} realMemberId={memberId} value={params} />
+      </div>
 
-      {entries.length === 0 ? (
-        <p className="border-b border-n-300 px-2 py-10 text-sm text-n-700">
-          {hasFilters || filters.cursor
-            ? "No activity matches these filters."
-            : "No activity yet. Changes anyone in the household makes will show up here."}
-        </p>
-      ) : (
-        <ActivityTimeline dateFormat={dateFormat} entries={entries} realMemberId={memberId} />
-      )}
+      <div data-tour="activity-list">
+        {entries.length === 0 ? (
+          <p className="border-b border-n-300 px-2 py-10 text-sm text-n-700">
+            {hasFilters || filters.cursor
+              ? "No activity matches these filters."
+              : "No activity yet. Changes anyone in the household makes will show up here."}
+          </p>
+        ) : (
+          <ActivityTimeline dateFormat={dateFormat} entries={entries} realMemberId={memberId} />
+        )}
+      </div>
 
       {(filters.cursor || nextCursor) && (
         <nav aria-label="Activity pages" className="mt-7 flex items-center justify-between border-t-2 border-rule pt-4 text-sm font-semibold">

@@ -11,6 +11,7 @@ import { draftForPhrase, type VoicePhrase } from "../lib/voice-phrases";
 import { useDemo } from "./DemoProvider";
 import { PhoneFrame } from "./phone/PhoneFrame";
 import { PhoneHome } from "./phone/PhoneHome";
+import { PhoneSettings } from "./phone/PhoneSettings";
 import { PhoneSheet } from "./phone/PhoneSheet";
 import { PhoneVoice } from "./phone/PhoneVoice";
 
@@ -27,7 +28,7 @@ type Props = {
 // expense at once.
 export function DemoPhone({ categories, currentMemberId, members, quickCategoryIds, recent }: Props) {
   const demo = useDemo();
-  const [screen, setScreen] = useState<"home" | "sheet" | "voice">("home");
+  const [screen, setScreen] = useState<"home" | "settings" | "sheet" | "voice">("home");
   const [draft, setDraft] = useState<ExpenseDraft | null>(null);
   const partnerId = members.find((m) => m.id !== currentMemberId)?.id ?? null;
 
@@ -54,7 +55,10 @@ export function DemoPhone({ categories, currentMemberId, members, quickCategoryI
         </Button>
       </div>
       <PhoneFrame>
-        {screen === "home" && <PhoneHome onType={() => openSheet(null)} onVoice={() => setScreen("voice")} recent={recent} />}
+        {screen === "home" && (
+          <PhoneHome onSettings={() => setScreen("settings")} onType={() => openSheet(null)} onVoice={() => setScreen("voice")} recent={recent} />
+        )}
+        {screen === "settings" && <PhoneSettings onBack={() => setScreen("home")} />}
         {screen === "voice" && <PhoneVoice onCancel={() => setScreen("home")} onHeard={onHeard} onTypeInstead={() => openSheet(null)} />}
         {screen === "sheet" && (
           <PhoneSheet

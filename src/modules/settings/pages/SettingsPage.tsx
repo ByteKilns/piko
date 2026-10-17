@@ -33,7 +33,7 @@ export async function SettingsPage() {
         <p className="text-[15px] text-n-700">Manage your account and appearance</p>
       </header>
 
-      <div className="flex flex-col gap-9">
+      <div className="flex flex-col gap-9" data-tour="settings-appearance">
         <AppearanceSection />
         <DateFormatSection initialFormat={dateFormat} />
         <DemoLocked locked={isDemo}>
@@ -44,7 +44,7 @@ export async function SettingsPage() {
         </DemoLocked>
         {canPublishReleases && <AppReleasesSection releases={releases} />}
 
-        <section>
+        <section data-tour="settings-account">
           <SectionHeading>Account</SectionHeading>
           <SettingsRow
             control={
