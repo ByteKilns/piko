@@ -23,7 +23,8 @@ import '../services/expense_list.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_update_sheet.dart';
 import '../widgets/brand_mark.dart';
-import '../widgets/esewa_review_banner.dart';
+import '../widgets/capture_bar.dart';
+import '../widgets/esewa_draft_strip.dart';
 import '../widgets/expense_confirm_sheet.dart';
 import '../widgets/expense_list_tile.dart';
 import '../widgets/money_text.dart';
@@ -41,6 +42,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // Re-check for a new build whenever the app comes back to the foreground, not just on cold start.
   late final AppLifecycleListener _lifecycle;
   StreamSubscription<Txn>? _newDrafts;
+  // eSewa checks still running (a resume can start one before the last ends).
+  int _esewaChecks = 0;
 
   @override
   void initState() {
@@ -48,19 +51,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _lifecycle = AppLifecycleListener(
       onResume: () {
         ref.invalidate(availableUpdateProvider);
+        ref.invalidate(esewaAccessProvider);
         _startEsewa();
         _openAlertTarget();
       },
     );
-    _startEsewa();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _openOnLaunch());
-  }
-
-  // Opened from a Piko alert: go where it points. Otherwise capturing an
-  // expense is the app's main job, so jump straight into voice capture.
-  Future<void> _openOnLaunch() async {
-    if (await _openAlertTarget()) return;
-    if (mounted) _openVoiceFlow(context, ref);
+    // After the first frame, since a check redraws Home with the squares.
+    // Piko opens on Home; opened from a Piko alert, it goes where that points.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startEsewa();
+      _openAlertTarget();
+    });
   }
 
   // True when Piko was opened from an alert and its screen is now showing.
@@ -86,14 +87,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void _startEsewa() {
     final esewa = ref.read(esewaServiceProvider);
     if (esewa == null) return;
-    _newDrafts ??= esewa.onDraft.listen((_) => ref.invalidate(esewaDraftCountProvider));
-    esewa.start().catchError((_) {}).whenComplete(() {
-      if (mounted) ref.invalidate(esewaDraftCountProvider);
-    });
+    _checkEsewa();
     // Alerts start to matter once capture is on: Android 13+ asks once.
     esewa.isAccessGranted().then((on) {
       if (on && mounted) return ref.read(esewaAlertsProvider).askOnce();
     }).catchError((_) {});
+  }
+
+  // Stores whatever the phone has queued, then recounts the drafts. Home
+  // shows the stepping squares until the new count is in.
+  Future<void> _checkEsewa() async {
+    final esewa = ref.read(esewaServiceProvider);
+    if (esewa == null) return;
+    _newDrafts ??= esewa.onDraft.listen((_) => ref.invalidate(esewaDraftCountProvider));
+    setState(() => _esewaChecks++);
+    try {
+      await esewa.start();
+    } catch (_) {
+      // Left queued; the next check tries again.
+    } finally {
+      if (mounted) {
+        setState(() => _esewaChecks--);
+        ref.invalidate(esewaDraftCountProvider);
+      }
+    }
   }
 
   Future<void> _openReview(BuildContext context) async {
@@ -113,7 +130,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   // A null draft means a new expense typed by hand.
   Future<void> _openConfirmSheet(BuildContext context, WidgetRef ref, ExpenseDraft? draft) async {
-    // Voice capture opens on launch, so categories may still be loading — wait rather than drop the draft.
+    // Categories may still be loading (just after launch) — wait rather than drop the draft.
     final CategoriesResult categoriesResult;
     try {
       categoriesResult = await ref.read(categoriesProvider.future);
@@ -173,7 +190,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final text = Theme.of(context).textTheme;
     final expensesAsync = ref.watch(recentExpensesProvider);
     final update = ref.watch(availableUpdateProvider).valueOrNull;
-    final toReview = ref.watch(esewaDraftCountProvider).valueOrNull ?? 0;
+    final draftCount = ref.watch(esewaDraftCountProvider);
+    // Only people using eSewa capture see Piko checking for drafts.
+    final checkingEsewa = ref.watch(esewaAccessProvider).valueOrNull == true &&
+        (_esewaChecks > 0 || draftCount.isLoading);
     final options = ref.watch(categoriesProvider).valueOrNull;
     final dateFormat = ref.watch(dateFormatProvider);
     final calendar = ref.watch(bsCalendarProvider);
@@ -193,15 +213,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(recentExpensesProvider),
+        onRefresh: () async {
+          ref.invalidate(recentExpensesProvider);
+          await _checkEsewa();
+        },
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           children: [
             if (update != null) ...[AppUpdateBanner(release: update), const SizedBox(height: 20)],
-            if (toReview > 0) ...[
-              EsewaReviewBanner(count: toReview, onTap: () => _openReview(context)),
-              const SizedBox(height: 20),
-            ],
+            EsewaDraftStrip(
+              checking: checkingEsewa,
+              count: draftCount.valueOrNull ?? 0,
+              onTap: () => _openReview(context),
+            ),
             Text('Recent expenses', style: text.headlineLarge),
             const SizedBox(height: 6),
             Text('The latest across the household', style: text.bodySmall),
@@ -220,7 +244,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
               data: (expenses) {
                 if (expenses.isEmpty) {
-                  return [const _Message(title: 'No expenses yet.', body: 'Tap Add by voice and say what you spent.')];
+                  return [const _Message(title: 'No expenses yet.', body: 'Tap Add expense, or the mic to say what you spent.')];
                 }
                 return [
                   // The 2px ink rule that tops every list on the website.
@@ -245,8 +269,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: _CaptureBar(
-        onType: () => _openConfirmSheet(context, ref, null),
+      bottomNavigationBar: CaptureBar(
+        onAdd: () => _openConfirmSheet(context, ref, null),
         onVoice: () => _openVoiceFlow(context, ref),
       ),
     );
@@ -305,49 +329,6 @@ class _Message extends StatelessWidget {
           Text(body, style: text.bodyMedium),
           if (action != null) ...[const SizedBox(height: 20), action!],
         ],
-      ),
-    );
-  }
-}
-
-// Pinned at the bottom: type an expense, or (the main action) say it.
-class _CaptureBar extends StatelessWidget {
-  const _CaptureBar({required this.onType, required this.onVoice});
-
-  final VoidCallback onType;
-  final VoidCallback onVoice;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.piko;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: c.paper,
-        border: Border(top: BorderSide(color: c.rule, width: 2)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-          child: Row(
-            children: [
-              OutlinedButton.icon(
-                onPressed: onType,
-                icon: const Icon(Icons.edit_outlined, size: 18),
-                label: const Text('Type it'),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: onVoice,
-                  icon: const Icon(Icons.mic, size: 20),
-                  label: const Text('Add by voice'),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

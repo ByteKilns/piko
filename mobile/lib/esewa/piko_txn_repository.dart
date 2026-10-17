@@ -37,6 +37,9 @@ class PikoTxnRepository implements TxnRepository {
   final _ids = Expando<String>('capture id');
   final _approvals = Expando<ExpenseDraft>('approval');
 
+  /// The server's id for [t]; null when [t] was never stored.
+  String? idOf(Txn t) => _ids[t];
+
   /// What was checked in the Add expense sheet, used the next time [t] is
   /// approved. Without it, [t] is approved as it is ([approvalDraft]).
   void prepareApproval(Txn t, ExpenseDraft draft) => _approvals[t] = draft;

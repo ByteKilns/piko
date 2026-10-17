@@ -11,6 +11,12 @@ import 'api_client_provider.dart';
 /// the pubspec build number that releases are published under.
 int pubspecBuildNumber(int installedVersionCode) => installedVersionCode % 1000;
 
+/// This install's version as Settings shows it, e.g. "1.4.0 (6)".
+final installedVersionProvider = FutureProvider<String>((ref) async {
+  final info = await PackageInfo.fromPlatform();
+  return '${info.version} (${pubspecBuildNumber(int.tryParse(info.buildNumber) ?? 0)})';
+});
+
 /// The latest published release, or null when this install is already up to date.
 /// Updates are sideloaded APKs, so this only applies on Android.
 final availableUpdateProvider = FutureProvider.autoDispose<AppRelease?>((ref) async {

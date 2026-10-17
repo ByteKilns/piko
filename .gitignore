@@ -54,3 +54,6 @@ next-env.d.ts
 
 # playwright (ad-hoc screenshots/inspection, includes a logged-in session)
 /.playwright/
+
+# Brainstorming mockups (superpowers visual companion)
+.superpowers/

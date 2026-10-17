@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -22,6 +23,8 @@ import 'package:piko/providers/expenses_provider.dart';
 import 'package:piko/services/api_client.dart';
 import 'package:piko/services/bs_calendar.dart';
 import 'package:piko/theme/app_theme.dart';
+import 'package:piko/widgets/appear.dart';
+import 'package:piko/widgets/step_squares.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Piko's capture endpoints, in memory.
@@ -33,6 +36,8 @@ class _FakeServer {
   final approved = <Map<String, dynamic>>[];
   final rejected = <String>[];
   final rules = <Map<String, dynamic>>[];
+  // While set, the drafts don't arrive until it completes.
+  Completer<void>? hold;
 
   static Map<String, Object?> _capture(String id, num amount, String payee, String category, {String kind = 'payment'}) => {
         'amount': amount,
@@ -54,6 +59,7 @@ class _FakeServer {
         final body = request.body.isEmpty ? <String, dynamic>{} : jsonDecode(request.body) as Map<String, dynamic>;
         switch ('${request.method} ${request.url.path}') {
           case 'GET /api/mobile/captures':
+            await hold?.future;
             return json({'captures': drafts});
           case 'POST /api/mobile/captures/approve':
             approved.add(body);
@@ -94,7 +100,7 @@ void main() {
   late _FakeServer server;
   late _Alerts alerts;
 
-  Future<void> pumpReview(WidgetTester tester) async {
+  Future<void> pumpReview(WidgetTester tester, {bool settle = true}) async {
     SharedPreferences.setMockInitialValues({});
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1;
@@ -115,8 +121,19 @@ void main() {
         child: MaterialApp(theme: AppTheme.light, home: const EsewaReviewScreen()),
       ),
     );
-    await tester.pumpAndSettle();
+    if (settle) await tester.pumpAndSettle();
   }
+
+  // How visible the row showing [payee] is, 0 to 1.
+  double opacityOf(WidgetTester tester, String payee) => tester
+      .widget<FadeTransition>(find
+          .descendant(
+            of: find.ancestor(of: find.text(payee), matching: find.byType(Appear)),
+            matching: find.byType(FadeTransition),
+          )
+          .first)
+      .opacity
+      .value;
 
   setUp(() {
     server = _FakeServer();
@@ -127,6 +144,41 @@ void main() {
     await pumpReview(tester);
 
     expect(alerts.cleared, 1);
+  });
+
+  testWidgets('shows the stepping squares until the drafts arrive, then fades them in', (tester) async {
+    server.hold = Completer<void>();
+    await pumpReview(tester, settle: false);
+    await tester.pump();
+
+    expect(find.byType(StepSquares), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+
+    server.hold!.complete();
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(StepSquares), findsNothing);
+    expect(opacityOf(tester, 'Bhatbhateni Supermarket'), lessThan(1));
+
+    await tester.pumpAndSettle();
+    expect(opacityOf(tester, 'Bhatbhateni Supermarket'), 1);
+    expect(opacityOf(tester, 'Hari Shrestha'), 1);
+  });
+
+  testWidgets('a draft that turns up on a refresh fades in; the ones already there stay put', (tester) async {
+    await pumpReview(tester);
+
+    server.drafts.insert(0, _FakeServer._capture('cap-daraz', 500, 'Daraz', 'Groceries'));
+    await tester.fling(find.text('eSewa payments'), const Offset(0, 400), 1000);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(opacityOf(tester, 'Daraz'), lessThan(1));
+    expect(opacityOf(tester, 'Bhatbhateni Supermarket'), 1);
+
+    await tester.pumpAndSettle();
+    expect(opacityOf(tester, 'Daraz'), 1);
   });
 
   testWidgets('lists each draft with its category, or asks for one', (tester) async {

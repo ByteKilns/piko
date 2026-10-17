@@ -25,9 +25,16 @@ class EsewaReviewBanner extends StatelessWidget {
               Container(width: 8, height: 8, color: c.signal),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  count == 1 ? '1 eSewa payment to review' : '$count eSewa payments to review',
-                  style: Theme.of(context).textTheme.titleMedium,
+                // A new count cross-fades in rather than flipping.
+                child: AnimatedSwitcher(
+                  duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : const Duration(milliseconds: 200),
+                  layoutBuilder: (current, previous) =>
+                      Stack(alignment: Alignment.centerLeft, children: [...previous, ?current]),
+                  child: Text(
+                    count == 1 ? '1 eSewa payment to review' : '$count eSewa payments to review',
+                    key: ValueKey(count),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
               ),
               TextButton(onPressed: onTap, child: const Text('Review')),
