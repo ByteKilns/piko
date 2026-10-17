@@ -20,6 +20,7 @@ describe("captureJson", () => {
     counterparty: "Bhatbhateni Supermarket",
     createdAt: new Date("2026-10-14T06:20:00.000Z"),
     direction: "debit" as const,
+    eventId: "0|com.f1soft.esewa|7|null|10123@1792036530250",
     expenseId: null,
     householdId: "h1",
     id: "c1",
@@ -50,9 +51,10 @@ describe("captureJson", () => {
     });
   });
 
-  it("leaves out who captured it and which household it belongs to", () => {
+  it("leaves out who captured it, which household it belongs to and the notification id", () => {
     const json = captureJson(row);
     expect(json).not.toHaveProperty("householdId");
     expect(json).not.toHaveProperty("memberId");
+    expect(json).not.toHaveProperty("eventId");
   });
 });

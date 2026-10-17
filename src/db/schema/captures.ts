@@ -38,10 +38,16 @@ export const capturedPayments = pgTable(
     category: text("category").notNull(),
     categoryConfidence: doublePrecision("category_confidence").notNull(),
     expenseId: uuid("expense_id").references(() => expenses.id, { onDelete: "set null" }),
+    // The phone notification it was read from (the app's "key@postedAt"), so
+    // the same notification can't become two drafts. Null on older rows.
+    eventId: text("event_id"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => [index("captured_payments_member_occurred_idx").on(table.memberId, table.occurredAt)],
+  (table) => [
+    index("captured_payments_member_occurred_idx").on(table.memberId, table.occurredAt),
+    unique().on(table.memberId, table.eventId),
+  ],
 );
 
 // Every eSewa notification the app saw, as captured (digits masked in OTP and

@@ -1,0 +1,2 @@
+ALTER TABLE "captured_payments" ADD COLUMN "event_id" text;--> statement-breakpoint
+ALTER TABLE "captured_payments" ADD CONSTRAINT "captured_payments_member_id_event_id_unique" UNIQUE("member_id","event_id");

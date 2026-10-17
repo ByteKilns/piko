@@ -17,6 +17,8 @@ function ownedBy(member: CurrentMember) {
   return and(eq(capturedPayments.householdId, member.householdId), eq(capturedPayments.memberId, member.memberId));
 }
 
+// `created` is false when this notification was already stored (two drains
+// at once, or a retry after a lost reply); the stored row comes back instead.
 export async function insertCaptureForMember(member: CurrentMember, input: CaptureInput) {
   const [row] = await db
     .insert(capturedPayments)
@@ -26,6 +28,7 @@ export async function insertCaptureForMember(member: CurrentMember, input: Captu
       categoryConfidence: input.categoryConfidence,
       counterparty: input.counterparty,
       direction: input.direction,
+      eventId: input.eventId,
       householdId: member.householdId,
       kind: input.kind,
       memberId: member.memberId,
@@ -35,8 +38,16 @@ export async function insertCaptureForMember(member: CurrentMember, input: Captu
       source: input.source,
       status: captureStatusFor(input.direction),
     })
+    .onConflictDoNothing({ target: [capturedPayments.memberId, capturedPayments.eventId] })
     .returning();
-  return row;
+  if (row) return { created: true, row };
+
+  // Only a known eventId conflicts (rows without one never do).
+  const [existing] = await db
+    .select()
+    .from(capturedPayments)
+    .where(and(ownedBy(member), eq(capturedPayments.eventId, input.eventId ?? "")));
+  return { created: false, row: existing };
 }
 
 // Drafts waiting for review, newest first.

@@ -16,7 +16,8 @@ export async function GET(request: NextRequest) {
 }
 
 // A transaction the app parsed from a notification. Money going out becomes a
-// draft; money coming in is kept as skipped.
+// draft; money coming in is kept as skipped. A notification already stored
+// comes back as it is, with `created: false`, so the app alerts only once.
 export async function POST(request: NextRequest) {
   const auth = await requireMobileAuth(request);
   if (auth instanceof NextResponse) return auth;
@@ -26,6 +27,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: { message: "Invalid capture" } }, { status: 400 });
   }
 
-  const row = await insertCaptureForMember(auth, parsed.data);
-  return NextResponse.json({ capture: captureJson(row) }, { status: 201 });
+  const { created, row } = await insertCaptureForMember(auth, parsed.data);
+  return NextResponse.json({ capture: captureJson(row), created }, { status: created ? 201 : 200 });
 }

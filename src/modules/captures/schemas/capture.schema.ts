@@ -13,6 +13,8 @@ export const captureSchema = z.object({
   categoryConfidence: z.number().min(0).max(1),
   counterparty: z.string().trim().min(1).nullable(),
   direction: z.enum(["debit", "credit"]),
+  // Which phone notification it came from; older app versions don't send it.
+  eventId: z.string().min(1).optional(),
   kind: z.enum(kinds),
   occurredAt: z.iso.datetime(),
   rawText: z.string(),
