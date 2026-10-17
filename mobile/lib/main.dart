@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'esewa/background.dart';
 import 'providers/auth_provider.dart';
 import 'providers/calendar_provider.dart';
 import 'providers/settings_provider.dart';
@@ -23,6 +24,14 @@ Future<void> main() async {
       child: const PikoApp(),
     ),
   );
+}
+
+// Started by Android (EsewaBackgroundRunner) when an eSewa notification
+// arrives and no Piko screen is running: makes the drafts and alerts, with no UI.
+@pragma('vm:entry-point')
+Future<void> esewaBackgroundMain() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await runEsewaBackground();
 }
 
 class PikoApp extends ConsumerWidget {

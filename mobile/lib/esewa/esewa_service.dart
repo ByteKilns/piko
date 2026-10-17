@@ -67,14 +67,16 @@ class EsewaService {
   final _newTxns = StreamController<Txn>.broadcast();
   StreamSubscription? _sub;
 
-  EsewaService(this.repo, {EsewaParser? parser, Deduplicator? dedup})
+  /// Piko: [supported] stands in for "running on Android" in tests.
+  EsewaService(this.repo, {EsewaParser? parser, Deduplicator? dedup, bool? supported})
       : parser = parser ?? EsewaParser(),
-        dedup = dedup ?? Deduplicator();
+        dedup = dedup ?? Deduplicator(),
+        isSupported = supported ?? Platform.isAndroid;
 
   /// Emits every new draft (use it to refresh a "N to review" badge).
   Stream<Txn> get onDraft => _newTxns.stream;
 
-  bool get isSupported => Platform.isAndroid;
+  final bool isSupported;
 
   Future<bool> isAccessGranted() async =>
       isSupported && (await _method.invokeMethod<bool>('isAccessGranted') ?? false);
