@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 
+import Link from "next/link";
+
 import { BrandSplit } from "@/components/BrandSplit";
 import { TextField } from "@/components/TextField";
 import { Button } from "@/components/ui/button";
@@ -24,6 +26,16 @@ export default function LoginPage() {
         <Button className="h-10 w-full" disabled={pending} type="submit">
           {pending ? "Signing in..." : "Sign in"}
         </Button>
+
+        <div className="flex items-center gap-3 text-[13px] text-n-600">
+          <span aria-hidden className="h-px flex-1 bg-n-300" />
+          or
+          <span aria-hidden className="h-px flex-1 bg-n-300" />
+        </div>
+        <Button asChild className="h-10 w-full" variant="outline">
+          <Link href="/demo">Try the demo</Link>
+        </Button>
+        <p className="text-center text-[13px] text-n-600">No account needed — you get a private copy, deleted after 24 hours.</p>
       </form>
     </BrandSplit>
   );
