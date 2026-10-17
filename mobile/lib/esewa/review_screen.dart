@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,9 +17,11 @@ import '../services/api_client.dart';
 import '../services/bs_calendar.dart';
 import '../services/expense_list.dart';
 import '../theme/app_theme.dart';
+import '../widgets/appear.dart';
 import '../widgets/category_icon.dart';
 import '../widgets/expense_confirm_sheet.dart';
 import '../widgets/money_text.dart';
+import '../widgets/step_squares.dart';
 import 'models.dart';
 import 'piko_txn_repository.dart';
 import 'review_rows.dart';
@@ -38,6 +41,8 @@ class _EsewaReviewScreenState extends ConsumerState<EsewaReviewScreen> {
   bool _loading = true;
   bool _failed = false;
   bool _approvingAll = false;
+  // The first drafts in fade in one after another; later ones on their own.
+  bool _stagger = false;
   StreamSubscription<Txn>? _sub;
 
   @override
@@ -63,6 +68,7 @@ class _EsewaReviewScreenState extends ConsumerState<EsewaReviewScreen> {
       if (!mounted) return;
       setState(() {
         _drafts = drafts;
+        _stagger = _loading;
         _loading = false;
         _failed = false;
       });
@@ -219,7 +225,7 @@ class _EsewaReviewScreenState extends ConsumerState<EsewaReviewScreen> {
             if (_failed || optionsAsync.hasError)
               Text("Couldn't load the payments. Pull down to try again.", style: text.bodyMedium)
             else if (_loading || options == null)
-              const LinearProgressIndicator()
+              const Align(alignment: Alignment.centerLeft, child: StepSquares())
             else if (_drafts.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 32),
@@ -228,14 +234,19 @@ class _EsewaReviewScreenState extends ConsumerState<EsewaReviewScreen> {
             else ...[
               // The 2px ink rule that tops every list on the website.
               Container(height: 2, color: c.ink),
-              for (final t in _drafts)
-                _DraftRow(
-                  txn: t,
-                  category: categoryNamed(t.category, options.categories),
-                  when: draftWhen(t, format, calendar),
-                  onTap: () => _check(t, options),
-                  confirmDismiss: (direction) => _confirmSwipe(t, direction, options),
-                  onDismissed: () => _dismissed(t),
+              for (final (i, t) in _drafts.indexed)
+                // Keyed by the server's id, so a reload doesn't replay rows already shown.
+                Appear(
+                  key: ValueKey(repo?.idOf(t) ?? t),
+                  delay: _stagger ? Duration(milliseconds: 60 * min(i, 5)) : Duration.zero,
+                  child: _DraftRow(
+                    txn: t,
+                    category: categoryNamed(t.category, options.categories),
+                    when: draftWhen(t, format, calendar),
+                    onTap: () => _check(t, options),
+                    confirmDismiss: (direction) => _confirmSwipe(t, direction, options),
+                    onDismissed: () => _dismissed(t),
+                  ),
                 ),
             ],
           ],

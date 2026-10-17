@@ -10,7 +10,7 @@ A household expense tracker for a small two-person household:
 - **Web app** (`src/`) — Next.js 16 (App Router, Turbopack), React 19, TypeScript,
   Tailwind v4, shadcn/radix UI. Dashboard, expenses, budgets, income, loans, savings
   pots, paybacks, dhukus, recurring bills, reports, notifications.
-- **Mobile app** (`mobile/`) — Flutter companion for capturing expenses by voice.
+- **Mobile app** (`mobile/`) — Flutter companion: eSewa payments arrive as drafts to review, and expenses are added by typing or by voice.
   Talks to the same Next.js backend over a small JSON API. Its look follows the
   web's modernist design (palette in `mobile/lib/theme/piko_colors.dart`). See
   `mobile/README.md`.

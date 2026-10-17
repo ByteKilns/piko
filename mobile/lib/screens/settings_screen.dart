@@ -7,6 +7,7 @@ import '../providers/esewa_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/bs_calendar.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_update_check.dart';
 import '../widgets/segmented.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -165,6 +166,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ),
             ],
+            const SizedBox(height: 36),
+            const _SectionHeading('App'),
+            const _SettingRow(
+              title: 'Updates',
+              description: 'Piko looks for a new version each time it opens. Check now to look straight away.',
+              child: AppUpdateCheck(),
+            ),
             if (isLoggedIn) ...[
               const SizedBox(height: 36),
               const _SectionHeading('Account'),

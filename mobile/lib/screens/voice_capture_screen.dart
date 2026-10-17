@@ -151,7 +151,7 @@ class _VoiceCaptureScreenState extends ConsumerState<VoiceCaptureScreen> with Si
 
   @override
   Widget build(BuildContext context) {
-    // This screen opens on launch and covers the home banner, so surface updates here too.
+    // This screen covers Home's update banner, so surface updates here too.
     final update = ref.watch(availableUpdateProvider).valueOrNull;
 
     return Scaffold(
