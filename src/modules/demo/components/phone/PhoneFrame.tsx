@@ -7,7 +7,7 @@ import { BatteryFull, Signal, Wifi } from "lucide-react";
 // over the website (see DemoPhone).
 export function PhoneFrame({ children }: { children: ReactNode }) {
   return (
-    <div className="relative flex h-[min(768px,80vh)] aspect-[9/20] flex-col overflow-hidden rounded-[34px] border-[9px] border-ink bg-paper text-ink shadow-dialog">
+    <div className="relative flex min-h-0 w-auto max-w-full flex-1 aspect-[9/20] flex-col overflow-hidden rounded-[32px] border-[8px] border-ink bg-paper text-ink shadow-dialog">
       <div aria-hidden className="relative flex h-7 shrink-0 items-center justify-between px-4 text-[11px] font-semibold">
         <span>9:41</span>
         <span className="absolute top-1.5 left-1/2 size-2.5 -translate-x-1/2 rounded-full bg-ink" />

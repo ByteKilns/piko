@@ -44,10 +44,9 @@ export function DemoPhone({ categories, currentMemberId, members, quickCategoryI
   if (!demo?.phoneOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-ink/60 p-4">
-      <section aria-label="Demo phone" className="flex max-h-full flex-col items-center gap-3">
-        <div className="flex w-full items-center justify-between gap-4">
-          <span className="text-sm font-semibold text-paper">The Piko phone app</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-3 sm:p-5">
+      <section aria-label="Demo phone" className="flex h-full max-h-full flex-col items-center gap-2">
+        <div className="flex w-full shrink-0 justify-end">
           <Button className="text-paper hover:bg-paper/10" onClick={() => demo.setPhoneOpen(false)} size="sm" type="button" variant="ghost">
             Close
           </Button>
