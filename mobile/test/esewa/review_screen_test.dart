@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:piko/esewa/categorizer.dart';
+import 'package:piko/esewa/esewa_alerts.dart';
 import 'package:piko/esewa/esewa_service.dart';
 import 'package:piko/esewa/piko_txn_repository.dart';
 import 'package:piko/esewa/review_screen.dart';
@@ -72,6 +73,14 @@ class _FakeServer {
       });
 }
 
+// Counts how often the drafts alert was cleared.
+class _Alerts extends EsewaAlerts {
+  int cleared = 0;
+
+  @override
+  Future<void> clearDrafts() async => cleared++;
+}
+
 void main() {
   final calendar = BsCalendar.fromJson(
     jsonDecode(File('assets/bs_calendar.json').readAsStringSync()) as Map<String, dynamic>,
@@ -83,6 +92,7 @@ void main() {
   );
 
   late _FakeServer server;
+  late _Alerts alerts;
 
   Future<void> pumpReview(WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
@@ -97,6 +107,7 @@ void main() {
         overrides: [
           esewaRepositoryProvider.overrideWithValue(repo),
           esewaServiceProvider.overrideWithValue(service),
+          esewaAlertsProvider.overrideWithValue(alerts),
           categoriesProvider.overrideWith((ref) async => options),
           recentExpensesProvider.overrideWith((ref) async => const <Expense>[]),
           bsCalendarProvider.overrideWithValue(calendar),
@@ -107,7 +118,16 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  setUp(() => server = _FakeServer());
+  setUp(() {
+    server = _FakeServer();
+    alerts = _Alerts();
+  });
+
+  testWidgets('opening it clears the drafts alert, since every draft is on screen', (tester) async {
+    await pumpReview(tester);
+
+    expect(alerts.cleared, 1);
+  });
 
   testWidgets('lists each draft with its category, or asks for one', (tester) async {
     await pumpReview(tester);

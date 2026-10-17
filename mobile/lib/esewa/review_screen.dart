@@ -44,6 +44,8 @@ class _EsewaReviewScreenState extends ConsumerState<EsewaReviewScreen> {
   void initState() {
     super.initState();
     _sub = ref.read(esewaServiceProvider)?.onDraft.listen((_) => _load());
+    // Everything the drafts alert announced is on this screen now.
+    ref.read(esewaAlertsProvider).clearDrafts().catchError((_) {});
     _load();
   }
 

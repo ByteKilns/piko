@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../esewa/captured_notifications_screen.dart';
+import '../esewa/esewa_alerts.dart';
 import '../esewa/models.dart';
 import '../esewa/review_screen.dart';
 import '../models/categories_result.dart';
@@ -47,13 +49,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       onResume: () {
         ref.invalidate(availableUpdateProvider);
         _startEsewa();
+        _openAlertTarget();
       },
     );
     _startEsewa();
-    // Capturing an expense is the app's main job, so jump straight into voice capture on launch.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _openVoiceFlow(context, ref);
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openOnLaunch());
+  }
+
+  // Opened from a Piko alert: go where it points. Otherwise capturing an
+  // expense is the app's main job, so jump straight into voice capture.
+  Future<void> _openOnLaunch() async {
+    if (await _openAlertTarget()) return;
+    if (mounted) _openVoiceFlow(context, ref);
+  }
+
+  // True when Piko was opened from an alert and its screen is now showing.
+  Future<bool> _openAlertTarget() async {
+    final AlertTarget? target;
+    try {
+      target = await ref.read(esewaAlertsProvider).takeOpenTarget();
+    } catch (_) {
+      return false;
+    }
+    if (target == null || !mounted) return false;
+    switch (target) {
+      case AlertTarget.review:
+        unawaited(_openReview(context));
+      case AlertTarget.captured:
+        unawaited(Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CapturedNotificationsScreen())));
+    }
+    return true;
   }
 
   // eSewa auto-capture: store anything captured while the app was away (or
@@ -65,6 +90,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     esewa.start().catchError((_) {}).whenComplete(() {
       if (mounted) ref.invalidate(esewaDraftCountProvider);
     });
+    // Alerts start to matter once capture is on: Android 13+ asks once.
+    esewa.isAccessGranted().then((on) {
+      if (on && mounted) return ref.read(esewaAlertsProvider).askOnce();
+    }).catchError((_) {});
   }
 
   Future<void> _openReview(BuildContext context) async {

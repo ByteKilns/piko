@@ -27,7 +27,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void initState() {
     super.initState();
     _urlController = TextEditingController();
-    _lifecycle = AppLifecycleListener(onResume: () => ref.invalidate(esewaAccessProvider));
+    _lifecycle = AppLifecycleListener(
+      onResume: () {
+        ref.invalidate(esewaAccessProvider);
+        ref.invalidate(esewaAlertsAllowedProvider);
+      },
+    );
   }
 
   @override
@@ -123,6 +128,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ),
                     OutlinedButton(onPressed: esewa.openAccessSettings, child: const Text('Notification access')),
+                  ],
+                ),
+              ),
+              _SettingRow(
+                title: 'Draft alerts',
+                description: 'A notification when an eSewa payment becomes a draft, even with Piko closed, '
+                    "and when Piko can't read one.",
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        ref.watch(esewaAlertsAllowedProvider).valueOrNull == true ? 'On' : 'Off',
+                        key: const Key('esewa-alerts'),
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    OutlinedButton(
+                      onPressed: () => ref.read(esewaAlertsProvider).request(),
+                      child: const Text('Notifications'),
+                    ),
                   ],
                 ),
               ),

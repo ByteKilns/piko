@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../esewa/esewa_alerts.dart';
 import '../esewa/esewa_service.dart';
 import '../esewa/piko_txn_repository.dart';
 import '../models/capture_event.dart';
@@ -29,6 +30,14 @@ final esewaAccessProvider = FutureProvider.autoDispose<bool>((ref) async {
   if (service == null || !service.isSupported) return false;
   return service.isAccessGranted();
 });
+
+// Piko's own eSewa alerts (permission, tapped-alert target).
+final esewaAlertsProvider = Provider<EsewaAlerts>((ref) => const EsewaAlerts());
+
+// Whether Android lets Piko show its draft alerts.
+final esewaAlertsAllowedProvider = FutureProvider.autoDispose<bool>(
+  (ref) => ref.watch(esewaAlertsProvider).allowed(),
+);
 
 final captureEventsProvider = FutureProvider.autoDispose<List<CaptureEvent>>(
   (ref) => ref.watch(apiClientProvider).fetchCaptureEvents(),
