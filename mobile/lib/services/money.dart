@@ -13,6 +13,13 @@ AmountParts splitAmount(double value) {
   return (integer: _group(fixed[0]), decimals: '.${fixed[1]}', negative: paisa < 0);
 }
 
+// An amount in a sentence, e.g. "Rs 2,100" or "Rs 1,250.50": paisa only
+// when there are some.
+String formatRupees(double value) {
+  final parts = splitAmount(value);
+  return 'Rs ${parts.negative ? '−' : ''}${parts.integer}${parts.decimals == '.00' ? '' : parts.decimals}';
+}
+
 String _group(String digits) => digits.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
 
 // "Rs", "NPR", "रु"/"रू" with an optional abbreviation dot — removed before

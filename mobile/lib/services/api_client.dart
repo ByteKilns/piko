@@ -7,6 +7,7 @@ import '../models/capture_event.dart';
 import '../models/categories_result.dart';
 import '../models/expense.dart';
 import '../models/expense_draft.dart';
+import '../models/pacing.dart';
 import '../models/voice_parse_result.dart';
 import 'bs_calendar.dart';
 
@@ -174,6 +175,13 @@ class ApiClient {
         for (final MapEntry(key: payee, value: categoryId) in rules.entries) {'categoryId': categoryId, 'counterparty': payee},
       ],
     });
+  }
+
+  /// The signed-in person's Safe to spend today; null without can-cut lines.
+  Future<Pacing?> fetchPacing() async {
+    final body = await _authorizedGet('/api/mobile/pacing');
+    final pacing = body['pacing'];
+    return pacing == null ? null : Pacing.fromJson(pacing as Map<String, dynamic>);
   }
 
   Future<AppRelease?> fetchLatestRelease() async {

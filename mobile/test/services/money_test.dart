@@ -34,6 +34,17 @@ void main() {
     });
   });
 
+  group('formatRupees', () {
+    test('drops whole-rupee paisa, as in "Rs 2,100"', () {
+      expect(formatRupees(2100), 'Rs 2,100');
+      expect(formatRupees(0), 'Rs 0');
+    });
+
+    test('keeps paisa when there are some', () {
+      expect(formatRupees(1250.5), 'Rs 1,250.50');
+    });
+  });
+
   group('sanitizeAmountInput', () {
     test('drops currency text and thousands separators from pasted amounts', () {
       expect(sanitizeAmountInput('Rs 1,500.50'), '1500.50');
