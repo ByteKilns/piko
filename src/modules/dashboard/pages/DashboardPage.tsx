@@ -13,7 +13,7 @@ import {
 import { getCurrentMember, getEffectiveMember, getHouseholdMembers } from "@/lib/session";
 import { todayISO } from "@/lib/today";
 import { listIncomeRows, listPlanLines } from "@/modules/budget/api/budget";
-import { buildPersonPlan, overrunFromPlan, overrunNote } from "@/modules/budget/lib/budget-view";
+import { buildPersonPlan } from "@/modules/budget/lib/budget-view";
 import { monthIncome } from "@/modules/budget/lib/income";
 import { listCategories } from "@/modules/categories/api/categories";
 import { listCushionData } from "@/modules/cushion/api/cushion";
@@ -22,15 +22,14 @@ import {
   type HomeBalanceRow,
   type HomeEssential,
   type HomeOwnerRow,
-  type HomePacing,
   type HomeSavingsPot,
   type HomeSettle,
   HomeView,
 } from "@/modules/dashboard/components/HomeView";
-import { daysLeftInMonth, spentByDayIn } from "@/modules/dashboard/lib/cash-flow";
+import { daysLeftInMonth } from "@/modules/dashboard/lib/cash-flow";
+import { viewerPacing } from "@/modules/dashboard/lib/home-pacing";
 import { toExpenseInputs } from "@/modules/dashboard/lib/map-rows";
 import { personMonthMoney } from "@/modules/dashboard/lib/month-money";
-import { buildPacingSchedule, currentWeekPacing, weekIndexOf, withOverrun } from "@/modules/dashboard/lib/pacing";
 import { walletSpentByMember } from "@/modules/dashboard/lib/wallet";
 import { listDhukuEntries, listDhukus } from "@/modules/dhuku/api/dhuku.actions";
 import { dhukuPosition } from "@/modules/dhuku/lib/dhuku-money";
@@ -54,7 +53,6 @@ import {
 import { forecastPot, monthAfter } from "@/modules/savings/lib/savings-forecast";
 import { potBalance } from "@/modules/savings/lib/savings-math";
 
-const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const PAYBACKS_SHOWN = 3;
 
 function trendPct(current: number, previous: number): number | null {
@@ -64,11 +62,6 @@ function trendPct(current: number, previous: number): number | null {
 
 function percent(part: number, whole: number): number | null {
   return whole > 0 ? Math.round((part / whole) * 100) : null;
-}
-
-function weekdayOf(startDate: string, dayOfPeriod: number): string {
-  const [year, month, day] = startDate.split("-").map(Number);
-  return WEEKDAYS[new Date(year, month - 1, day + dayOfPeriod - 1).getDay()];
 }
 
 type Props = { searchParams: Promise<{ month?: string; year?: string }> };
@@ -248,30 +241,10 @@ export async function DashboardPage({ searchParams }: Props) {
     spending: viewerSpending,
   });
 
-  // Weekly pacing over the can-cut lines: the hero's safe-to-spend figure and
-  // its carry-over. Only can-cut spending counts against it, and whatever went
-  // over elsewhere comes out of what's left, from this week on.
-  const canCut = viewerPlan.groups.find((g) => g.kind === "can_cut");
-  const canCutIds = new Set(canCut?.rows.map((r) => r.categoryId) ?? []);
-  const overrun = overrunFromPlan(viewerPlan);
+  // Weekly pacing over the can-cut lines: the hero's safe-to-spend figure,
+  // worked out the same way for the phone's Home.
   const dayOfPeriod = isCurrentMonth ? daysElapsedInPeriod(period) : period.daysInPeriod;
-  const baseSchedule = canCut ? buildPacingSchedule({ daysInPeriod: period.daysInPeriod, flexibleTotal: canCut.planned }) : null;
-  const pacingSchedule = baseSchedule ? withOverrun(baseSchedule, weekIndexOf(baseSchedule, dayOfPeriod), overrun.total) : null;
-  const spentByDay = spentByDayIn(viewerSpending, canCutIds, year, month, dateFormat);
-  const weekPacing = pacingSchedule ? currentWeekPacing(pacingSchedule, dayOfPeriod, spentByDay) : null;
-  const pacing: HomePacing | null =
-    pacingSchedule && weekPacing
-      ? {
-          carryIn: weekPacing.carryIn,
-          nextWeekAllowance: pacingSchedule.weeks[weekPacing.index + 1]?.allowance ?? weekPacing.allowance,
-          nextWeekday: weekdayOf(period.startDate, weekPacing.nextWeekStartDay),
-          over: weekPacing.remaining <= 0,
-          overrunNote: overrunNote(overrun),
-          safeToday: weekPacing.safeToday,
-          weekLeft: weekPacing.remaining,
-          weeklyAllowance: weekPacing.allowance,
-        }
-      : null;
+  const pacing = viewerPacing({ dateFormat, dayOfPeriod, month, period, plan: viewerPlan, spending: viewerSpending, year });
   const essentials: HomeEssential[] =
     viewerPlan.groups
       .find((g) => g.kind === "essential")
