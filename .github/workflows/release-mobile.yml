@@ -1,0 +1,112 @@
+# Release mobile app: run by hand (Actions → Release mobile app → Run workflow).
+# Builds the latest main, refuses unless the live website is ready for it,
+# then publishes the arm64 APK that installed apps update to.
+# One-time setup: mobile/README.md, "Publishing an update".
+name: Release mobile app
+
+on:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: Release notes, shown in the app's update sheet
+        required: true
+        type: string
+
+# One release at a time; a second run waits instead of racing the first.
+concurrency:
+  group: release-mobile
+  cancel-in-progress: false
+
+permissions:
+  contents: write # for the mobile-v… tag
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      APP_RELEASE_TOKEN: ${{ secrets.APP_RELEASE_TOKEN }}
+      PIKO_URL: ${{ vars.PIKO_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install the publish script's packages
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Read the version from pubspec.yaml
+        id: version
+        run: |
+          version=$(sed -n 's/^version: *//p' mobile/pubspec.yaml)
+          echo "name=${version%%+*}" >> "$GITHUB_OUTPUT"
+          echo "code=${version##*+}" >> "$GITHUB_OUTPUT"
+          echo "Releasing Piko $version from $(git rev-parse --short HEAD)"
+
+      - name: Check the website is ready
+        run: node scripts/release-ready.mjs "${{ steps.version.outputs.code }}"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+          cache: true
+
+      - name: Test and analyze
+        working-directory: mobile
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+
+      - name: Write the signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/piko-release.jks"
+          cat > mobile/android/key.properties <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=$RUNNER_TEMP/piko-release.jks
+          EOF
+
+      - name: Build the APK
+        working-directory: mobile
+        run: flutter build apk --release --split-per-abi
+
+      - name: Upload and publish
+        env:
+          RELEASE_NOTES: ${{ inputs.notes }}
+        run: >-
+          node scripts/publish-apk.mjs
+          mobile/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          "${{ steps.version.outputs.name }}" "${{ steps.version.outputs.code }}"
+
+      - name: Tag the release
+        run: |
+          tag="mobile-v${{ steps.version.outputs.name }}+${{ steps.version.outputs.code }}"
+          git tag "$tag"
+          git push origin "$tag"
+          {
+            echo "### Published Piko ${{ steps.version.outputs.name }} (${{ steps.version.outputs.code }})"
+            echo "Commit \`$(git rev-parse --short HEAD)\`, tag \`$tag\`. Installed apps will offer the update."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove the signing key
+        if: always()
+        run: rm -f mobile/android/key.properties "$RUNNER_TEMP/piko-release.jks"
