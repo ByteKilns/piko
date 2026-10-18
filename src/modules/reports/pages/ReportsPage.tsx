@@ -210,6 +210,7 @@ export async function ReportsPage({ searchParams }: Props) {
           annotation,
           daily,
           daysInPeriod: period.daysInPeriod,
+          isCurrent,
           points: pacePoints,
           todayDay: isCurrent ? daysElapsedInPeriod(period) : period.daysInPeriod,
           totalPlanned,

@@ -18,7 +18,7 @@ import { formatMoney } from "@/lib/money";
 import type { MonthNavModel } from "@/lib/month-nav";
 import { cn } from "@/lib/utils";
 import type { BudgetLine, CategoryChange, CategorySlice, PacePoint } from "@/modules/reports/lib/reports-stats";
-import type { ExpenseLead } from "@/modules/reports/lib/reports-view";
+import { chartLabelPosition, type ExpenseLead, paceMarker } from "@/modules/reports/lib/reports-view";
 
 type OwnerSlice = { amount: number; key: "me" | "partner" | "shared"; label: string; pct: number };
 type ChangeRow = CategoryChange;
@@ -32,6 +32,8 @@ type PaceData = {
   annotation: null | { amount: number; day: number; label: string };
   daily: number[];
   daysInPeriod: number;
+  // This month, as opposed to one that's over.
+  isCurrent: boolean;
   points: PacePoint[];
   todayDay: null | number;
   totalPlanned: number;
@@ -304,7 +306,7 @@ function ExpensesReport({
 }
 
 function SpendingPace({ pace }: { pace: PaceData }) {
-  const { points, daily, daysInPeriod, todayDay, totalPlanned, annotation } = pace;
+  const { points, daily, daysInPeriod, isCurrent, todayDay, totalPlanned, annotation } = pace;
   const finalActual = [...points].reverse().find((p) => p.actual !== null)?.actual ?? 0;
   const yMax = niceCeil(Math.max(totalPlanned, finalActual, 1));
   const grid = [0.25, 0.5, 0.75].map((f) => ({ b: f * 100, label: `${Math.round((yMax * f) / 1000)}k` }));
@@ -322,6 +324,9 @@ function SpendingPace({ pace }: { pace: PaceData }) {
   const todayValue = todayPoint?.actual ?? 0;
   const todayMultiple = todayPoint && todayPoint.pace > 0 ? todayValue / todayPoint.pace : null;
   const maxDaily = Math.max(1, ...daily);
+  const todayLabel = chartLabelPosition(day, daysInPeriod, 14);
+  const marker = paceMarker({ isCurrent, value: todayValue, yMax });
+  const annotationLabel = annotation ? chartLabelPosition(annotation.day, daysInPeriod, 10) : null;
 
   return (
     <section className="mt-13">
@@ -348,7 +353,8 @@ function SpendingPace({ pace }: { pace: PaceData }) {
         </span>
       </div>
 
-      <div className="relative mt-5.5 h-57.5">
+      {/* The extra room on top fits a month-end label above a total near the top. */}
+      <div className="relative mt-12 h-57.5">
         {grid.map((line) => (
           <div className="absolute right-0 left-0 border-t border-dashed border-n-300" key={line.b} style={{ bottom: `${line.b}%` }}>
             <span className="absolute right-0 bottom-1 text-[11px] text-n-500 tabular-nums">{line.label}</span>
@@ -362,13 +368,19 @@ function SpendingPace({ pace }: { pace: PaceData }) {
           ))}
         </svg>
         <div className="absolute top-[-8px] bottom-0 border-l border-signal" style={{ left: `${(day / daysInPeriod) * 100}%` }} />
-        <div className="absolute size-2 translate-x-[-50%] translate-y-1/2 bg-ink" style={{ bottom: `${100 - (todayValue / yMax) * 100}%`, left: `${(day / daysInPeriod) * 100}%` }} />
-        <div className="absolute flex translate-x-3.5 translate-y-1/2 flex-col gap-0.5 whitespace-nowrap" style={{ bottom: `${100 - (todayValue / yMax) * 100}%`, left: `${(day / daysInPeriod) * 100}%` }}>
+        <div className="absolute size-2 translate-x-[-50%] translate-y-1/2 bg-ink" style={{ bottom: marker.bottom, left: `${(day / daysInPeriod) * 100}%` }} />
+        <div
+          className={cn("absolute flex flex-col gap-0.5 whitespace-nowrap", todayLabel.align === "end" ? "items-end" : "items-start")}
+          style={{ bottom: marker.labelBottom, ...todayLabel.style }}
+        >
           <span className="text-[15px] font-extrabold tabular-nums">{formatMoney(todayValue)}</span>
-          <span className="text-xs text-n-700">Today{todayMultiple !== null ? ` · ${todayMultiple.toFixed(1)}× the even pace` : ""}</span>
+          <span className="text-xs text-n-700">{marker.caption}{todayMultiple !== null ? ` · ${todayMultiple.toFixed(1)}× the even pace` : ""}</span>
         </div>
         {annotation && (
-          <div className="absolute flex flex-col items-start gap-0.5 whitespace-nowrap" style={{ bottom: "24%", left: `calc(${(annotation.day / daysInPeriod) * 100}% + 10px)` }}>
+          <div
+            className={cn("absolute flex flex-col gap-0.5 whitespace-nowrap", annotationLabel?.align === "end" ? "items-end" : "items-start")}
+            style={{ bottom: "24%", ...annotationLabel?.style }}
+          >
             <span className="text-xs font-semibold">{annotation.label}</span>
             <span className="text-xs text-n-600">Rs {Math.round(annotation.amount).toLocaleString("en-US")}</span>
           </div>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { BudgetLine, CategoryChange } from "./reports-stats";
-import { expenseLead } from "./reports-view";
+import { chartLabelPosition, expenseLead, paceMarker } from "./reports-view";
 
 const change = (name: string, delta: number, categoryId = name): CategoryChange => ({
   categoryId,
@@ -61,5 +61,40 @@ describe("expenseLead", () => {
     });
     expect(lead.exceptionStrong).toBe("");
     expect(lead.exceptionRest).toBe("");
+  });
+});
+
+describe("chartLabelPosition", () => {
+  it("puts the label to the right of a marker in the left half of the chart", () => {
+    expect(chartLabelPosition(10, 30, 14)).toEqual({ align: "start", style: { left: `calc(${(10 / 30) * 100}% + 14px)` } });
+  });
+
+  it("puts the label to the left of a marker in the right half, so it never runs past the chart's edge", () => {
+    expect(chartLabelPosition(30, 30, 14)).toEqual({ align: "end", style: { right: "calc(0% + 14px)" } });
+    expect(chartLabelPosition(24, 30, 10)).toEqual({ align: "end", style: { right: "calc(20% + 10px)" } });
+  });
+
+  it("keeps a marker exactly half way on the right side", () => {
+    expect(chartLabelPosition(15, 30, 14).align).toBe("start");
+  });
+});
+
+describe("paceMarker", () => {
+  it("sits as high up the chart as the running total, not mirrored", () => {
+    expect(paceMarker({ isCurrent: true, value: 178_148, yMax: 200_000 }).bottom).toBe(`${(178_148 / 200_000) * 100}%`);
+    expect(paceMarker({ isCurrent: true, value: 0, yMax: 200_000 }).bottom).toBe("0%");
+  });
+
+  it("says Today for this month and Month end for a month that's over", () => {
+    expect(paceMarker({ isCurrent: true, value: 1, yMax: 2 }).caption).toBe("Today");
+    expect(paceMarker({ isCurrent: false, value: 1, yMax: 2 }).caption).toBe("Month end");
+  });
+
+  it("puts its label just above the point, where the line (a running total, so never higher to the left) can't cross it", () => {
+    expect(paceMarker({ isCurrent: false, value: 50, yMax: 100 }).labelBottom).toBe("calc(50% + 8px)");
+    // Even at the top: the chart leaves room above it.
+    expect(paceMarker({ isCurrent: false, value: 100, yMax: 100 }).labelBottom).toBe("calc(100% + 8px)");
+    // And at the bottom, clear of the axis.
+    expect(paceMarker({ isCurrent: true, value: 0, yMax: 100 }).labelBottom).toBe("calc(0% + 8px)");
   });
 });
