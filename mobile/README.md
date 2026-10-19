@@ -97,14 +97,43 @@ SHA-256 and opens Android's installer.
    latest one through a short-lived signed link from `/api/mobile/app-version`. Add `APP_RELEASE_ADMIN_EMAILS` with the emails
    allowed to publish, then run `npm run db:migrate`.
 
+3. **Release button (GitHub Actions).** Lets GitHub build, sign and publish a
+   release when you press a button. Set up once:
+
+   - Make a release token: `openssl rand -hex 32`. Add it in Vercel as
+     `APP_RELEASE_TOKEN` (Production) and redeploy, so the website accepts it.
+   - Turn the signing key into text: `base64 -w0 ~/piko-release.jks` (Git Bash;
+     on macOS `base64 -i ~/piko-release.jks`).
+   - On GitHub → the repo → Settings → Secrets and variables → Actions, add the
+     **secrets** `APP_RELEASE_TOKEN` (the same token), `ANDROID_KEYSTORE_BASE64`
+     (that text), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_PASSWORD` and
+     `ANDROID_KEY_ALIAS` (the values in `android/key.properties`), and the
+     **variable** `PIKO_URL` (the live site, e.g. `https://piko.example.com`, no
+     trailing slash).
+
+   The key's passwords must not contain a backslash (`key.properties` would read
+   it as an escape).
+
 ### Each release
 
 1. Bump `version:` in `pubspec.yaml` — the number after `+` must go up
-   (e.g. `1.0.0+1` → `1.1.0+2`).
-2. `flutter build apk --release --split-per-abi`
-3. On the website, go to **Settings → App updates**, choose
-   `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`, enter the same
-   version and build number, add release notes and publish.
+   (e.g. `1.0.0+1` → `1.1.0+2`) — and push it to `main`.
+2. Wait for Vercel to deploy that commit. If it adds a migration, run
+   `npm run db:migrate`.
+3. On GitHub → Actions → **Release mobile app** → **Run workflow**, type the
+   release notes (shown in the app's update sheet) and run it.
+
+The workflow checks the website first and stops, publishing nothing, if the website
+doesn't run this commit yet ("Deploy the website first"), a migration is missing
+("Run npm run db:migrate first") or the build number isn't higher than the live one.
+Then it runs the app's tests, builds and signs the arm64 APK, uploads and publishes
+it, and tags the commit `mobile-v<version>+<build>`. A release build on GitHub
+without the signing key fails rather than signing with the debug key.
+
+**By hand instead** (fallback): `flutter build apk --release --split-per-abi`, then
+on the website go to **Settings → App updates**, choose
+`build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`, enter the same version
+and build number, add release notes and publish.
 
 `--split-per-abi` builds one APK per CPU type instead of a single ~50 MB
 "fat" APK bundling all three; the arm64 one (~19 MB) covers practically every

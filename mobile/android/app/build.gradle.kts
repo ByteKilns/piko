@@ -54,6 +54,10 @@ android {
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")
             } else {
+                // The release workflow (CI=true) must never publish a debug-signed build.
+                if (System.getenv("CI") == "true") {
+                    throw GradleException("key.properties not found: a CI release build must be signed with the release key.")
+                }
                 // Keeps `flutter run --release` working without a key, but don't publish these
                 // builds — they won't install over an app signed with the release key.
                 logger.warn("key.properties not found — signing release build with the DEBUG key.")

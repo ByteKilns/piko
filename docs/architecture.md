@@ -47,7 +47,7 @@ Domain conventions that shape everything:
 src/
   app/            # routes only — thin files that re-export a module page
     (app)/        # authed route group; layout.tsx gates auth + renders nav
-    api/          # route handlers: web (auth, app-releases) + mobile/*
+    api/          # route handlers: web (auth, app-releases), release-bot/* (release workflow) + mobile/*
     login/
     demo/         # public: starts a private demo household (see Public demo)
   modules/        # feature slices (see below)
@@ -342,7 +342,15 @@ approved. The agreed design is in the "Design (agreed)" section of
   flow (`src/app/api/app-releases/upload/route.ts`). `handleUpload` requires
   `BLOB_READ_WRITE_TOKEN` (OIDC alone is not enough). The store is **private**:
   `/api/mobile/app-version` hands the app a 24h signed link to the latest APK
-  only, and publishing deletes superseded APK files. Full procedure in `mobile/README.md`.
+  only, and publishing deletes superseded APK files. Both ways to publish share
+  `publishRelease` (`modules/app-releases/api/app-releases.ts`): the Settings form
+  (a release admin's session) and the **Release mobile app** GitHub workflow
+  (`.github/workflows/release-mobile.yml`), which signs its requests with
+  `APP_RELEASE_TOKEN` (`src/lib/release-token.ts`) to `/api/release-bot/{status,upload,publish}`.
+  Those routes skip the sign-in redirect in `src/proxy.ts`. `/status` reports the
+  deployment's commit (`VERCEL_GIT_COMMIT_SHA`) and whether the database is missing a
+  migration (`release-status.ts`), so the workflow refuses to publish an APK ahead of the
+  website it needs. Full procedure in `mobile/README.md`.
 - **Activity log** (`src/modules/activity/`): every household data mutation calls
   `logActivity(activityActor(member), entry)` after its write succeeds. Each module
   owns a pure `lib/<x>-activity.ts` (summary + `diffFields` specs) so field knowledge

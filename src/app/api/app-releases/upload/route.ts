@@ -2,7 +2,7 @@ import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
 
 import { isReleaseAdmin } from "@/lib/release-admin";
-import { MAX_APK_SIZE_BYTES } from "@/modules/app-releases/schemas/app-release.schema";
+import { APK_UPLOAD_OPTIONS } from "@/modules/app-releases/api/app-releases";
 
 // Issues short-lived tokens so the browser uploads the APK straight to Vercel
 // Blob — the file is far over Vercel's 4.5 MB function body limit. The release
@@ -15,11 +15,7 @@ export async function POST(request: Request) {
       body,
       onBeforeGenerateToken: async () => {
         if (!(await isReleaseAdmin())) throw new Error("Not allowed to publish app releases");
-        return {
-          addRandomSuffix: true,
-          allowedContentTypes: ["application/vnd.android.package-archive"],
-          maximumSizeInBytes: MAX_APK_SIZE_BYTES,
-        };
+        return APK_UPLOAD_OPTIONS;
       },
       request,
     });
