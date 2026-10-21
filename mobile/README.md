@@ -21,10 +21,15 @@ and ink, one red accent, square corners, rules instead of cards, Host Grotesk.
 - Light, Dark or System is chosen in Settings and stored on the phone; the app
   opens in Light, like the website.
 
-## eSewa auto-capture
+## Safe to spend
 
 Home opens with **Safe to spend today**, the website's Home figure for the signed-in
 person (`GET /api/mobile/pacing`): it needs Can cut budget lines, set on the website.
+It refreshes when the app comes back to the front, on pull to refresh, after saving
+an expense and after closing Review. How it's worked out: "Safe-to-spend pacing" in
+`docs/architecture.md`.
+
+## eSewa auto-capture
 
 eSewa payments arrive as drafts to review (Home → "N eSewa payments to review"); only
 approved ones become expenses. How it works: the "eSewa capture" section of
@@ -105,17 +110,25 @@ SHA-256 and opens Android's installer.
 
    - Make a release token: `openssl rand -hex 32`. Add it in Vercel as
      `APP_RELEASE_TOKEN` (Production) and redeploy, so the website accepts it.
-   - Turn the signing key into text: `base64 -w0 ~/piko-release.jks` (Git Bash;
-     on macOS `base64 -i ~/piko-release.jks`).
-   - On GitHub → the repo → Settings → Secrets and variables → Actions, add the
-     **secrets** `APP_RELEASE_TOKEN` (the same token), `ANDROID_KEYSTORE_BASE64`
-     (that text), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_PASSWORD` and
-     `ANDROID_KEY_ALIAS` (the values in `android/key.properties`), and the
-     **variable** `PIKO_URL` (the live site, e.g. `https://piko.example.com`, no
-     trailing slash).
+   - Turn the signing key into text and copy it. In PowerShell:
+     `[Convert]::ToBase64String([IO.File]::ReadAllBytes("$HOME\piko-release.jks")) | Set-Clipboard`
+     (macOS: `base64 -i ~/piko-release.jks | pbcopy`). It's one line starting `MIIK`
+     (Piko's key is 3,612 characters).
+   - On GitHub → the repo → Settings → Secrets and variables → Actions, add
+     **repository** secrets (not environment secrets: the workflow names no
+     environment, so it can't see them) `APP_RELEASE_TOKEN` (the same token),
+     `ANDROID_KEYSTORE_BASE64` (that text), `ANDROID_KEYSTORE_PASSWORD`,
+     `ANDROID_KEY_PASSWORD` and `ANDROID_KEY_ALIAS` (the values in
+     `android/key.properties`), and the repository **variable** `PIKO_URL` (the
+     live site, e.g. `https://piko.example.com`, no trailing slash).
+   - Settings → Actions → General: Actions must be allowed, and **Workflow
+     permissions** must be "Read and write" (the workflow pushes a release tag).
 
    The key's passwords must not contain a backslash (`key.properties` would read
    it as an escape).
+
+   To check the setup without publishing, run the workflow before bumping the
+   version: it should stop at "Build N isn't higher than the live build N".
 
 ### Each release
 
@@ -123,8 +136,10 @@ SHA-256 and opens Android's installer.
    (e.g. `1.0.0+1` → `1.1.0+2`) — and push it to `main`.
 2. Wait for Vercel to deploy that commit. If it adds a migration, run
    `npm run db:migrate`.
-3. On GitHub → Actions → **Release mobile app** → **Run workflow**, type the
-   release notes (shown in the app's update sheet) and run it.
+3. On GitHub, open the repo's **Actions** tab (the top row next to Pull requests,
+   not Settings → Actions) → **Release mobile app** → **Run workflow**, type the
+   release notes (shown in the app's update sheet) and run it. It takes 10–15
+   minutes.
 
 The workflow checks the website first and stops, publishing nothing, if the website
 doesn't run this commit yet ("Deploy the website first"), a migration is missing
@@ -132,6 +147,17 @@ doesn't run this commit yet ("Deploy the website first"), a migration is missing
 Then it runs the app's tests, builds and signs the arm64 APK, uploads and publishes
 it, and tags the commit `mobile-v<version>+<build>`. A release build on GitHub
 without the signing key fails rather than signing with the debug key.
+
+If a run fails, nothing was published; fix the cause and run it again:
+
+| Error in the run | What to do |
+|---|---|
+| "The website refused the release token" | `APP_RELEASE_TOKEN` differs between Vercel and GitHub, or Vercel wasn't redeployed after adding it. |
+| "The website runs …, which doesn't include …" | Vercel hasn't deployed this commit yet: wait, then rerun. |
+| "Run npm run db:migrate first" | Run it, then rerun. |
+| "Build N isn't higher than the live build N" | Bump the number after `+` in `pubspec.yaml` and push. |
+| `toDerInputStream rejects tag type …` | `ANDROID_KEYSTORE_BASE64` isn't the keystore's text: copy it again (setup above) and update the secret. |
+| "Keystore was tampered with, or password was incorrect" | Re-paste `ANDROID_KEYSTORE_PASSWORD` and `ANDROID_KEY_PASSWORD`. |
 
 **By hand instead** (fallback): `flutter build apk --release --split-per-abi`, then
 on the website go to **Settings → App updates**, choose
