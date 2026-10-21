@@ -13,8 +13,8 @@ import {
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { householdIncome } from "@/modules/budget/api/budget";
 import { listCategories } from "@/modules/categories/api/categories";
-import { listExpensesForMonth } from "@/modules/expenses/api/expenses.actions";
-import { listRecurringExpenses } from "@/modules/recurring/api/recurring.actions";
+import { listExpensesForMonth } from "@/modules/expenses/api/expenses";
+import { listRecurringExpenses } from "@/modules/recurring/api/recurring";
 import { type RecurringRowModel, RecurringView } from "@/modules/recurring/components/RecurringView";
 import { buildRecurringTimeline, dayOfHouseholdCalendar, monthlyEquivalent, type TimelineEntry } from "@/modules/recurring/lib/recurring-view";
 

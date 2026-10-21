@@ -34,14 +34,6 @@ async function assertCategoryInHousehold(householdId: string, categoryId: string
   }
 }
 
-export async function listRecurringExpenses(householdId: string) {
-  return db
-    .select()
-    .from(recurringExpenses)
-    .where(eq(recurringExpenses.householdId, householdId))
-    .orderBy(recurringExpenses.nextDueDate);
-}
-
 async function findRecurringInHousehold(householdId: string, id: string) {
   const [item] = await db
     .select()

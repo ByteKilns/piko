@@ -1,7 +1,7 @@
 // src/modules/dhuku/api/dhuku.actions.ts
 "use server";
 
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db/client";
@@ -11,7 +11,7 @@ import { activityActor, loadActivityFormatters, logActivity } from "@/modules/ac
 import { formatNPR } from "@/modules/dashboard/lib/format";
 import { dhukuChanges, dhukuEntrySummary, dhukuSummary } from "@/modules/dhuku/lib/dhuku-activity";
 import { type DhukuEntryInput, dhukuEntrySchema, type DhukuInput, dhukuSchema } from "@/modules/dhuku/schemas/dhuku.schema";
-import { insertNotification } from "@/modules/notifications/api/notifications.actions";
+import { insertNotification } from "@/modules/notifications/api/notifications";
 
 function revalidateDhukuPaths() {
   revalidatePath("/dhuku");
@@ -23,22 +23,6 @@ async function assertMemberInHousehold(householdId: string, memberId: string) {
   if (!members.some((m) => m.id === memberId)) {
     throw new Error("Member does not belong to this household");
   }
-}
-
-export async function listDhukus(householdId: string) {
-  return db.select().from(dhukus).where(eq(dhukus.householdId, householdId)).orderBy(desc(dhukus.startDate));
-}
-
-export async function listDhukuEntries(householdId: string) {
-  const rows = await listDhukus(householdId);
-  const dhukuIds = rows.map((d) => d.id);
-  if (dhukuIds.length === 0) return [];
-
-  return db
-    .select()
-    .from(dhukuEntries)
-    .where(inArray(dhukuEntries.dhukuId, dhukuIds))
-    .orderBy(desc(dhukuEntries.date), desc(dhukuEntries.createdAt));
 }
 
 async function findDhukuInHousehold(householdId: string, dhukuId: string) {

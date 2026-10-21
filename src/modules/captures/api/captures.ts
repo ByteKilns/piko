@@ -5,7 +5,7 @@ import { capturedPayments, captureEvents, captureRules } from "@/db/schema";
 import type { CurrentMember } from "@/lib/session";
 import { activityActor } from "@/modules/activity/api/activity";
 import { listCategories } from "@/modules/categories/api/categories";
-import { createExpenseForHousehold } from "@/modules/expenses/api/expenses.actions";
+import { createExpenseForHousehold } from "@/modules/expenses/api/expenses";
 import type { ExpenseInput } from "@/modules/expenses/schemas/expense.schema";
 
 import { captureStatusFor } from "../lib/captures";

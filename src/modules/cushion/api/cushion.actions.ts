@@ -11,8 +11,8 @@ import { getCurrentMember } from "@/lib/session";
 import { activityActor, loadActivityFormatters, logActivity } from "@/modules/activity/api/activity";
 import { loadPersonMonthMoney } from "@/modules/dashboard/api/month-money";
 import { listFundData } from "@/modules/funds/api/funds";
-import { listLoans } from "@/modules/loans/api/loans.actions";
-import { listSavingsPots } from "@/modules/savings/api/savings.actions";
+import { listLoans } from "@/modules/loans/api/loans";
+import { listSavingsPots } from "@/modules/savings/api/savings";
 
 import { cushionSummary, settlementSummary } from "../lib/cushion-activity";
 import { checkSplit, cushionBalance } from "../lib/month-close";

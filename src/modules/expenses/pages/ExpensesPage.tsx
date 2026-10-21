@@ -6,14 +6,14 @@ import { todayISO } from "@/lib/today";
 import { householdIncome } from "@/modules/budget/api/budget";
 import { listCategories } from "@/modules/categories/api/categories";
 import { daysLeftInMonth } from "@/modules/dashboard/lib/cash-flow";
-import { listExpensesForMonth } from "@/modules/expenses/api/expenses.actions";
+import { listExpensesForMonth } from "@/modules/expenses/api/expenses";
 import { ExpensesView, type UpcomingBill } from "@/modules/expenses/components/ExpensesView";
 import { topCategoryIds } from "@/modules/expenses/lib/expense-view";
 import { roleForOwner } from "@/modules/expenses/lib/member-tone";
 import { listFundData } from "@/modules/funds/api/funds";
 import { fundBalances } from "@/modules/funds/lib/fund-math";
-import { listRecurringExpenses } from "@/modules/recurring/api/recurring.actions";
-import { listSavingsPots } from "@/modules/savings/api/savings.actions";
+import { listRecurringExpenses } from "@/modules/recurring/api/recurring";
+import { listSavingsPots } from "@/modules/savings/api/savings";
 
 type Props = { searchParams: Promise<{ month?: string; year?: string }> };
 

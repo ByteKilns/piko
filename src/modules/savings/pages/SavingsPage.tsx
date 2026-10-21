@@ -4,13 +4,7 @@ import { formatMoney } from "@/lib/money";
 import { currentPeriodYearMonth, formatPeriodLabel, resolvePeriod } from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { listCategories } from "@/modules/categories/api/categories";
-import {
-  listSavingsDeposits,
-  listSavingsExpenses,
-  listSavingsItems,
-  listSavingsPotPlans,
-  listSavingsPots,
-} from "@/modules/savings/api/savings.actions";
+import { listSavingsDeposits, listSavingsExpenses, listSavingsItems, listSavingsPotPlans, listSavingsPots } from "@/modules/savings/api/savings";
 import { type PotOwnerKey, type SavingsPotModel, SavingsView } from "@/modules/savings/components/SavingsView";
 import {
   forecastPot,

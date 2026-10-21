@@ -2,7 +2,7 @@ import { formatShortDate } from "@/lib/date-format";
 import { getDateFormatPref } from "@/lib/date-format-cookie";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { todayISO } from "@/lib/today";
-import { listLoanPayments, listLoans } from "@/modules/loans/api/loans.actions";
+import { listLoanPayments, listLoans } from "@/modules/loans/api/loans";
 import { type LoanRowModel, LoansView } from "@/modules/loans/components/LoansView";
 import { buildLoanCards, loanOverviewStats } from "@/modules/loans/lib/loan-stats";
 

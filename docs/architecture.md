@@ -73,8 +73,8 @@ Each feature is a slice under `src/modules/<feature>/`:
   pages/XPage.tsx           # server component page (async, calls queries)
   components/               # PascalCase components, client components where interactive
   api/
-    <feature>.actions.ts    # "use server" mutations (actions)
-    <feature>.ts            # Drizzle queries (no "use server")
+    <feature>.actions.ts    # "use server": only `…Action` functions, household from the session
+    <feature>.ts            # Drizzle queries and helpers taking a householdId (no "use server")
   schemas/<feature>.schema.ts  # Zod schemas
   lib/                      # pure helpers, usually with a colocated .test.ts
   hooks/                    # client hooks (e.g. table columns)
@@ -98,9 +98,15 @@ before adding UI. Layout responds to the page's `@container`, not the viewport
 constant — never a fake write.
 
 **Worked example:** `expenses`. `api/expenses.actions.ts` holds `createExpenseAction`
-(session-based) plus `createExpenseForHousehold(input, { actorName, householdId })` —
+(session-based), which calls `createExpenseForHousehold(input, actor)` in `api/expenses.ts` —
 the shared core that both the web action and the mobile route call. Reuse that pattern:
 put the tenancy-agnostic logic in a `...ForHousehold` function so web and mobile share it.
+
+**Never export a helper from a `"use server"` file.** Every export there is a Server
+Action a browser can POST to with arguments of its choosing, so one that takes a
+`householdId` would let any signed-in user reach another household. Those files export
+only `…Action` functions (plus types); helpers live in the plain `<feature>.ts` beside
+them. `src/lib/use-server-exports.test.ts` fails the build's tests otherwise.
 
 ## Request & data flow
 
