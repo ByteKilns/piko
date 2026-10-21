@@ -118,6 +118,58 @@ void main() {
       expect(unauthorizedCalled, isFalse);
     });
 
+    test('fetchPacing sends the bearer token and reads Safe to spend', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.method, 'GET');
+        expect(request.url.toString(), 'https://example.com/api/mobile/pacing');
+        expect(request.headers['Authorization'], 'Bearer jwt-123');
+        return http.Response(
+          jsonEncode({
+            'pacing': {
+              'carryIn': 0,
+              'nextWeekAllowance': 490,
+              'nextWeekday': 'Wednesday',
+              'over': false,
+              'overrunNote': null,
+              'safeToday': 78,
+              'weekLeft': 390,
+              'weeklyAllowance': 490,
+            },
+          }),
+          200,
+        );
+      });
+      final client = ApiClient(
+        getBaseUrl: () => 'https://example.com',
+        getToken: () => 'jwt-123',
+        onUnauthorized: () {},
+        client: mockClient,
+      );
+
+      final pacing = await client.fetchPacing();
+
+      expect(pacing!.safeToday, 78);
+      expect(pacing.over, isFalse);
+      expect(pacing.nextWeekday, 'Wednesday');
+    });
+
+    test('fetchPacing is null without can-cut lines, and throws when the server fails', () async {
+      var fail = false;
+      final mockClient = MockClient((request) async => fail
+          ? http.Response(jsonEncode({'error': {'message': 'Boom'}}), 500)
+          : http.Response(jsonEncode({'pacing': null}), 200));
+      final client = ApiClient(
+        getBaseUrl: () => 'https://example.com',
+        getToken: () => 'jwt-123',
+        onUnauthorized: () {},
+        client: mockClient,
+      );
+
+      expect(await client.fetchPacing(), isNull);
+      fail = true;
+      await expectLater(client.fetchPacing(), throwsA(isA<ApiException>()));
+    });
+
     test('createExpense posts the draft and returns the created expense', () async {
       final mockClient = MockClient((request) async {
         expect(request.url.toString(), 'https://example.com/api/mobile/expenses');

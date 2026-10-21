@@ -48,17 +48,29 @@ export type MonthMoney = {
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
+// What left one person's own wallet from pay, expense by expense: the part
+// of each expense paid from pay (not a savings pot or fund), counted by who
+// paid, with any "to be paid back" part moved onto the other person. Home's
+// month figures and its Safe to spend both start from this.
+export function personSpending(input: {
+  expenses: ExpenseRow[];
+  memberId: string;
+  memberIds: string[];
+}): { amount: number; categoryId: string; date: string }[] {
+  return payRows(input.expenses).flatMap((e) =>
+    walletShares(
+      { amount: Number(e.amount), paidByMemberId: e.paidByMemberId, payBackAmount: e.payBackAmount === null ? null : Number(e.payBackAmount) },
+      input.memberIds,
+    ).flatMap((share) => (share.memberId === input.memberId ? [{ amount: share.amount, categoryId: e.categoryId, date: e.date }] : [])),
+  );
+}
+
 // One person's month: their pay and extra, what left their own wallet from
 // pay, and what they moved to their own piles. Home and closing a month both
 // use it, so the amount to decide on is always Home's Unallocated.
 export function personMonthMoney(input: MonthMoneyInput): MonthMoney {
   const { memberId } = input;
-  const spending = payRows(input.expenses).flatMap((e) =>
-    walletShares(
-      { amount: Number(e.amount), paidByMemberId: e.paidByMemberId, payBackAmount: e.payBackAmount === null ? null : Number(e.payBackAmount) },
-      input.memberIds,
-    ).flatMap((share) => (share.memberId === memberId ? [{ amount: share.amount, categoryId: e.categoryId, date: e.date }] : [])),
-  );
+  const spending = personSpending(input);
   const spent = round2(spending.reduce((s, e) => s + e.amount, 0));
   const income = monthIncome(input.incomeRows, memberId, input.month);
 

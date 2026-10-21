@@ -336,7 +336,10 @@ approved. The agreed design is in the "Design (agreed)" section of
   unspent allowance forward between weeks, and surfaces `safeToday` (remaining ÷
   days left in the week) on the dashboard hero. Only the viewer's can-cut spending
   from pay counts against it day by day (`spentByDayIn` in `dashboard/lib/cash-flow.ts`);
-  overruns elsewhere shrink the weeks left instead.
+  overruns elsewhere shrink the weeks left instead. The hero's figure comes from
+  `viewerPacing` (`dashboard/lib/home-pacing.ts`), which the website's Home and the
+  phone's (`GET /api/mobile/pacing` → `loadViewerPacing` in `dashboard/api/home-pacing.ts`)
+  both call, so the two always agree. The phone always shows the signed-in member.
 - **App releases**: publishing is gated by `APP_RELEASE_ADMIN_EMAILS`
   (`src/lib/release-admin.ts`); APKs are uploaded to Vercel Blob via a client-token
   flow (`src/app/api/app-releases/upload/route.ts`). `handleUpload` requires

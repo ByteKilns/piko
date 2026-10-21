@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type MonthMoneyInput, personMonthMoney } from "./month-money";
+import { type MonthMoneyInput, personMonthMoney, personSpending } from "./month-money";
 
 const ME = "me";
 const HER = "her";
@@ -93,5 +93,25 @@ describe("personMonthMoney", () => {
 
     expect(money.income.pay).toBe(62000);
     expect(money.unallocated).toBe(62000 + 38000 - 40000 - 5000);
+  });
+});
+
+describe("personSpending", () => {
+  it("is the spending personMonthMoney counts: their pay share of each expense they paid, plus what's to be paid back to them", () => {
+    const expenses = [
+      expense({ amount: "1000.00" }),
+      expense({ amount: "2000.00", categoryId: "dates", paidByMemberId: HER, payBackAmount: "500.00" }),
+      expense({ amount: "14690.00", fundAmount: "12000.00" }),
+      expense({ amount: "800.00", savingsPotId: "pot" }),
+    ];
+
+    const spending = personSpending({ expenses, memberId: ME, memberIds: [ME, HER] });
+
+    expect(spending).toEqual(personMonthMoney({ ...EMPTY, expenses }).spending);
+    expect(spending).toEqual([
+      { amount: 1000, categoryId: "lunch", date: "2026-10-20" },
+      { amount: 500, categoryId: "dates", date: "2026-10-20" },
+      { amount: 2690, categoryId: "lunch", date: "2026-10-20" },
+    ]);
   });
 });

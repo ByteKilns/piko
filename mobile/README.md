@@ -23,6 +23,9 @@ and ink, one red accent, square corners, rules instead of cards, Host Grotesk.
 
 ## eSewa auto-capture
 
+Home opens with **Safe to spend today**, the website's Home figure for the signed-in
+person (`GET /api/mobile/pacing`): it needs Can cut budget lines, set on the website.
+
 eSewa payments arrive as drafts to review (Home → "N eSewa payments to review"); only
 approved ones become expenses. How it works: the "eSewa capture" section of
 `docs/architecture.md`.

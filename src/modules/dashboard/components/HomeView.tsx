@@ -24,6 +24,7 @@ import { PayDialog } from "@/modules/budget/components/PayDialog";
 import type { ExtraIncome } from "@/modules/budget/lib/income";
 import { CushionDialog } from "@/modules/cushion/components/CushionDialog";
 import { SettleCard, type SettleOptions } from "@/modules/cushion/components/SettleCard";
+import type { HomePacing } from "@/modules/dashboard/lib/home-pacing";
 import { RecentExpensesList } from "@/modules/expenses/components/RecentExpensesList";
 import type { RecentGroup } from "@/modules/expenses/lib/recent-groups";
 import { deletePaybackAction } from "@/modules/paybacks/api/paybacks.actions";
@@ -51,19 +52,6 @@ export type HomeEssential = { categoryName: string; planned: number; spent: numb
 
 // Last month's leftover, waiting to be decided on.
 export type HomeSettle = SettleOptions & { amount: number; canSettle: boolean; month: number; monthLabel: string; year: number };
-
-export type HomePacing = {
-  carryIn: number;
-  nextWeekAllowance: number;
-  nextWeekday: null | string;
-  over: boolean;
-  // Set when another line went over (or money went outside a budget) and was
-  // taken from the can-cut money.
-  overrunNote: null | string;
-  safeToday: number;
-  weekLeft: number;
-  weeklyAllowance: number;
-};
 
 export type HomePaybackRow = { amount: number; dateLabel: string; fromName: string; id: string; toName: string };
 

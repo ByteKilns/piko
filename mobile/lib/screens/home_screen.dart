@@ -16,6 +16,7 @@ import '../providers/calendar_provider.dart';
 import '../providers/categories_provider.dart';
 import '../providers/esewa_provider.dart';
 import '../providers/expenses_provider.dart';
+import '../providers/pacing_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/api_client.dart';
 import '../services/bs_calendar.dart';
@@ -28,6 +29,7 @@ import '../widgets/esewa_draft_strip.dart';
 import '../widgets/expense_confirm_sheet.dart';
 import '../widgets/expense_list_tile.dart';
 import '../widgets/money_text.dart';
+import '../widgets/safe_to_spend_hero.dart';
 import 'settings_screen.dart';
 import 'voice_capture_screen.dart';
 
@@ -52,6 +54,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       onResume: () {
         ref.invalidate(availableUpdateProvider);
         ref.invalidate(esewaAccessProvider);
+        ref.invalidate(pacingProvider);
         _startEsewa();
         _openAlertTarget();
       },
@@ -117,6 +120,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EsewaReviewScreen()));
     ref.invalidate(esewaDraftCountProvider);
     ref.invalidate(recentExpensesProvider);
+    // Approved drafts are spending now.
+    ref.invalidate(pacingProvider);
   }
 
   Future<void> _openVoiceFlow(BuildContext context, WidgetRef ref) async {
@@ -165,6 +170,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             try {
               await client.createExpense(finalDraft);
               ref.invalidate(recentExpensesProvider);
+              ref.invalidate(pacingProvider);
               if (sheetContext.mounted) Navigator.of(sheetContext).pop();
             } on ApiException catch (e) {
               if (sheetContext.mounted) {
@@ -190,6 +196,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final text = Theme.of(context).textTheme;
     final expensesAsync = ref.watch(recentExpensesProvider);
     final update = ref.watch(availableUpdateProvider).valueOrNull;
+    final pacing = ref.watch(pacingProvider);
     final draftCount = ref.watch(esewaDraftCountProvider);
     // Only people using eSewa capture see Piko checking for drafts.
     final checkingEsewa = ref.watch(esewaAccessProvider).valueOrNull == true &&
@@ -215,11 +222,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(recentExpensesProvider);
+          ref.invalidate(pacingProvider);
           await _checkEsewa();
         },
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           children: [
+            SafeToSpendHero(pacing: pacing),
             if (update != null) ...[AppUpdateBanner(release: update), const SizedBox(height: 20)],
             EsewaDraftStrip(
               checking: checkingEsewa,

@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { expenses, savingsItems, savingsPots } from "@/db/schema";
 import { type DateFormat, getDateFormatPref } from "@/lib/date-format-cookie";
-import { currentPeriodYearMonth, resolvePeriod } from "@/lib/month-period";
+import { currentPeriodYearMonth } from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { type ActivityActor, activityActor, loadActivityFormatters, logActivities, logActivity } from "@/modules/activity/api/activity";
 import { listCategories } from "@/modules/categories/api/categories";
@@ -18,6 +18,7 @@ import { checkBudgetThreshold, insertNotification } from "@/modules/notification
 import { expenseChanges, expenseSummary } from "../lib/expense-activity";
 import { type ExpenseInput, expenseSchema } from "../schemas/expense.schema";
 import { ExpenseValidationError } from "./expense-errors";
+import { listHouseholdExpensesForMonth } from "./expenses-by-month";
 
 async function assertMemberInHousehold(householdId: string, memberId: string) {
   const members = await getHouseholdMembers(householdId);
@@ -334,15 +335,7 @@ export async function deleteExpenseAction(id: string) {
 
 export async function listExpensesForMonth(year: number, month: number, dateFormat: DateFormat) {
   const { householdId } = await getCurrentMember();
-  const period = resolvePeriod(year, month, dateFormat);
-
-  return db
-    .select()
-    .from(expenses)
-    .where(
-      and(eq(expenses.householdId, householdId), gte(expenses.date, period.startDate), lte(expenses.date, period.endDate)),
-    )
-    .orderBy(desc(expenses.date), desc(expenses.createdAt));
+  return listHouseholdExpensesForMonth(householdId, year, month, dateFormat);
 }
 
 export async function listExpensesForRange(startDate: string, endDate: string) {

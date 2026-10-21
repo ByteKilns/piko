@@ -47,8 +47,7 @@ class DrainResult {
   Map<String, Object> toJson() => {'drafts': drafts.map(draftLine).toList(), 'unreadable': unreadable};
 
   static String draftLine(Txn t) {
-    final amount = splitAmount(t.amount);
-    final rupees = 'Rs ${amount.integer}${amount.decimals == '.00' ? '' : amount.decimals}';
+    final rupees = formatRupees(t.amount);
     final payee = t.counterparty;
     return payee == null ? '$rupees eSewa payment' : '$rupees to $payee';
   }
