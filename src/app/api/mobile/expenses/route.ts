@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 import { requireMobileAuth } from "@/lib/mobile-request";
 import { activityActor } from "@/modules/activity/api/activity";
 import { ExpenseValidationError } from "@/modules/expenses/api/expense-errors";
-import { createExpenseForHousehold, listRecentExpensesForHousehold } from "@/modules/expenses/api/expenses.actions";
+import { createExpenseForHousehold, listRecentExpensesForHousehold } from "@/modules/expenses/api/expenses";
 import { expenseSchema } from "@/modules/expenses/schemas/expense.schema";
 
 const DEFAULT_LIMIT = 20;

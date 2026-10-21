@@ -12,10 +12,10 @@ import { DemoBanner } from "@/modules/demo/components/DemoBanner";
 import { DemoPhone } from "@/modules/demo/components/DemoPhone";
 import { DemoProvider } from "@/modules/demo/components/DemoProvider";
 import { demoTimeLeft } from "@/modules/demo/lib/demo-constants";
-import { listRecentExpensesForHousehold } from "@/modules/expenses/api/expenses.actions";
+import { listRecentExpensesForHousehold } from "@/modules/expenses/api/expenses";
 import { topCategoryIds } from "@/modules/expenses/lib/expense-view";
 import { buildRecentGroups } from "@/modules/expenses/lib/recent-groups";
-import { countUnreadNotifications } from "@/modules/notifications/api/notifications.actions";
+import { countUnreadNotifications } from "@/modules/notifications/api/notifications";
 
 // How many recent expenses decide the quick-pick categories in Add expense.
 const QUICK_CATEGORY_SAMPLE = 60;

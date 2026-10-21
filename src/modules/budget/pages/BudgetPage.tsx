@@ -11,14 +11,14 @@ import { lastKindByCategory } from "@/modules/budget/lib/plan-lines";
 import { dhukuSetAsides, fundSetAsides, loanSetAsides, savingsSetAsides } from "@/modules/budget/lib/set-aside";
 import { listCategories } from "@/modules/categories/api/categories";
 import { walletShares } from "@/modules/dashboard/lib/wallet";
-import { listDhukuEntries, listDhukus } from "@/modules/dhuku/api/dhuku.actions";
-import { listExpensesForMonth } from "@/modules/expenses/api/expenses.actions";
+import { listDhukuEntries, listDhukus } from "@/modules/dhuku/api/dhuku";
+import { listExpensesForMonth } from "@/modules/expenses/api/expenses";
 import { payRows } from "@/modules/expenses/lib/pay-amount";
 import { listFundData } from "@/modules/funds/api/funds";
 import { fundBalances, setAsideFor, suggestedMonthly } from "@/modules/funds/lib/fund-math";
-import { listLoanPayments, listLoans } from "@/modules/loans/api/loans.actions";
-import { checkBudgetReminder } from "@/modules/notifications/api/notifications.actions";
-import { listSavingsDeposits, listSavingsPotPlans, listSavingsPots } from "@/modules/savings/api/savings.actions";
+import { listLoanPayments, listLoans } from "@/modules/loans/api/loans";
+import { checkBudgetReminder } from "@/modules/notifications/api/notifications";
+import { listSavingsDeposits, listSavingsPotPlans, listSavingsPots } from "@/modules/savings/api/savings";
 import { monthAfter } from "@/modules/savings/lib/savings-forecast";
 
 function percent(part: number, whole: number): number {

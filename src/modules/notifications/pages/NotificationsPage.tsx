@@ -6,15 +6,10 @@ import { NOTIFICATION_PREFS_COOKIE_NAME, parseNotificationPreferences } from "@/
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { listCategories } from "@/modules/categories/api/categories";
 import { roleForOwner } from "@/modules/expenses/lib/member-tone";
-import {
-  listNotifications,
-  syncDhukuDueSoonNotifications,
-  syncDueSoonNotifications,
-  syncLoanInstallmentsDueSoonNotifications,
-} from "@/modules/notifications/api/notifications.actions";
+import { listNotifications, syncDhukuDueSoonNotifications, syncDueSoonNotifications, syncLoanInstallmentsDueSoonNotifications } from "@/modules/notifications/api/notifications";
 import { type NotificationRowModel, NotificationsView, type UpcomingPaymentModel } from "@/modules/notifications/components/NotificationsView";
 import { formatNotificationTime } from "@/modules/notifications/lib/notification-format";
-import { listRecurringExpenses } from "@/modules/recurring/api/recurring.actions";
+import { listRecurringExpenses } from "@/modules/recurring/api/recurring";
 
 function displayLabel(role: "me" | "partner" | "shared", name: string): string {
   if (role === "shared") return "Shared";

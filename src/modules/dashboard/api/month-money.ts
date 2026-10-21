@@ -2,11 +2,11 @@ import { getDateFormatPref } from "@/lib/date-format-cookie";
 import { resolvePeriod } from "@/lib/month-period";
 import { getHouseholdMembers } from "@/lib/session";
 import { listIncomeRows } from "@/modules/budget/api/budget";
-import { listDhukuEntries, listDhukus } from "@/modules/dhuku/api/dhuku.actions";
-import { listExpensesForMonth } from "@/modules/expenses/api/expenses.actions";
+import { listDhukuEntries, listDhukus } from "@/modules/dhuku/api/dhuku";
+import { listExpensesForMonth } from "@/modules/expenses/api/expenses";
 import { listFundData } from "@/modules/funds/api/funds";
-import { listLoanPayments, listLoans } from "@/modules/loans/api/loans.actions";
-import { listSavingsDeposits } from "@/modules/savings/api/savings.actions";
+import { listLoanPayments, listLoans } from "@/modules/loans/api/loans";
+import { listSavingsDeposits } from "@/modules/savings/api/savings";
 
 import { personMonthMoney } from "../lib/month-money";
 

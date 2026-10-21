@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db/client";
@@ -10,7 +10,7 @@ import { activityActor, loadActivityFormatters, logActivity } from "@/modules/ac
 import { formatNPR } from "@/modules/dashboard/lib/format";
 import { loanChanges, loanPaymentSummary, loanSummary } from "@/modules/loans/lib/loan-activity";
 import { type LoanInput, type LoanPaymentInput, loanPaymentSchema, loanSchema } from "@/modules/loans/schemas/loan.schema";
-import { insertNotification } from "@/modules/notifications/api/notifications.actions";
+import { insertNotification } from "@/modules/notifications/api/notifications";
 
 function revalidateLoansPaths() {
   revalidatePath("/loans");
@@ -22,22 +22,6 @@ async function assertMemberInHousehold(householdId: string, memberId: string) {
   if (!members.some((m) => m.id === memberId)) {
     throw new Error("Member does not belong to this household");
   }
-}
-
-export async function listLoans(householdId: string) {
-  return db.select().from(loans).where(eq(loans.householdId, householdId)).orderBy(desc(loans.date));
-}
-
-export async function listLoanPayments(householdId: string) {
-  const rows = await listLoans(householdId);
-  const loanIds = rows.map((l) => l.id);
-  if (loanIds.length === 0) return [];
-
-  return db
-    .select()
-    .from(loanPayments)
-    .where(inArray(loanPayments.loanId, loanIds))
-    .orderBy(desc(loanPayments.date), desc(loanPayments.createdAt));
 }
 
 async function findLoanInHousehold(householdId: string, loanId: string) {

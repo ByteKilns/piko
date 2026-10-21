@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, asc, eq, isNotNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db/client";
@@ -9,7 +9,7 @@ import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { todayISO } from "@/lib/today";
 import { activityActor, loadActivityFormatters, logActivity } from "@/modules/activity/api/activity";
 import { formatNPR } from "@/modules/dashboard/lib/format";
-import { insertNotification } from "@/modules/notifications/api/notifications.actions";
+import { insertNotification } from "@/modules/notifications/api/notifications";
 
 import { depositSummary, itemSummary, potSummary } from "../lib/savings-activity";
 import {
@@ -22,6 +22,7 @@ import {
   type UpdatePotInput,
   updatePotSchema,
 } from "../schemas/savings.schema";
+import { listSavingsPots } from "./savings";
 
 type PlanInput = { memberId: string; monthlyAmount: number };
 
@@ -30,50 +31,6 @@ function revalidateSavingsPaths() {
   revalidatePath("/dashboard");
   revalidatePath("/budget");
   revalidatePath("/reports");
-}
-
-export async function listSavingsPots(householdId: string) {
-  return db.select().from(savingsPots).where(eq(savingsPots.householdId, householdId)).orderBy(asc(savingsPots.createdAt));
-}
-
-async function potIdsOf(householdId: string) {
-  return (await listSavingsPots(householdId)).map((pot) => pot.id);
-}
-
-export async function listSavingsPotPlans(householdId: string) {
-  const potIds = await potIdsOf(householdId);
-  if (potIds.length === 0) return [];
-  return db.select().from(savingsPotPlans).where(inArray(savingsPotPlans.potId, potIds));
-}
-
-export async function listSavingsItems(householdId: string) {
-  const potIds = await potIdsOf(householdId);
-  if (potIds.length === 0) return [];
-  return db.select().from(savingsItems).where(inArray(savingsItems.potId, potIds)).orderBy(asc(savingsItems.position));
-}
-
-export async function listSavingsDeposits(householdId: string) {
-  const potIds = await potIdsOf(householdId);
-  if (potIds.length === 0) return [];
-  return db
-    .select()
-    .from(savingsDeposits)
-    .where(inArray(savingsDeposits.potId, potIds))
-    .orderBy(desc(savingsDeposits.date), desc(savingsDeposits.createdAt));
-}
-
-// Every expense ever paid from a pot: for pot balances and finished items.
-export async function listSavingsExpenses(householdId: string) {
-  return db
-    .select({
-      amount: expenses.amount,
-      date: expenses.date,
-      id: expenses.id,
-      savingsItemId: expenses.savingsItemId,
-      savingsPotId: expenses.savingsPotId,
-    })
-    .from(expenses)
-    .where(and(eq(expenses.householdId, householdId), isNotNull(expenses.savingsPotId)));
 }
 
 async function findPotInHousehold(householdId: string, potId: string) {

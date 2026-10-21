@@ -3,7 +3,7 @@ import { getDateFormatPref } from "@/lib/date-format-cookie";
 import { currentPeriodYearMonth, formatPeriodLabel, resolvePeriod } from "@/lib/month-period";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { todayISO } from "@/lib/today";
-import { listDhukuEntries, listDhukus } from "@/modules/dhuku/api/dhuku.actions";
+import { listDhukuEntries, listDhukus } from "@/modules/dhuku/api/dhuku";
 import { type DhukuEntryModel, type DhukuRowModel, DhukuView } from "@/modules/dhuku/components/DhukuView";
 import { dhukuRealCost, expectedPot } from "@/modules/dhuku/lib/dhuku-money";
 import { addMonths, dhukuMonthCells, dhukuProgress } from "@/modules/dhuku/lib/dhuku-view";

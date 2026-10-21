@@ -1,34 +1,17 @@
 "use server";
 
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db/client";
-import { expenses, paybacks } from "@/db/schema";
+import { paybacks } from "@/db/schema";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
 import { activityActor, loadActivityFormatters, logActivity } from "@/modules/activity/api/activity";
 import { formatNPR } from "@/modules/dashboard/lib/format";
-import { insertNotification } from "@/modules/notifications/api/notifications.actions";
+import { insertNotification } from "@/modules/notifications/api/notifications";
 
 import { paybackSummary } from "../lib/payback-activity";
 import { type PaybackInput, paybackSchema } from "../schemas/payback.schema";
-
-export async function listPaybacks(householdId: string) {
-  return db
-    .select()
-    .from(paybacks)
-    .where(eq(paybacks.householdId, householdId))
-    .orderBy(desc(paybacks.date), desc(paybacks.createdAt));
-}
-
-// Every expense ever ticked "to be paid back": the running balance spans all
-// months, like a shop's credit book.
-export async function listPayBackExpenses(householdId: string) {
-  return db
-    .select({ amount: expenses.amount, paidByMemberId: expenses.paidByMemberId, payBackAmount: expenses.payBackAmount })
-    .from(expenses)
-    .where(and(eq(expenses.householdId, householdId), isNotNull(expenses.payBackAmount)));
-}
 
 export async function createPaybackAction(input: PaybackInput) {
   const member = await getCurrentMember();

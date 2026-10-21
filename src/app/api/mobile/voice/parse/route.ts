@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { requireMobileAuth } from "@/lib/mobile-request";
-import { parseVoiceEntry } from "@/modules/voice-entry/api/voice-entry.actions";
+import { parseVoiceEntry } from "@/modules/voice-entry/api/voice-entry";
 
 export async function POST(request: NextRequest) {
   const auth = await requireMobileAuth(request);
