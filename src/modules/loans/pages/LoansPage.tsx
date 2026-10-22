@@ -67,6 +67,7 @@ export async function LoansPage() {
       payments: paymentRows
         .filter((p) => p.loanId === loan.id)
         .map((p) => ({ amount: Number(p.amount), dateLabel: formatShortDate(p.date, dateFormat), id: p.id, note: p.note })),
+      outstanding: loan.outstanding,
       pct: loan.pct,
       principal: loan.principalAmount,
     };
@@ -76,8 +77,6 @@ export async function LoansPage() {
     <LoansView
       currentMemberId={memberId}
       ledger={{
-        borrowed: stats.totalTaken,
-        lent: stats.totalGiven,
         owe: stats.outstandingToPay,
         owed: stats.outstandingToReceive,
         owedRatio: stats.totalGiven > 0 ? (stats.totalGiven - stats.outstandingToReceive) / stats.totalGiven : 0,

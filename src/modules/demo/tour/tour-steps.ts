@@ -135,12 +135,12 @@ export const TOURS: Record<TourId, TourStep[]> = {
   ],
   loans: [
     {
-      body: "What's still to come back to you, what you still owe, and the totals you've lent and borrowed.",
+      body: "What's still to come back to you, what you still owe, and the two together.",
       targets: ["loans-ledger"],
       title: "Owed and owing",
     },
     {
-      body: "Each loan with how much is repaid. Tap one to see its payments, or add one here.",
+      body: "Each open loan with what's left on it; finished ones move to Settled. Tap one to see its payments.",
       targets: ["loans-tabs"],
       title: "Each loan",
     },
