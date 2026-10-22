@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { RowMenu } from "@/components/RowMenu";
 import { Row, type RowColumns, RowsHeader } from "@/components/Rows";
 import { Button } from "@/components/ui/button";
+import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { deleteLoanAction, deleteLoanPaymentAction } from "@/modules/loans/api/loans.actions";
 import { LoanDialog, type LoanEditing, type LoanOwnerKey } from "@/modules/loans/components/LoanDialog";
@@ -32,6 +33,8 @@ export type LoanRowModel = {
   id: string;
   nextLabel: string;
   nextTone: "default" | "muted" | "negative";
+  // What's still to come back (lent) or to pay (borrowed).
+  outstanding: number;
   ownerKey: LoanOwnerKey;
   paid: number;
   payments: LoanPaymentModel[];
@@ -39,7 +42,7 @@ export type LoanRowModel = {
   principal: number;
 };
 
-type LedgerFigures = { borrowed: number; lent: number; owe: number; owed: number; owedRatio: number };
+type LedgerFigures = { owe: number; owed: number; owedRatio: number };
 
 type Props = {
   currentMemberId: string;
@@ -48,7 +51,9 @@ type Props = {
   rows: LoanRowModel[];
 };
 
-type Tab = "all" | "given" | "settled" | "taken";
+// Open (the default), Lent and Borrowed list loans with money still
+// outstanding; finished ones are only under Settled.
+type Tab = "given" | "open" | "settled" | "taken";
 
 const COLUMNS: RowColumns = {
   lg: "minmax(180px,1.6fr) minmax(0,0.9fr) minmax(120px,1.2fr) minmax(0,1.1fr) 150px",
@@ -62,7 +67,7 @@ const WIDE = "@max-[559px]:hidden";
 export function LoansView(props: Props) {
   const { currentMemberId, members } = props;
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("all");
+  const [tab, setTab] = useState<Tab>("open");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [dialog, setDialog] = useState<{ editing: null | LoanEditing; open: boolean }>({ editing: null, open: false });
   const [paymentTarget, setPaymentTarget] = useState<PaymentTarget | null>(null);
@@ -79,17 +84,19 @@ export function LoansView(props: Props) {
     return [people[key]];
   };
 
+  const openRows = props.rows.filter((r) => r.active);
   const counts = {
-    all: props.rows.length,
-    given: props.rows.filter((r) => r.direction === "given").length,
-    settled: props.rows.filter((r) => !r.active).length,
-    taken: props.rows.filter((r) => r.direction === "taken").length,
+    given: openRows.filter((r) => r.direction === "given").length,
+    open: openRows.length,
+    settled: props.rows.length - openRows.length,
+    taken: openRows.filter((r) => r.direction === "taken").length,
   };
   const visible = props.rows.filter((row) => {
-    if (tab === "all") return true;
     if (tab === "settled") return !row.active;
-    return row.direction === tab;
+    if (!row.active) return false;
+    return tab === "open" || row.direction === tab;
   });
+  const net = props.ledger.owed - props.ledger.owe;
 
   async function run(action: () => Promise<unknown>, done: string) {
     try {
@@ -120,17 +127,14 @@ export function LoansView(props: Props) {
       />
 
       <Ledger data-tour="loans-ledger">
-        <LedgerCell bar={<Meter ratio={props.ledger.owedRatio} />} label="Owed to you" lead note="Still to come back">
+        <LedgerCell bar={<Meter ratio={props.ledger.owedRatio} />} label="To get back" lead note="Still owed to you">
           <Money size="lead" value={props.ledger.owed} />
         </LedgerCell>
-        <LedgerCell label="You owe" note="Still to pay">
+        <LedgerCell label="To pay" note="Still owed by you">
           <Money size="cell" value={props.ledger.owe} />
         </LedgerCell>
-        <LedgerCell label="Lent out" note="Total principal">
-          <Money size="cell" value={props.ledger.lent} />
-        </LedgerCell>
-        <LedgerCell label="Borrowed" note="Total principal">
-          <Money size="cell" value={props.ledger.borrowed} />
+        <LedgerCell label="Net" note={net > 0 ? "You're owed overall" : net < 0 ? "You owe overall" : "All square"}>
+          <Money size="cell" tone={net < 0 ? "negative" : "default"} value={net} />
         </LedgerCell>
       </Ledger>
 
@@ -140,7 +144,7 @@ export function LoansView(props: Props) {
         label="Direction"
         onChange={(value) => setTab(value)}
         tabs={[
-          { count: counts.all, label: "All", value: "all" },
+          { count: counts.open, label: "Open", value: "open" },
           { count: counts.given, label: "Lent", value: "given" },
           { count: counts.taken, label: "Borrowed", value: "taken" },
           { count: counts.settled, label: "Settled", value: "settled" },
@@ -150,7 +154,7 @@ export function LoansView(props: Props) {
 
       <RowsHeader columns={COLUMNS}>
         <span>Counterparty</span>
-        <span className="text-right">Principal</span>
+        <span className="text-right">{tab === "settled" ? "Principal" : "Left"}</span>
         <span className={WIDE}>Repaid</span>
         <span className={WIDE}>Next</span>
         <span />
@@ -174,8 +178,19 @@ export function LoansView(props: Props) {
                   {row.pct}% repaid{row.nextLabel === "—" ? "" : ` · ${row.nextLabel}`}
                 </span>
               </div>
-              <div className="text-right text-[15px]">
-                <Money value={row.principal} />
+              <div className="flex flex-col items-end gap-0.5">
+                {row.active ? (
+                  <>
+                    <span className="text-[15px] font-semibold">
+                      <Money value={row.outstanding} />
+                    </span>
+                    <span className="text-xs whitespace-nowrap text-n-600">of {formatMoney(row.principal, { currency: false })}</span>
+                  </>
+                ) : (
+                  <span className="text-[15px] text-n-600">
+                    <Money tone="muted" value={row.principal} />
+                  </span>
+                )}
               </div>
               <div className={cn("flex min-w-0 items-center gap-2.5", WIDE)}>
                 <Meter className="flex-1" ratio={row.pct / 100} />
@@ -240,7 +255,11 @@ export function LoansView(props: Props) {
         );
       })}
 
-      {visible.length === 0 && <div className="border-b border-n-300 px-2 py-9 text-sm text-n-700">Nothing here yet.</div>}
+      {visible.length === 0 && (
+        <div className="border-b border-n-300 px-2 py-9 text-sm text-n-700">
+          {tab !== "settled" && counts.settled > 0 ? "Nothing outstanding. Finished loans are under Settled." : "Nothing here yet."}
+        </div>
+      )}
 
       <LoanDialog
         currentMemberId={currentMemberId}
