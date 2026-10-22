@@ -36,16 +36,20 @@ class PikoTxnRepository implements TxnRepository {
   // Txn has no id field, so the server's id for each capture rides alongside.
   final _ids = Expando<String>('capture id');
   final _approvals = Expando<ExpenseDraft>('approval');
+  final _lastNotes = Expando<String>('last note');
 
   /// The server's id for [t]; null when [t] was never stored.
   String? idOf(Txn t) => _ids[t];
+
+  /// The note [t] starts with: the one last used for its payee, else the payee.
+  String? noteFor(Txn t) => _lastNotes[t] ?? t.counterparty;
 
   /// What was checked in the Add expense sheet, used the next time [t] is
   /// approved. Without it, [t] is approved as it is ([approvalDraft]).
   void prepareApproval(Txn t, ExpenseDraft draft) => _approvals[t] = draft;
 
   /// [t] as an expense for and paid by the signed-in person, on the day it
-  /// was paid, with the payee as the note. Null when its category isn't one
+  /// was paid, with [noteFor] as the note. Null when its category isn't one
   /// of the household's, or the server doesn't say who is signed in.
   ExpenseDraft? approvalDraft(Txn t, CategoriesResult options) {
     final me = options.currentMemberId;
@@ -57,7 +61,7 @@ class PikoTxnRepository implements TxnRepository {
       ownerMemberId: me,
       paidByMemberId: me,
       date: formatAd(t.occurredAt.toLocal()),
-      note: t.counterparty,
+      note: noteFor(t),
     );
   }
 
@@ -81,6 +85,7 @@ class PikoTxnRepository implements TxnRepository {
       },
     );
     _ids[t] = json['id'] as String;
+    if (json['lastNote'] case final String note) _lastNotes[t] = note;
     return t;
   }
 

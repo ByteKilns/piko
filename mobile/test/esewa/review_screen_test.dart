@@ -208,6 +208,23 @@ void main() {
     expect(find.text('Bhatbhateni Supermarket'), findsNothing);
   });
 
+  testWidgets('a payee paid before starts with the note last used for them, on the row, a swipe and the sheet', (tester) async {
+    server.drafts[0]['lastNote'] = 'Weekly groceries';
+    server.drafts[1]['lastNote'] = 'Rent share';
+    await pumpReview(tester);
+
+    expect(find.text('Bhatbhateni Supermarket'), findsOneWidget);
+    expect(find.textContaining('Weekly groceries · Groceries ·', findRichText: true), findsOneWidget);
+
+    await tester.drag(find.text('Bhatbhateni Supermarket'), const Offset(600, 0));
+    await tester.pumpAndSettle();
+    expect((server.approved.single['expense'] as Map<String, dynamic>)['note'], 'Weekly groceries');
+
+    await tester.tap(find.text('Hari Shrestha'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(find.byKey(const Key('note-field'))).controller!.text, 'Rent share');
+  });
+
   testWidgets('swiping right on a draft without a category opens the sheet instead', (tester) async {
     await pumpReview(tester);
 

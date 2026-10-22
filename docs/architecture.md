@@ -299,6 +299,10 @@ approved. The agreed design is in the "Design (agreed)" section of
 - **Categories** — the categorizer's tables use the household's own category names; a
   name the household doesn't have means no guess. A category changed while approving is
   learned for that payee (`capture_rules`, add-or-update only).
+- **Notes** — each draft from `GET /api/mobile/captures` carries `lastNote`: the note on
+  the expense the member last approved for the same payee (`lastNotesByPayeeForMember`,
+  read from the expense, so later edits count). The app starts the note with it, else the
+  payee, on a swipe and in the sheet, and shows it on the row. Nothing is stored for it.
 - **Note suggestions** — `GET /api/mobile/categories` also sends `noteWords` (word →
   category from past notes, `expenses/lib/note-words.ts`), and the app's Add expense sheet
   suggests a category from the note until one is picked by hand. None of this goes to an AI.

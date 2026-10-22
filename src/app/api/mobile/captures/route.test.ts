@@ -1,15 +1,16 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { insertCaptureForMember } from "@/modules/captures/api/captures";
+import { insertCaptureForMember, lastNotesByPayeeForMember, listDraftCapturesForMember } from "@/modules/captures/api/captures";
 
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 vi.mock("@/lib/mobile-request", () => ({
   requireMobileAuth: vi.fn(async () => ({ householdId: "h1", memberId: "m1" })),
 }));
 vi.mock("@/modules/captures/api/captures", () => ({
   insertCaptureForMember: vi.fn(),
+  lastNotesByPayeeForMember: vi.fn(),
   listDraftCapturesForMember: vi.fn(),
 }));
 
@@ -51,6 +52,26 @@ const capture = {
 function post(body: unknown) {
   return POST(new NextRequest("https://piko.test/api/mobile/captures", { body: JSON.stringify(body), method: "POST" }));
 }
+
+describe("GET /api/mobile/captures", () => {
+  it("gives each draft the note last used for its payee, whatever the case or spacing", async () => {
+    vi.mocked(listDraftCapturesForMember).mockResolvedValue([
+      { ...row, counterparty: " DARAZ " },
+      { ...row, counterparty: "Bhatbhateni", id: "c2" },
+      { ...row, counterparty: null, id: "c3" },
+    ]);
+    vi.mocked(lastNotesByPayeeForMember).mockResolvedValue(new Map([["daraz", "T shirt"]]));
+
+    const response = await GET(new NextRequest("https://piko.test/api/mobile/captures"));
+    const body = await response.json();
+
+    expect(body.captures.map((c: { id: string; lastNote: null | string }) => [c.id, c.lastNote])).toEqual([
+      ["c1", "T shirt"],
+      ["c2", null],
+      ["c3", null],
+    ]);
+  });
+});
 
 describe("POST /api/mobile/captures", () => {
   beforeEach(() => vi.mocked(insertCaptureForMember).mockReset());

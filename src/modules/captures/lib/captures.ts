@@ -9,6 +9,12 @@ export function captureStatusFor(direction: CaptureRow["direction"]): CaptureRow
   return direction === "debit" ? "draft" : "skipped";
 }
 
+// One payee however the notification spelled its case or spacing, the same
+// key the app's category rules use.
+export function payeeKey(counterparty: null | string): string {
+  return (counterparty ?? "").trim().toLowerCase();
+}
+
 // A captured payment as the app reads it. Money is a number (Drizzle returns
 // numeric as a string) and the time is UTC.
 export function captureJson(row: CaptureRow) {

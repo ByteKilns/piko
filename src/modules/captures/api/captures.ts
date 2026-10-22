@@ -1,7 +1,7 @@
 import { and, between, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db/client";
-import { capturedPayments, captureEvents, captureRules } from "@/db/schema";
+import { capturedPayments, captureEvents, captureRules, expenses } from "@/db/schema";
 import type { CurrentMember } from "@/lib/session";
 import { activityActor } from "@/modules/activity/api/activity";
 import { listCategories } from "@/modules/categories/api/categories";
@@ -57,6 +57,21 @@ export async function listDraftCapturesForMember(member: CurrentMember) {
     .from(capturedPayments)
     .where(and(ownedBy(member), eq(capturedPayments.status, "draft")))
     .orderBy(desc(capturedPayments.occurredAt));
+}
+
+// The note on the expense this member last approved for each payee (keyed as
+// payeeKey does), so the next payment to them starts with it. Read from the
+// expense, so an edit made since is what comes back; a deleted expense or an
+// empty note gives nothing.
+export async function lastNotesByPayeeForMember(member: CurrentMember): Promise<Map<string, string>> {
+  const payee = sql<string>`lower(trim(${capturedPayments.counterparty}))`;
+  const rows = await db
+    .selectDistinctOn([payee], { note: expenses.note, payee })
+    .from(capturedPayments)
+    .innerJoin(expenses, and(eq(expenses.id, capturedPayments.expenseId), eq(expenses.householdId, capturedPayments.householdId)))
+    .where(and(ownedBy(member), eq(capturedPayments.status, "approved"), sql`${payee} <> ''`, sql`trim(${expenses.note}) <> ''`))
+    .orderBy(payee, desc(capturedPayments.occurredAt));
+  return new Map(rows.map((row) => [row.payee, row.note!.trim()]));
 }
 
 // Captures in any status within `seconds` of `at`, for the app's duplicate check.

@@ -123,7 +123,8 @@ class _EsewaReviewScreenState extends ConsumerState<EsewaReviewScreen> {
 
   // The Add expense sheet, filled in from the draft. Saving approves it with
   // what was checked; a changed category is learned for that payee. The
-  // payee stays separate from the note, which can be anything.
+  // payee stays separate from the note, which can be anything; it starts as
+  // the note last used for that payee.
   Future<void> _check(Txn t, CategoriesResult options) async {
     final repo = ref.read(esewaRepositoryProvider)!;
     final service = ref.read(esewaServiceProvider)!;
@@ -134,7 +135,7 @@ class _EsewaReviewScreenState extends ConsumerState<EsewaReviewScreen> {
           ownerMemberId: options.currentMemberId,
           paidByMemberId: options.currentMemberId ?? options.members.firstOrNull?.id ?? '',
           date: formatAd(t.occurredAt.toLocal()),
-          note: t.counterparty,
+          note: repo.noteFor(t),
         );
     final recent = ref.read(recentExpensesProvider).valueOrNull ?? const <Expense>[];
 
@@ -242,6 +243,7 @@ class _EsewaReviewScreenState extends ConsumerState<EsewaReviewScreen> {
                   child: _DraftRow(
                     txn: t,
                     category: categoryNamed(t.category, options.categories),
+                    note: repo?.noteFor(t),
                     when: draftWhen(t, format, calendar),
                     onTap: () => _check(t, options),
                     confirmDismiss: (direction) => _confirmSwipe(t, direction, options),
@@ -257,12 +259,13 @@ class _EsewaReviewScreenState extends ConsumerState<EsewaReviewScreen> {
 }
 
 // One draft, laid out like a row of the expense list: the category's icon,
-// who was paid with the category (or "Pick a category") and when, and the
-// amount. Swiping shows what it will do.
+// who was paid with the note it will be saved with (when that isn't just the
+// payee), the category (or "Pick a category") and when, and the amount. Swiping shows what it will do.
 class _DraftRow extends StatelessWidget {
   const _DraftRow({
     required this.txn,
     required this.category,
+    required this.note,
     required this.when,
     required this.onTap,
     required this.confirmDismiss,
@@ -271,6 +274,7 @@ class _DraftRow extends StatelessWidget {
 
   final Txn txn;
   final CategoryOption? category;
+  final String? note;
   final String when;
   final VoidCallback onTap;
   final Future<bool> Function(DismissDirection direction) confirmDismiss;
@@ -280,6 +284,8 @@ class _DraftRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.piko;
     final text = Theme.of(context).textTheme;
+    final title = draftTitle(txn);
+    final extra = note?.trim() ?? '';
 
     return Dismissible(
       key: ObjectKey(txn),
@@ -312,11 +318,12 @@ class _DraftRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(draftTitle(txn), maxLines: 1, overflow: TextOverflow.ellipsis, style: text.titleMedium),
+                    Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.titleMedium),
                     const SizedBox(height: 4),
                     Text.rich(
                       TextSpan(
                         children: [
+                          if (extra.isNotEmpty && extra != title) TextSpan(text: '$extra · '),
                           TextSpan(
                             text: category?.name ?? 'Pick a category',
                             style: category == null ? TextStyle(color: c.signalInk) : null,
