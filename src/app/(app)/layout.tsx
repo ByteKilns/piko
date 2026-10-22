@@ -57,8 +57,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         />
         <main className="min-w-0 flex-1 px-4 pt-5 pb-28 md:px-12 md:pt-9 md:pb-16">
           <DemoBanner />
-          {/* @container: composites lay out against the content width, not the window. */}
-          <div className="@container max-w-280">{children}</div>
+          {/* @container: composites lay out against the content width, not the window.
+              Capped at 1280px and centred in the space beside the sidebar, so a wide
+              monitor gets even margins instead of an empty strip on the right. */}
+          <div className="@container mx-auto max-w-320">{children}</div>
         </main>
         {demo && (
           <DemoPhone
