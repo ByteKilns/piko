@@ -58,15 +58,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <main className="min-w-0 flex-1 px-4 pt-5 pb-28 md:px-12 md:pt-9 md:pb-16">
           <DemoBanner />
           {/* @container: composites lay out against the content width, not the window.
-              Capped at 1280px and centred on the screen (not just beside the sidebar,
-              which reads as pushed right). The margin is how far the column's left edge
-              must move for that: half the spare screen width, less the sidebar and
-              <main>'s 3rem padding, i.e. 100% - 50vw - 37rem (100% is <main>'s content
-              width, so the sidebar's width drops out). Where there isn't room it stays
-              against the padding, as close to centre as it can be. */}
-          <div className="@container max-w-320" style={{ marginLeft: "max(0px, calc(100% - 50vw - 37rem))" }}>
-            {children}
-          </div>
+              Capped at 1280px and centred in the space beside the sidebar (the sidebar
+              isn't part of the centring), so a wide monitor gets even margins. */}
+          <div className="@container mx-auto max-w-320">{children}</div>
         </main>
         {demo && (
           <DemoPhone
