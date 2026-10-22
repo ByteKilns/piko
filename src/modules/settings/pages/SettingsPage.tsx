@@ -36,20 +36,22 @@ export async function SettingsPage() {
         <p className="text-[15px] text-n-700">Manage your account and appearance</p>
       </header>
 
-      <div className="flex flex-col gap-9" data-tour="settings-appearance">
-        <AppearanceSection />
-        <DateFormatSection initialFormat={dateFormat} />
-        <DemoLocked locked={isDemo}>
-          <ProfilePictureSection initialImage={user?.image ?? null} name={user?.name ?? "?"} />
-        </DemoLocked>
-        <DemoLocked locked={isDemo}>
-          <PasswordSection />
-        </DemoLocked>
-        {workflow && <ReleaseWorkflowSection {...workflow} />}
-        {canPublishReleases && <AppReleasesSection releases={releases} />}
+      {/* Preferences, then Account, then (for release admins only) App releases. */}
+      <div className="flex flex-col gap-9">
+        <section data-tour="settings-appearance">
+          <SectionHeading>Preferences</SectionHeading>
+          <AppearanceSection />
+          <DateFormatSection initialFormat={dateFormat} />
+        </section>
 
         <section data-tour="settings-account">
           <SectionHeading>Account</SectionHeading>
+          <DemoLocked locked={isDemo}>
+            <ProfilePictureSection initialImage={user?.image ?? null} name={user?.name ?? "?"} />
+          </DemoLocked>
+          <DemoLocked locked={isDemo}>
+            <PasswordSection />
+          </DemoLocked>
           <SettingsRow
             control={
               <form action={logoutAction}>
@@ -62,6 +64,14 @@ export async function SettingsPage() {
             label="Sign out"
           />
         </section>
+
+        {canPublishReleases && (
+          <section className="flex flex-col gap-6">
+            <SectionHeading sub="Only release admins see this.">App releases</SectionHeading>
+            {workflow && <ReleaseWorkflowSection {...workflow} />}
+            <AppReleasesSection releases={releases} />
+          </section>
+        )}
       </div>
     </div>
   );
@@ -72,8 +82,16 @@ export async function SettingsPage() {
 async function releaseWorkflowState(): Promise<{ configured: boolean; initialError: null | string; initialRuns: ReleaseRun[] }> {
   if (!releaseWorkflowConfigured()) return { configured: false, initialError: null, initialRuns: [] };
   try {
-    return { configured: true, initialError: null, initialRuns: await listReleaseRuns() };
+    return {
+      configured: true,
+      initialError: null,
+      initialRuns: await listReleaseRuns(),
+    };
   } catch (error) {
-    return { configured: true, initialError: error instanceof Error ? error.message : "Couldn't reach GitHub", initialRuns: [] };
+    return {
+      configured: true,
+      initialError: error instanceof Error ? error.message : "Couldn't reach GitHub",
+      initialRuns: [],
+    };
   }
 }

@@ -5,7 +5,6 @@ import { useRef, useState, useTransition } from "react";
 import { Upload } from "lucide-react";
 import { toast } from "sonner";
 
-import { SectionHeading } from "@/components/SectionHeading";
 import { Button } from "@/components/ui/button";
 import { updateProfileImageAction } from "@/modules/settings/api/settings.actions";
 import { SettingsRow } from "@/modules/settings/components/SettingsRow";
@@ -66,34 +65,31 @@ export function ProfilePictureSection({ initialImage, name }: Props) {
   }
 
   return (
-    <section>
-      <SectionHeading>Profile</SectionHeading>
-      <SettingsRow
-        control={
-          <div className="flex items-center gap-3">
-            <span className="grid size-12 shrink-0 place-items-center overflow-hidden bg-surface text-lg font-semibold text-n-700">
-              {image ? (
-                // eslint-disable-next-line @next/next/no-img-element -- a client-side data URL, not a remote asset
-                <img alt={name} className="h-full w-full object-cover" src={image} />
-              ) : (
-                name.charAt(0).toUpperCase() || "?"
-              )}
-            </span>
-            <Button disabled={pending} onClick={() => inputRef.current?.click()} type="button" variant="outline">
-              <Upload />
-              Change
-            </Button>
-            {image && (
-              <Button disabled={pending} onClick={() => save(null)} type="button" variant="ghost">
-                Remove
-              </Button>
+    <SettingsRow
+      control={
+        <div className="flex items-center gap-3">
+          <span className="grid size-12 shrink-0 place-items-center overflow-hidden bg-surface text-lg font-semibold text-n-700">
+            {image ? (
+              // eslint-disable-next-line @next/next/no-img-element -- a client-side data URL, not a remote asset
+              <img alt={name} className="h-full w-full object-cover" src={image} />
+            ) : (
+              name.charAt(0).toUpperCase() || "?"
             )}
-            <input accept="image/*" className="hidden" onChange={handleFileChange} ref={inputRef} type="file" />
-          </div>
-        }
-        description="JPG or PNG — square images look best."
-        label="Photo"
-      />
-    </section>
+          </span>
+          <Button disabled={pending} onClick={() => inputRef.current?.click()} type="button" variant="outline">
+            <Upload />
+            Change
+          </Button>
+          {image && (
+            <Button disabled={pending} onClick={() => save(null)} type="button" variant="ghost">
+              Remove
+            </Button>
+          )}
+          <input accept="image/*" className="hidden" onChange={handleFileChange} ref={inputRef} type="file" />
+        </div>
+      }
+      description="JPG or PNG — square images look best."
+      label="Photo"
+    />
   );
 }

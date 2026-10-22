@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { ExternalLink, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
-import { SectionHeading } from "@/components/SectionHeading";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -71,10 +70,15 @@ export function ReleaseWorkflowSection({ configured, initialError, initialRuns }
   const active = runs.some(isRunActive);
 
   return (
-    <section>
-      <SectionHeading sub="Builds the latest main on GitHub, checks the website is ready for it, then publishes it.">
-        Release the mobile app
-      </SectionHeading>
+    <section aria-labelledby="release-workflow-title" className="flex flex-col">
+      <div className="flex flex-col gap-0.5 pt-4">
+        <h3 className="text-[15px] font-semibold" id="release-workflow-title">
+          Release the mobile app
+        </h3>
+        <span className="text-[13px] text-n-600">
+          Builds the latest main on GitHub, checks the website is ready for it, then publishes it.
+        </span>
+      </div>
 
       {!configured ? (
         <p className="border-b border-n-300 py-4 text-[13px] text-n-700">
@@ -128,10 +132,18 @@ export function ReleaseWorkflowSection({ configured, initialError, initialRuns }
                     {label}
                   </span>
                   <span className="text-[13px] text-n-600" suppressHydrationWarning>
-                    {new Date(run.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                    {new Date(run.createdAt).toLocaleString(undefined, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
                   </span>
                 </div>
-                <a className="inline-flex items-center gap-1 text-[13px] text-n-700 hover:text-ink" href={run.url} rel="noreferrer" target="_blank">
+                <a
+                  className="inline-flex items-center gap-1 text-[13px] text-n-700 hover:text-ink"
+                  href={run.url}
+                  rel="noreferrer"
+                  target="_blank"
+                >
                   On GitHub
                   <ExternalLink className="size-3.5" />
                 </a>

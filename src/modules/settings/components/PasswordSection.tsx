@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { SectionHeading } from "@/components/SectionHeading";
 import { TextField } from "@/components/TextField";
 import { Button } from "@/components/ui/button";
 import { changePasswordAction } from "@/modules/settings/api/settings.actions";
@@ -48,9 +47,12 @@ export function PasswordSection() {
   });
 
   return (
-    <section>
-      <SectionHeading>Password</SectionHeading>
-      <form className="flex max-w-sm flex-col gap-3 pt-4" onSubmit={onSubmit}>
+    <div className="flex flex-col gap-3 border-b border-n-300 py-4">
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[15px]">Password</span>
+        <span className="text-[13px] text-n-600">Change the password you sign in with.</span>
+      </div>
+      <form className="flex max-w-sm flex-col gap-3" onSubmit={onSubmit}>
         <TextField
           autoComplete="current-password"
           error={errors.currentPassword?.message}
@@ -79,6 +81,6 @@ export function PasswordSection() {
           {isSubmitting ? "Saving..." : "Change Password"}
         </Button>
       </form>
-    </section>
+    </div>
   );
 }

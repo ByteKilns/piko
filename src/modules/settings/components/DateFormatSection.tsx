@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 
 import { toast } from "sonner";
 
-import { SectionHeading } from "@/components/SectionHeading";
 import { Segmented } from "@/components/Segmented";
 import type { DateFormat } from "@/lib/date-format-cookie";
 import { setDateFormatAction } from "@/modules/settings/api/settings.actions";
@@ -26,24 +25,21 @@ export function DateFormatSection({ initialFormat }: { initialFormat: DateFormat
   }
 
   return (
-    <section>
-      <SectionHeading>Dates</SectionHeading>
-      <SettingsRow
-        control={
-          <Segmented
-            hideLabel
-            label="Date format"
-            onChange={handleChange}
-            options={[
-              { label: "BS", value: "nepali" },
-              { label: "AD", value: "english" },
-            ]}
-            value={format}
-          />
-        }
-        description="Bikram Sambat (e.g. 15 Bhadra 2083) or Gregorian (15 August 2026)."
-        label="Date format"
-      />
-    </section>
+    <SettingsRow
+      control={
+        <Segmented
+          hideLabel
+          label="Date format"
+          onChange={handleChange}
+          options={[
+            { label: "BS", value: "nepali" },
+            { label: "AD", value: "english" },
+          ]}
+          value={format}
+        />
+      }
+      description="Bikram Sambat (e.g. 15 Bhadra 2083) or Gregorian (15 August 2026)."
+      label="Date format"
+    />
   );
 }

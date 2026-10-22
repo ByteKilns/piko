@@ -10,8 +10,9 @@ test.describe("settings", () => {
   test("shows the appearance and account sections", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
     await expect(page.getByText("Manage your account and appearance")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Appearance" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Dates" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Preferences" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Account" })).toBeVisible();
+    await expect(page.getByRole("radiogroup", { name: "Date format" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Change Password" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
   });

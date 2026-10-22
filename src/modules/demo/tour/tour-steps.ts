@@ -207,7 +207,7 @@ export const TOURS: Record<TourId, TourStep[]> = {
     {
       body: "Change the theme and the calendar for everyone in the household.",
       targets: ["settings-appearance"],
-      title: "Appearance and dates",
+      title: "Preferences",
     },
     {
       body: "Your account, the server, and the way out of the demo.",

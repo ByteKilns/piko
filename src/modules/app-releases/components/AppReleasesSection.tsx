@@ -113,7 +113,7 @@ export function AppReleasesSection({ releases }: Props) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium">App updates</CardTitle>
+        <CardTitle className="text-base font-medium">Upload an APK by hand</CardTitle>
         <p className="text-sm text-muted-foreground">
           {latest ? (
             <>
