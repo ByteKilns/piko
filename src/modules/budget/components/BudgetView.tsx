@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, type ReactNode, useState } from "react";
 
 import { ChevronRight, Plus, Repeat } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -75,10 +75,23 @@ type Tab = "me" | "partner" | "shared";
 
 const COLUMNS: RowColumns = {
   lg: "minmax(170px,1.6fr) repeat(3,minmax(0,0.85fr)) minmax(140px,1.2fr)",
-  md: "minmax(130px,1.4fr) repeat(3,minmax(0,0.9fr)) minmax(110px,1fr)",
-  sm: "minmax(120px,1.4fr) repeat(3,minmax(0,0.9fr)) minmax(90px,1fr)",
+  md: "minmax(0,1fr) auto",
+  sm: "minmax(0,1fr) auto",
 };
 const SHOWN_UNBUDGETED = 4;
+
+// Below 780px (a phone, a tablet) a row is just its name and what's left:
+// Budget, Spent and the Used bar don't fit next to six-figure amounts, so
+// they're hidden (WIDE) and said in a line under the name (PhoneNote).
+const WIDE = "@max-[779px]:hidden";
+
+function PhoneNote({ children }: { children: ReactNode }) {
+  return <span className="truncate text-xs text-n-600 @min-[780px]:hidden">{children}</span>;
+}
+
+function spentOf(spent: number, planned: number, ratio: number) {
+  return `${formatMoney(spent, { currency: false })} of ${formatMoney(planned, { currency: false })} · ${pct(ratio)}`;
+}
 
 function pct(ratio: number) {
   return `${Math.round(ratio * 100)}%`;
@@ -205,10 +218,10 @@ export function BudgetView(props: Props) {
 
       <RowsHeader columns={COLUMNS}>
         <span>Category</span>
-        <span className="text-right">Budget</span>
-        <span className="text-right">Spent</span>
+        <span className={cn("text-right", WIDE)}>Budget</span>
+        <span className={cn("text-right", WIDE)}>Spent</span>
         <span className="text-right">Left</span>
-        <span>Used</span>
+        <span className={WIDE}>Used</span>
       </RowsHeader>
 
       {person && person.setAside.rows.length > 0 && <SetAsideRows setAside={person.setAside} />}
@@ -245,9 +258,9 @@ export function BudgetView(props: Props) {
             <div className="text-right text-[15px] font-semibold">
               <Money value={props.shared.reduce((sum, row) => sum + row.planned, 0)} />
             </div>
-            <div />
-            <div />
-            <div />
+            <div className={WIDE} />
+            <div className={WIDE} />
+            <div className={WIDE} />
           </RowGroupHead>
           {props.shared.map((row) => (
             <Row columns={COLUMNS} key={row.categoryId}>
@@ -255,9 +268,9 @@ export function BudgetView(props: Props) {
               <div className="text-right text-[15px]">
                 <Money value={row.planned} />
               </div>
-              <div className="text-right text-[15px] text-n-500">—</div>
-              <div className="text-right text-[15px] text-n-500">—</div>
-              <div />
+              <div className={cn("text-right text-[15px] text-n-500", WIDE)}>—</div>
+              <div className={cn("text-right text-[15px] text-n-500", WIDE)}>—</div>
+              <div className={WIDE} />
             </Row>
           ))}
         </>
@@ -316,20 +329,23 @@ function SetAsideRows({ setAside }: { setAside: PersonView["setAside"] }) {
   return (
     <div data-tour="budget-set-aside">
       <RowGroupHead columns={COLUMNS} first>
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="text-[15px] font-semibold whitespace-nowrap">Set aside first</span>
-          <span className="truncate text-[13px] text-n-600">Filled in from savings, dhuku, loans and funds</span>
+        <div className="flex min-w-0 flex-col">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="text-[15px] font-semibold whitespace-nowrap">Set aside first</span>
+            <span className="truncate text-[13px] text-n-600">Filled in from savings, dhuku, loans and funds</span>
+          </div>
+          <PhoneNote>{spentOf(setAside.done, setAside.planned, ratio)}</PhoneNote>
         </div>
-        <div className="text-right text-[15px] font-semibold">
+        <div className={cn("text-right text-[15px] font-semibold", WIDE)}>
           <Money value={setAside.planned} />
         </div>
-        <div className="text-right text-[15px] font-semibold">
+        <div className={cn("text-right text-[15px] font-semibold", WIDE)}>
           <Money value={setAside.done} />
         </div>
         <div className="text-right text-[15px] font-semibold">
           <Money value={Math.max(0, setAside.planned - setAside.done)} />
         </div>
-        <div className="flex min-w-0 items-center gap-2.5">
+        <div className={cn("flex min-w-0 items-center gap-2.5", WIDE)}>
           <Meter className="flex-1" ratio={Math.min(1, ratio)} />
           <span className="w-10.5 text-right text-[13px] font-semibold text-ink">{pct(ratio)}</span>
         </div>
@@ -338,20 +354,23 @@ function SetAsideRows({ setAside }: { setAside: PersonView["setAside"] }) {
         const rowRatio = row.planned > 0 ? row.done / row.planned : 0;
         return (
           <Row columns={COLUMNS} key={row.id}>
-            <div className="flex min-w-0 items-baseline gap-2.5">
-              <span className="truncate text-[15px] whitespace-nowrap">{row.label}</span>
-              <span className="shrink-0 text-xs text-n-600">{row.sub}</span>
+            <div className="flex min-w-0 flex-col">
+              <div className="flex min-w-0 items-baseline gap-2.5">
+                <span className="truncate text-[15px] whitespace-nowrap">{row.label}</span>
+                <span className="shrink-0 text-xs text-n-600">{row.sub}</span>
+              </div>
+              <PhoneNote>{spentOf(row.done, row.planned, rowRatio)}</PhoneNote>
             </div>
-            <div className="text-right text-[15px]">
+            <div className={cn("text-right text-[15px]", WIDE)}>
               <Money value={row.planned} />
             </div>
-            <div className="text-right text-[15px]">
+            <div className={cn("text-right text-[15px]", WIDE)}>
               <Money value={row.done} />
             </div>
             <div className="text-right text-[15px]">
               <Money value={Math.max(0, row.planned - row.done)} />
             </div>
-            <div className="flex min-w-0 items-center gap-2.5">
+            <div className={cn("flex min-w-0 items-center gap-2.5", WIDE)}>
               <Meter className="flex-1" ratio={Math.min(1, rowRatio)} />
               <span className="w-10.5 text-right text-[13px] text-n-700">{pct(rowRatio)}</span>
             </div>
@@ -382,7 +401,7 @@ function FundRows({ canEdit, funds, onAdd, onFund }: FundRowsProps) {
             {funds.length === 0 ? "Money set aside for occasional costs" : "Monthly, holds, target"}
           </span>
         </div>
-        <div className="col-span-4 flex justify-end">
+        <div className="col-span-4 flex justify-end @max-[779px]:col-span-1">
           {canEdit && (
             <Button className="h-auto px-1.5 py-0.75 text-[13px]" onClick={onAdd} type="button" variant="ghost">
               <Plus />
@@ -404,15 +423,21 @@ function FundRows({ canEdit, funds, onAdd, onFund }: FundRowsProps) {
                   {short && fund.suggested !== null ? ` · needs ${formatMoney(fund.suggested)} a month` : ""}
                 </span>
               )}
+              <PhoneNote>
+                {formatMoney(fund.monthlyAmount, { currency: false })} a month
+                {fund.target !== null && ` · target ${formatMoney(fund.target, { currency: false })}`}
+              </PhoneNote>
             </div>
-            <div className="text-right text-[15px]">
+            <div className={cn("text-right text-[15px]", WIDE)}>
               <Money value={fund.monthlyAmount} />
             </div>
             <div className="text-right text-[15px]">
               <Money tone={fund.balance < 0 ? "negative" : "default"} value={fund.balance} />
             </div>
-            <div className="text-right text-[15px]">{fund.target === null ? <span className="text-n-500">—</span> : <Money value={fund.target} />}</div>
-            <div className="flex min-w-0 items-center gap-2.5">
+            <div className={cn("text-right text-[15px]", WIDE)}>
+              {fund.target === null ? <span className="text-n-500">—</span> : <Money value={fund.target} />}
+            </div>
+            <div className={cn("flex min-w-0 items-center gap-2.5", WIDE)}>
               {fund.target !== null && (
                 <>
                   <Meter className="flex-1" ratio={Math.min(1, ratio)} />
@@ -459,7 +484,7 @@ function PersonRows({ afterSetAside, monogram, onCategory, onNew, onRow, openUnb
               No budgets yet · Rs {formatMoney(plan.totalSpent, { currency: false })} spent
             </span>
           </div>
-          <div className="col-span-4 flex justify-end">
+          <div className="col-span-4 flex justify-end @max-[779px]:col-span-1">
             <Button className="h-auto px-1.5 py-0.75 text-[13px]" onClick={onNew} type="button" variant="ghost">
               <Plus />
               Set a budget
@@ -474,22 +499,25 @@ function PersonRows({ afterSetAside, monogram, onCategory, onNew, onRow, openUnb
         return (
           <Fragment key={group.kind}>
             <RowGroupHead columns={COLUMNS} first={index === 0 && !afterSetAside}>
-              <div className="flex min-w-0 items-center gap-2.5">
-                <span className="text-[15px] font-semibold whitespace-nowrap">{group.label}</span>
-                <span className="truncate text-[13px] text-n-600">
-                  {group.rows.length} {group.rows.length === 1 ? "line" : "lines"}
-                </span>
+              <div className="flex min-w-0 flex-col">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="text-[15px] font-semibold whitespace-nowrap">{group.label}</span>
+                  <span className="truncate text-[13px] text-n-600">
+                    {group.rows.length} {group.rows.length === 1 ? "line" : "lines"}
+                  </span>
+                </div>
+                <PhoneNote>{spentOf(group.spent, group.planned, usedRatio)}</PhoneNote>
               </div>
-              <div className="text-right text-[15px] font-semibold">
+              <div className={cn("text-right text-[15px] font-semibold", WIDE)}>
                 <Money value={group.planned} />
               </div>
-              <div className="text-right text-[15px] font-semibold">
+              <div className={cn("text-right text-[15px] font-semibold", WIDE)}>
                 <Money value={group.spent} />
               </div>
               <div className={cn("text-right text-[15px] font-semibold", left < 0 && "text-signal-ink")}>
                 <Money tone={left < 0 ? "negative" : "default"} value={left} />
               </div>
-              <div className="flex min-w-0 items-center gap-2.5">
+              <div className={cn("flex min-w-0 items-center gap-2.5", WIDE)}>
                 <Meter className="flex-1" ratio={usedRatio} />
                 <span className={cn("w-10.5 text-right text-[13px] font-semibold", usedRatio > 1 ? "text-signal-ink" : "text-ink")}>
                   {pct(usedRatio)}
@@ -502,17 +530,20 @@ function PersonRows({ afterSetAside, monogram, onCategory, onNew, onRow, openUnb
               const rowLeft = row.planned - row.spent;
               return (
                 <Row columns={COLUMNS} key={row.categoryId} onClick={() => onRow(row)}>
-                  <span className="truncate text-[15px] whitespace-nowrap">{row.categoryName}</span>
-                  <div className="text-right text-[15px]">
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate text-[15px] whitespace-nowrap">{row.categoryName}</span>
+                    <PhoneNote>{spentOf(row.spent, row.planned, rowRatio)}</PhoneNote>
+                  </div>
+                  <div className={cn("text-right text-[15px]", WIDE)}>
                     <Money value={row.planned} />
                   </div>
-                  <div className="text-right text-[15px]">
+                  <div className={cn("text-right text-[15px]", WIDE)}>
                     <Money value={row.spent} />
                   </div>
                   <div className={cn("text-right text-[15px] font-semibold", rowLeft < 0 && "text-signal-ink")}>
                     <Money tone={rowLeft < 0 ? "negative" : "default"} value={rowLeft} />
                   </div>
-                  <div className="flex min-w-0 items-center gap-2.5">
+                  <div className={cn("flex min-w-0 items-center gap-2.5", WIDE)}>
                     <Meter className="flex-1" ratio={rowRatio} />
                     <span className={cn("w-10.5 text-right text-[13px]", rowRatio > 1 ? "text-signal-ink" : "text-n-700")}>{pct(rowRatio)}</span>
                   </div>
@@ -526,7 +557,7 @@ function PersonRows({ afterSetAside, monogram, onCategory, onNew, onRow, openUnb
       {plan.unbudgeted.length > 0 && (
         <>
           <Row columns={COLUMNS} onClick={() => setOpenUnbudgeted(!openUnbudgeted)}>
-            <div className="col-span-2 flex min-w-0 items-center gap-2">
+            <div className="col-span-2 flex min-w-0 items-center gap-2 @max-[779px]:col-span-1">
               <ChevronRight aria-hidden className={cn("size-3.5 shrink-0 text-n-600 transition-transform", openUnbudgeted && "rotate-90")} />
               <span className="shrink-0 text-sm text-n-800">Without a budget</span>
               <span className="truncate text-[13px] text-n-600">{preview}</span>
@@ -534,8 +565,8 @@ function PersonRows({ afterSetAside, monogram, onCategory, onNew, onRow, openUnb
             <div className="text-right text-[15px]">
               <Money value={plan.unbudgetedTotal} />
             </div>
-            <div />
-            <div className="text-[13px] text-n-600">
+            <div className={WIDE} />
+            <div className={cn("text-[13px] text-n-600", WIDE)}>
               {plan.unbudgeted.length} {plan.unbudgeted.length === 1 ? "category" : "categories"}
             </div>
           </Row>
@@ -543,12 +574,12 @@ function PersonRows({ afterSetAside, monogram, onCategory, onNew, onRow, openUnb
           {openUnbudgeted &&
             shown.map((row) => (
               <Row className="bg-ink/3" columns={COLUMNS} key={row.categoryId}>
-                <div className="col-span-2 truncate pl-5.5 text-sm text-n-800">{row.categoryName}</div>
+                <div className="col-span-2 truncate pl-5.5 text-sm text-n-800 @max-[779px]:col-span-1">{row.categoryName}</div>
                 <div className="text-right text-sm">
                   <Money value={row.spent} />
                 </div>
-                <div />
-                <div className="flex">
+                <div className={WIDE} />
+                <div className="flex @max-[779px]:col-span-full @max-[779px]:pl-4">
                   <Button className="h-auto px-1.5 py-0.5 text-[13px]" onClick={() => onCategory(row.categoryId)} type="button" variant="ghost">
                     Set budget
                   </Button>
@@ -558,14 +589,14 @@ function PersonRows({ afterSetAside, monogram, onCategory, onNew, onRow, openUnb
 
           {openUnbudgeted && moreCount > 0 && (
             <Row className="bg-ink/3" columns={COLUMNS}>
-              <div className="col-span-2 truncate pl-5.5 text-sm text-n-800">
+              <div className="col-span-2 truncate pl-5.5 text-sm text-n-800 @max-[779px]:col-span-1">
                 {moreCount} more {moreCount === 1 ? "category" : "categories"}
               </div>
               <div className="text-right text-sm">
                 <Money value={moreTotal} />
               </div>
-              <div />
-              <div />
+              <div className={WIDE} />
+              <div className={WIDE} />
             </Row>
           )}
         </>

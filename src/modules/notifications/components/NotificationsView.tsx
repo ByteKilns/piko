@@ -147,7 +147,7 @@ export function NotificationsView(props: Props) {
 
       {visible.length === 0 && <div className="border-b border-n-300 px-2 py-9 text-sm text-n-700">Nothing here.</div>}
 
-      <div className="mt-13 grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-12" data-tour="notifications-list">
+      <div className="mt-13 grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] gap-12" data-tour="notifications-list">
         <section className="min-w-0">
           <SectionHeading>Coming up</SectionHeading>
           {props.upcoming.length === 0 ? (

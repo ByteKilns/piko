@@ -74,8 +74,8 @@ export const TOURS: Record<TourId, TourStep[]> = {
       title: "One group",
     },
     {
-      body: "Log a month's payment, the pot when it's your turn, or a fine.",
-      targets: ["dhuku-log"],
+      body: "Log a month's payment, the pot when it's your turn, or a fine. On a phone it's in the ⋯ menu.",
+      targets: ["dhuku-log", "dhuku-row-actions"],
       title: "Log entry",
     },
   ],

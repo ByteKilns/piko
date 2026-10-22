@@ -79,9 +79,12 @@ type Tab = "active" | "all" | "completed" | "paused" | "upcoming";
 
 const COLUMNS: RowColumns = {
   lg: "28px minmax(160px,1.6fr) minmax(0,0.7fr) minmax(0,1.3fr) 104px 28px",
-  md: "28px minmax(140px,1.5fr) minmax(0,0.8fr) minmax(0,1.2fr) 96px 28px",
-  sm: "28px minmax(130px,1.5fr) minmax(0,0.7fr) minmax(0,1.3fr) 96px 28px",
+  md: "28px minmax(140px,1.5fr) minmax(max-content,0.8fr) minmax(0,1.2fr) 96px 28px",
+  sm: "28px minmax(0,1fr) 96px 28px",
 };
+// Below 560px For and Schedule don't fit: they're said under the name instead,
+// and Mark paid is in the row's menu.
+const WIDE = "@max-[559px]:hidden";
 const FREQUENCY_LABEL = { monthly: "Monthly", quarterly: "Quarterly", yearly: "Yearly" } as const;
 
 export function RecurringView(props: Props) {
@@ -188,11 +191,11 @@ export function RecurringView(props: Props) {
               </span>
             </span>
           </div>
-          <div className="relative pt-6.5">
+          <div className="relative pt-6.5 @max-[559px]:pt-0">
             {props.timeline.marks.map((mark) => (
               <div
                 className={cn(
-                  "absolute top-0 box-border h-6.5 px-1.75 text-xs leading-[1.3] whitespace-nowrap text-ink",
+                  "absolute top-0 box-border h-6.5 px-1.75 text-xs leading-[1.3] whitespace-nowrap text-ink @max-[559px]:hidden",
                   mark.align === "left" ? "border-r border-ink" : "border-l border-ink",
                 )}
                 key={mark.day}
@@ -261,8 +264,8 @@ export function RecurringView(props: Props) {
 
       <RowsHeader columns={COLUMNS}>
         <span className="col-span-2">Item</span>
-        <span>For</span>
-        <span>Schedule</span>
+        <span className={WIDE}>For</span>
+        <span className={WIDE}>Schedule</span>
         <span className="text-right">NPR</span>
         <span />
       </RowsHeader>
@@ -275,12 +278,20 @@ export function RecurringView(props: Props) {
             <div className="flex min-w-0 flex-col gap-0.5">
               <span className={cn("truncate text-[15px]", muted && "text-n-600")}>{row.name}</span>
               <span className="truncate text-[13px] text-n-600">{row.sub}</span>
+              <span
+                className={cn(
+                  "text-xs @min-[560px]:hidden",
+                  row.scheduleTone === "negative" ? "text-signal-ink" : "text-n-600",
+                )}
+              >
+                {label(row.ownerKey)} · {row.scheduleText}
+              </span>
             </div>
-            <div className="flex min-w-0 items-center gap-2.5">
+            <div className={cn("flex min-w-0 items-center gap-2.5", WIDE)}>
               <Monogram people={monograms(row.ownerKey)} />
               <span className="text-sm whitespace-nowrap">{label(row.ownerKey)}</span>
             </div>
-            <div className="flex min-w-0 items-center justify-between gap-2.5">
+            <div className={cn("flex min-w-0 items-center justify-between gap-2.5", WIDE)}>
               <div className="flex min-w-0 flex-col gap-0.5">
                 <span className="inline-flex items-center gap-1.5 text-sm">
                   <Repeat aria-hidden className="size-3.25" />
@@ -316,6 +327,9 @@ export function RecurringView(props: Props) {
               <RowMenu
                 items={[
                   { label: "Edit", onSelect: () => setDialog({ editing: row.editing, open: true }) },
+                  ...(row.canPay
+                    ? [{ label: "Mark paid", onSelect: () => void run(() => markRecurringExpensePaidAction(row.id), `${row.name} marked paid`) }]
+                    : []),
                   row.status === "paused"
                     ? { label: "Resume", onSelect: () => void run(() => resumeRecurringExpenseAction(row.id), "Recurring resumed") }
                     : { label: "Pause", onSelect: () => void run(() => pauseRecurringExpenseAction(row.id), "Recurring paused") },
@@ -336,7 +350,7 @@ export function RecurringView(props: Props) {
         />
       )}
 
-      <div className="mt-11 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-6 border-t-2 border-rule pt-4.5">
+      <div className="mt-11 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-6 border-t-2 border-rule pt-4.5 @max-[559px]:grid-cols-1 @max-[559px]:justify-items-start @max-[559px]:gap-3">
         <p className="max-w-[62ch] text-sm leading-[1.55] text-n-700 text-pretty">
           Rent, subscriptions, insurance, EMIs — add anything that repeats. Each one appears in Expenses as{" "}
           <span className="font-semibold text-ink">Upcoming</span> until you mark it paid, so nothing slips.
