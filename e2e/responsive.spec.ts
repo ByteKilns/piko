@@ -3,10 +3,11 @@ import { expect, type Page, test } from "@playwright/test";
 import { SIGNED_OUT } from "./support/demo";
 import { gotoRoute } from "./support/nav";
 
-// Every page has to fit a phone, a tablet and a small laptop: nothing may
+// Every page has to fit a phone, a tablet and a small laptop (and six-figure
+// amounts, which the e2e seed is too small to show): nothing may
 // make the page scroll sideways, and no table cell may spill into the next
 // one (each table has its own phone layout, see RowColumns in Rows.tsx).
-const WIDTHS = [360, 640, 768, 900, 1024];
+const WIDTHS = [320, 360, 390, 480, 560, 600, 640, 700, 768, 820, 900, 1024];
 const APP_PAGES = [
   "/dashboard",
   "/expenses",

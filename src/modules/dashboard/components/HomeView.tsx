@@ -95,11 +95,12 @@ type Props = {
 
 const PEOPLE_COLUMNS: RowColumns = {
   lg: "minmax(140px,1.2fr) repeat(3,minmax(0,1fr)) minmax(150px,1.3fr)",
-  md: "minmax(110px,1fr) repeat(3,minmax(0,1fr)) minmax(120px,1.2fr)",
+  md: "minmax(0,1fr) auto",
   sm: "minmax(0,1fr) auto",
 };
-// Below 560px only Person and Spent fit; the rest is said under the name.
-const WIDE = "@max-[559px]:hidden";
+// Below 780px (a phone, a tablet) only Person and Spent fit next to six-figure
+// amounts; the rest is said under the name.
+const WIDE = "@max-[779px]:hidden";
 
 function personNote(owner: { income: null | number; incomeUsedPct: null | number; key: string; left: null | number }) {
   if (owner.key === "shared") return "Already counted under whoever paid";
@@ -365,7 +366,7 @@ export function HomeView(props: Props) {
                 <Monogram people={owner.monogram} />
                 <div className="flex min-w-0 flex-col">
                   <span className="text-[15px] font-semibold">{owner.label}</span>
-                  <span className="text-xs text-n-600 @min-[560px]:hidden">{personNote(owner)}</span>
+                  <span className="text-xs text-n-600 @min-[780px]:hidden">{personNote(owner)}</span>
                 </div>
               </div>
               <div className={cn("flex flex-col items-end gap-0.5", WIDE)}>

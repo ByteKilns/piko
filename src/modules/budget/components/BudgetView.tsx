@@ -75,18 +75,18 @@ type Tab = "me" | "partner" | "shared";
 
 const COLUMNS: RowColumns = {
   lg: "minmax(170px,1.6fr) repeat(3,minmax(0,0.85fr)) minmax(140px,1.2fr)",
-  md: "minmax(130px,1.4fr) repeat(3,minmax(0,0.9fr)) minmax(110px,1fr)",
+  md: "minmax(0,1fr) auto",
   sm: "minmax(0,1fr) auto",
 };
 const SHOWN_UNBUDGETED = 4;
 
-// Below 560px a row is just its name and what's left: Budget, Spent and the
-// Used bar don't fit a phone, so they're hidden (WIDE) and said in a line of
-// text under the name instead (PhoneNote).
-const WIDE = "@max-[559px]:hidden";
+// Below 780px (a phone, a tablet) a row is just its name and what's left:
+// Budget, Spent and the Used bar don't fit next to six-figure amounts, so
+// they're hidden (WIDE) and said in a line under the name (PhoneNote).
+const WIDE = "@max-[779px]:hidden";
 
 function PhoneNote({ children }: { children: ReactNode }) {
-  return <span className="truncate text-xs text-n-600 @min-[560px]:hidden">{children}</span>;
+  return <span className="truncate text-xs text-n-600 @min-[780px]:hidden">{children}</span>;
 }
 
 function spentOf(spent: number, planned: number, ratio: number) {
@@ -401,7 +401,7 @@ function FundRows({ canEdit, funds, onAdd, onFund }: FundRowsProps) {
             {funds.length === 0 ? "Money set aside for occasional costs" : "Monthly, holds, target"}
           </span>
         </div>
-        <div className="col-span-4 flex justify-end @max-[559px]:col-span-1">
+        <div className="col-span-4 flex justify-end @max-[779px]:col-span-1">
           {canEdit && (
             <Button className="h-auto px-1.5 py-0.75 text-[13px]" onClick={onAdd} type="button" variant="ghost">
               <Plus />
@@ -484,7 +484,7 @@ function PersonRows({ afterSetAside, monogram, onCategory, onNew, onRow, openUnb
               No budgets yet · Rs {formatMoney(plan.totalSpent, { currency: false })} spent
             </span>
           </div>
-          <div className="col-span-4 flex justify-end @max-[559px]:col-span-1">
+          <div className="col-span-4 flex justify-end @max-[779px]:col-span-1">
             <Button className="h-auto px-1.5 py-0.75 text-[13px]" onClick={onNew} type="button" variant="ghost">
               <Plus />
               Set a budget
@@ -557,7 +557,7 @@ function PersonRows({ afterSetAside, monogram, onCategory, onNew, onRow, openUnb
       {plan.unbudgeted.length > 0 && (
         <>
           <Row columns={COLUMNS} onClick={() => setOpenUnbudgeted(!openUnbudgeted)}>
-            <div className="col-span-2 flex min-w-0 items-center gap-2 @max-[559px]:col-span-1">
+            <div className="col-span-2 flex min-w-0 items-center gap-2 @max-[779px]:col-span-1">
               <ChevronRight aria-hidden className={cn("size-3.5 shrink-0 text-n-600 transition-transform", openUnbudgeted && "rotate-90")} />
               <span className="shrink-0 text-sm text-n-800">Without a budget</span>
               <span className="truncate text-[13px] text-n-600">{preview}</span>
@@ -574,12 +574,12 @@ function PersonRows({ afterSetAside, monogram, onCategory, onNew, onRow, openUnb
           {openUnbudgeted &&
             shown.map((row) => (
               <Row className="bg-ink/3" columns={COLUMNS} key={row.categoryId}>
-                <div className="col-span-2 truncate pl-5.5 text-sm text-n-800 @max-[559px]:col-span-1">{row.categoryName}</div>
+                <div className="col-span-2 truncate pl-5.5 text-sm text-n-800 @max-[779px]:col-span-1">{row.categoryName}</div>
                 <div className="text-right text-sm">
                   <Money value={row.spent} />
                 </div>
                 <div className={WIDE} />
-                <div className="flex @max-[559px]:col-span-full @max-[559px]:pl-4">
+                <div className="flex @max-[779px]:col-span-full @max-[779px]:pl-4">
                   <Button className="h-auto px-1.5 py-0.5 text-[13px]" onClick={() => onCategory(row.categoryId)} type="button" variant="ghost">
                     Set budget
                   </Button>
@@ -589,7 +589,7 @@ function PersonRows({ afterSetAside, monogram, onCategory, onNew, onRow, openUnb
 
           {openUnbudgeted && moreCount > 0 && (
             <Row className="bg-ink/3" columns={COLUMNS}>
-              <div className="col-span-2 truncate pl-5.5 text-sm text-n-800 @max-[559px]:col-span-1">
+              <div className="col-span-2 truncate pl-5.5 text-sm text-n-800 @max-[779px]:col-span-1">
                 {moreCount} more {moreCount === 1 ? "category" : "categories"}
               </div>
               <div className="text-right text-sm">
