@@ -187,7 +187,10 @@ test.describe("public demo", () => {
     const householdId = await newestDemoHouseholdId();
     const userIds = await queryE2e(async (sql) => {
       const members = await sql`select user_id from household_members where household_id = ${householdId}`;
-      await sql`update households set demo_expires_at = now() - interval '1 minute' where id = ${householdId}`;
+      // The app's clock, not the database's now(): the column has no time zone
+      // and the app stores UTC, so now() (or a Date, which the driver converts
+      // to the database time zone) is off by the database's offset.
+      await sql`update households set demo_expires_at = ${new Date(Date.now() - 60_000).toISOString()} where id = ${householdId}`;
       return members.map((m) => m.user_id as string);
     });
 
