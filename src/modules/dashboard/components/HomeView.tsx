@@ -404,7 +404,7 @@ export function HomeView(props: Props) {
                     <Meter className="flex-1" ratio={owner.incomeUsedRatio ?? 0} />
                     <span
                       className={cn(
-                        "w-10 text-right text-[13px] font-semibold",
+                        "min-w-10 text-right text-[13px] font-semibold",
                         (owner.incomeUsedPct ?? 0) > 100 && "text-signal-ink",
                       )}
                     >

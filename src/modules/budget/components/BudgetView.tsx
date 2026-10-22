@@ -347,7 +347,7 @@ function SetAsideRows({ setAside }: { setAside: PersonView["setAside"] }) {
         </div>
         <div className={cn("flex min-w-0 items-center gap-2.5", WIDE)}>
           <Meter className="flex-1" ratio={Math.min(1, ratio)} />
-          <span className="w-10.5 text-right text-[13px] font-semibold text-ink">{pct(ratio)}</span>
+          <span className="min-w-10.5 text-right text-[13px] font-semibold text-ink">{pct(ratio)}</span>
         </div>
       </RowGroupHead>
       {setAside.rows.map((row) => {
@@ -372,7 +372,7 @@ function SetAsideRows({ setAside }: { setAside: PersonView["setAside"] }) {
             </div>
             <div className={cn("flex min-w-0 items-center gap-2.5", WIDE)}>
               <Meter className="flex-1" ratio={Math.min(1, rowRatio)} />
-              <span className="w-10.5 text-right text-[13px] text-n-700">{pct(rowRatio)}</span>
+              <span className="min-w-10.5 text-right text-[13px] text-n-700">{pct(rowRatio)}</span>
             </div>
           </Row>
         );
@@ -441,7 +441,7 @@ function FundRows({ canEdit, funds, onAdd, onFund }: FundRowsProps) {
               {fund.target !== null && (
                 <>
                   <Meter className="flex-1" ratio={Math.min(1, ratio)} />
-                  <span className="w-10.5 text-right text-[13px] text-n-700">{pct(ratio)}</span>
+                  <span className="min-w-10.5 text-right text-[13px] text-n-700">{pct(ratio)}</span>
                 </>
               )}
             </div>
@@ -519,7 +519,7 @@ function PersonRows({ afterSetAside, monogram, onCategory, onNew, onRow, openUnb
               </div>
               <div className={cn("flex min-w-0 items-center gap-2.5", WIDE)}>
                 <Meter className="flex-1" ratio={usedRatio} />
-                <span className={cn("w-10.5 text-right text-[13px] font-semibold", usedRatio > 1 ? "text-signal-ink" : "text-ink")}>
+                <span className={cn("min-w-10.5 text-right text-[13px] font-semibold", usedRatio > 1 ? "text-signal-ink" : "text-ink")}>
                   {pct(usedRatio)}
                 </span>
               </div>
@@ -545,7 +545,7 @@ function PersonRows({ afterSetAside, monogram, onCategory, onNew, onRow, openUnb
                   </div>
                   <div className={cn("flex min-w-0 items-center gap-2.5", WIDE)}>
                     <Meter className="flex-1" ratio={rowRatio} />
-                    <span className={cn("w-10.5 text-right text-[13px]", rowRatio > 1 ? "text-signal-ink" : "text-n-700")}>{pct(rowRatio)}</span>
+                    <span className={cn("min-w-10.5 text-right text-[13px]", rowRatio > 1 ? "text-signal-ink" : "text-n-700")}>{pct(rowRatio)}</span>
                   </div>
                 </Row>
               );

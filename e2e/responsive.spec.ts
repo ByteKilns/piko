@@ -3,11 +3,12 @@ import { expect, type Page, test } from "@playwright/test";
 import { SIGNED_OUT } from "./support/demo";
 import { gotoRoute } from "./support/nav";
 
-// Every page has to fit a phone, a tablet and a small laptop (and six-figure
-// amounts, which the e2e seed is too small to show): nothing may
-// make the page scroll sideways, and no table cell may spill into the next
-// one (each table has its own phone layout, see RowColumns in Rows.tsx).
-const WIDTHS = [320, 360, 390, 480, 560, 600, 640, 700, 768, 820, 900, 1024];
+// Every page has to fit a phone, a tablet, a laptop and a big monitor (and
+// six-figure amounts, which the e2e seed is too small to show): nothing may
+// make the page scroll sideways, no table cell may spill into the next one
+// (each table has its own phone layout, see RowColumns in Rows.tsx), and on a
+// wide screen the capped content column sits centred beside the sidebar.
+const WIDTHS = [320, 360, 390, 480, 560, 600, 640, 700, 768, 820, 900, 1024, 1440, 1920, 2560];
 const APP_PAGES = [
   "/dashboard",
   "/expenses",
@@ -38,7 +39,18 @@ async function layoutProblems(page: Page) {
         if (cell.scrollWidth > cell.clientWidth + 1) spilled.push((cell.textContent ?? "").trim().slice(0, 40));
       }
     }
-    return { sideways: doc.scrollWidth - doc.clientWidth, spilled };
+    // Space left and right of the content column, inside <main>'s padding.
+    const main = document.querySelector("main");
+    const column = main?.querySelector(":scope > div[class*='@container']");
+    let offCentre = 0;
+    if (main && column) {
+      const inner = main.getBoundingClientRect();
+      const style = getComputedStyle(main);
+      const left = column.getBoundingClientRect().left - (inner.left + parseFloat(style.paddingLeft));
+      const right = inner.right - parseFloat(style.paddingRight) - column.getBoundingClientRect().right;
+      offCentre = Math.round(Math.abs(left - right));
+    }
+    return { offCentre, sideways: doc.scrollWidth - doc.clientWidth, spilled };
   });
 }
 
@@ -48,7 +60,7 @@ async function expectFits(page: Page, path: string) {
     // Let the layout settle (the sidebar switches to its rail below 1024px).
     await page.waitForTimeout(300);
     const problems = await layoutProblems(page);
-    expect(problems, `${path} at ${width}px`).toEqual({ sideways: 0, spilled: [] });
+    expect(problems, `${path} at ${width}px`).toEqual({ offCentre: 0, sideways: 0, spilled: [] });
   }
 }
 
