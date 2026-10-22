@@ -94,7 +94,7 @@ language lives in the shared composites under `src/components/` (`PageHeader`, `
 `Rows`, `Modal`, `Money`, `Meter`, `LineTabs`, `Segmented`, …) and the tokens in
 `src/app/globals.css`; read `docs/superpowers/specs/2026-10-07-modernist-redesign-design.md`
 before adding UI. Layout responds to the page's `@container`, not the viewport
-(`@min-[780px]:` etc.). The content column is capped at 1280px and centred beside the sidebar. Every table (`Rows`) needs a real phone layout in its `sm` band
+(`@min-[780px]:` etc.). The content column is capped at 1280px and centred on the screen (as close as the sidebar allows). Every table (`Rows`) needs a real phone layout in its `sm` band
 (below 560px), not the desktop columns squeezed: keep the name, the key figure and the
 ⋯ menu, hide the other cells with `@max-[559px]:hidden`, say what they held in a line
 under the name (`@min-[560px]:hidden`), and move row buttons into the menu — Budget and

@@ -7,7 +7,8 @@ import { gotoRoute } from "./support/nav";
 // six-figure amounts, which the e2e seed is too small to show): nothing may
 // make the page scroll sideways, no table cell may spill into the next one
 // (each table has its own phone layout, see RowColumns in Rows.tsx), and on a
-// wide screen the capped content column sits centred beside the sidebar.
+// wide screen the capped content column sits centred on the screen (or as
+// close as the sidebar allows).
 const WIDTHS = [320, 360, 390, 480, 560, 600, 640, 700, 768, 820, 900, 1024, 1440, 1920, 2560];
 const APP_PAGES = [
   "/dashboard",
@@ -39,16 +40,18 @@ async function layoutProblems(page: Page) {
         if (cell.scrollWidth > cell.clientWidth + 1) spilled.push((cell.textContent ?? "").trim().slice(0, 40));
       }
     }
-    // Space left and right of the content column, inside <main>'s padding.
+    // How far the content column's left edge is from where it should be:
+    // centred on the screen, or as close as <main>'s padding allows. Within
+    // half a scrollbar (CSS's 50vw counts the scrollbar) is centred.
     const main = document.querySelector("main");
     const column = main?.querySelector(":scope > div[class*='@container']");
     let offCentre = 0;
     if (main && column) {
-      const inner = main.getBoundingClientRect();
-      const style = getComputedStyle(main);
-      const left = column.getBoundingClientRect().left - (inner.left + parseFloat(style.paddingLeft));
-      const right = inner.right - parseFloat(style.paddingRight) - column.getBoundingClientRect().right;
-      offCentre = Math.round(Math.abs(left - right));
+      const box = column.getBoundingClientRect();
+      const start = main.getBoundingClientRect().left + parseFloat(getComputedStyle(main).paddingLeft);
+      const centred = Math.max(start, (doc.clientWidth - box.width) / 2);
+      const miss = Math.abs(box.left - centred);
+      offCentre = miss <= 9 ? 0 : Math.round(miss);
     }
     return { offCentre, sideways: doc.scrollWidth - doc.clientWidth, spilled };
   });
