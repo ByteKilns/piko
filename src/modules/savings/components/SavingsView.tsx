@@ -17,6 +17,7 @@ import { SectionHeading } from "@/components/SectionHeading";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
 import { todayISO } from "@/lib/today";
+import { cn } from "@/lib/utils";
 import { ExpenseDialog } from "@/modules/expenses/components/ExpenseDialog";
 import { deleteSavingsDepositAction, deleteSavingsItemAction, moveSavingsItemAction } from "@/modules/savings/api/savings.actions";
 import { DepositDialog } from "@/modules/savings/components/DepositDialog";
@@ -70,8 +71,11 @@ type PotDialogState = { editing: null | SavingsPotModel; open: boolean; ownerKey
 const COLUMNS: RowColumns = {
   lg: "32px minmax(160px,1.6fr) minmax(0,0.9fr) minmax(0,1.1fr) 150px",
   md: "28px minmax(130px,1.4fr) minmax(0,0.9fr) minmax(0,1.1fr) 140px",
-  sm: "24px minmax(110px,1.4fr) minmax(0,0.9fr) minmax(0,1fr) 128px",
+  sm: "20px minmax(0,1fr) auto 28px",
 };
+// Below 560px Affordable is said under the name, and Pay for this is in the
+// row's menu.
+const WIDE = "@max-[559px]:hidden";
 
 export function SavingsView(props: Props) {
   const { currentMemberId, members } = props;
@@ -189,7 +193,7 @@ export function SavingsView(props: Props) {
                 <span>#</span>
                 <span>Saving for</span>
                 <span className="text-right">Cost</span>
-                <span>Affordable</span>
+                <span className={WIDE}>Affordable</span>
                 <span />
               </RowsHeader>
 
@@ -201,17 +205,24 @@ export function SavingsView(props: Props) {
                     {item.note && <span className="truncate text-[13px] text-n-600">{item.note}</span>}
                     {item.warning && <span className="text-[13px] text-signal-ink">{item.warning}</span>}
                     {item.hint && <span className="text-[13px] text-n-600">{item.hint}</span>}
+                    <span className="text-xs text-n-700 @min-[560px]:hidden">{item.affordable}</span>
                   </div>
                   <span className="text-right text-[15px] font-semibold">
                     <Money value={item.cost} />
                   </span>
-                  <span className="text-sm">{item.affordable}</span>
+                  <span className={cn("text-sm", WIDE)}>{item.affordable}</span>
                   <div className="flex items-center justify-end gap-1" onClick={(event) => event.stopPropagation()}>
-                    <Button className="h-auto px-1.5 py-0.75 text-[13px]" onClick={() => setPaying({ item, pot })} type="button" variant="ghost">
+                    <Button
+                      className={cn("h-auto px-1.5 py-0.75 text-[13px]", WIDE)}
+                      onClick={() => setPaying({ item, pot })}
+                      type="button"
+                      variant="ghost"
+                    >
                       Pay for this
                     </Button>
                     <RowMenu
                       items={[
+                        { label: "Pay for this", onSelect: () => setPaying({ item, pot }) },
                         ...(index > 0 ? [{ label: "Move up", onSelect: () => void run(() => moveSavingsItemAction(item.id, "up"), "Moved up") }] : []),
                         ...(index < pot.items.length - 1
                           ? [{ label: "Move down", onSelect: () => void run(() => moveSavingsItemAction(item.id, "down"), "Moved down") }]
@@ -241,7 +252,7 @@ export function SavingsView(props: Props) {
             </div>
 
             {(pot.deposits.length > 0 || pot.done.length > 0) && (
-              <div className="mt-8 grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-x-12 gap-y-8">
+              <div className="mt-8 grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-x-12 gap-y-8">
                 {pot.deposits.length > 0 && (
                   <div className="min-w-0">
                     <div className="micro-label border-b-2 border-rule pb-2.5 text-n-600">Recent money in</div>

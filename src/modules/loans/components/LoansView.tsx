@@ -52,9 +52,12 @@ type Tab = "all" | "given" | "settled" | "taken";
 
 const COLUMNS: RowColumns = {
   lg: "minmax(180px,1.6fr) minmax(0,0.9fr) minmax(120px,1.2fr) minmax(0,1.1fr) 150px",
-  md: "minmax(150px,1.5fr) minmax(0,0.9fr) minmax(100px,1.1fr) minmax(0,1fr) 140px",
-  sm: "minmax(130px,1.5fr) minmax(0,0.9fr) minmax(90px,1.1fr) minmax(0,1fr) 130px",
+  md: "minmax(150px,1.5fr) minmax(max-content,0.9fr) minmax(100px,1.1fr) minmax(0,1fr) 140px",
+  sm: "minmax(0,1fr) auto 28px",
 };
+// Below 560px Repaid and Next are said under the name, and Record payment is
+// in the row's menu.
+const WIDE = "@max-[559px]:hidden";
 
 export function LoansView(props: Props) {
   const { currentMemberId, members } = props;
@@ -148,8 +151,8 @@ export function LoansView(props: Props) {
       <RowsHeader columns={COLUMNS}>
         <span>Counterparty</span>
         <span className="text-right">Principal</span>
-        <span>Repaid</span>
-        <span>Next</span>
+        <span className={WIDE}>Repaid</span>
+        <span className={WIDE}>Next</span>
         <span />
       </RowsHeader>
 
@@ -167,15 +170,18 @@ export function LoansView(props: Props) {
                   <Monogram people={monograms(row.ownerKey)} size="sm" />
                   <span className="text-[13px] text-n-600">{label(row.ownerKey)}</span>
                 </span>
+                <span className={cn("text-xs @min-[560px]:hidden", row.nextTone === "negative" ? "text-signal-ink" : "text-n-600")}>
+                  {row.pct}% repaid{row.nextLabel === "—" ? "" : ` · ${row.nextLabel}`}
+                </span>
               </div>
               <div className="text-right text-[15px]">
                 <Money value={row.principal} />
               </div>
-              <div className="flex min-w-0 items-center gap-2.5">
+              <div className={cn("flex min-w-0 items-center gap-2.5", WIDE)}>
                 <Meter className="flex-1" ratio={row.pct / 100} />
                 <span className="w-9.5 text-right text-[13px] text-n-700 tabular-nums">{row.pct}%</span>
               </div>
-              <div className="flex min-w-0 flex-col gap-0.5">
+              <div className={cn("flex min-w-0 flex-col gap-0.5", WIDE)}>
                 <span
                   className={cn(
                     "truncate text-sm whitespace-nowrap",
@@ -188,7 +194,7 @@ export function LoansView(props: Props) {
               <div className="flex items-center justify-end gap-1" onClick={(event) => event.stopPropagation()}>
                 {row.active && (
                   <Button
-                    className="h-auto px-2.5 py-1.25 text-[13px]"
+                    className={cn("h-auto px-2.5 py-1.25 text-[13px]", WIDE)}
                     onClick={() => setPaymentTarget({ id: row.id, name: row.counterpartyName })}
                     type="button"
                     variant="outline"
@@ -198,6 +204,7 @@ export function LoansView(props: Props) {
                 )}
                 <RowMenu
                   items={[
+                    ...(row.active ? [{ label: "Record payment", onSelect: () => setPaymentTarget({ id: row.id, name: row.counterpartyName }) }] : []),
                     { label: "Edit", onSelect: () => setDialog({ editing: row.editing, open: true }) },
                     { destructive: true, label: "Delete", onSelect: () => void remove(row) },
                   ]}
@@ -208,7 +215,10 @@ export function LoansView(props: Props) {
             {open && row.payments.length > 0 && (
               <div className="border-b border-n-300 bg-ink/3 px-2 py-2">
                 {row.payments.map((payment) => (
-                  <div className="grid grid-cols-[120px_minmax(0,1fr)_auto_auto] items-center gap-4 border-b border-n-200 py-1.5 last:border-0" key={payment.id}>
+                  <div
+                    className="grid grid-cols-[120px_minmax(0,1fr)_auto_auto] items-center gap-4 border-b border-n-200 py-1.5 last:border-0 @max-[559px]:grid-cols-[72px_minmax(0,1fr)_auto_auto] @max-[559px]:gap-2"
+                    key={payment.id}
+                  >
                     <span className="text-[13px] text-n-600">{payment.dateLabel}</span>
                     <span className="truncate text-sm">{payment.note ?? "Payment"}</span>
                     <span className="text-sm font-semibold">

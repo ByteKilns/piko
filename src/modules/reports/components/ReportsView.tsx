@@ -195,7 +195,7 @@ function ExpensesReport({
 
       <SpendingPace pace={pace} />
 
-      <div className="mt-14 grid grid-cols-[repeat(auto-fit,minmax(340px,1fr))] gap-x-14 gap-y-13">
+      <div className="mt-14 grid grid-cols-[repeat(auto-fit,minmax(min(340px,100%),1fr))] gap-x-14 gap-y-13">
         <section className="min-w-0">
           <SectionHeading aside={<ArrowLink href={budgetHref}>Budget</ArrowLink>}>Budget vs actual</SectionHeading>
           {topBudget.map((line) => {
@@ -489,7 +489,7 @@ function SavingsReport({ deposits, paidFromSavings, pots, putIn, putInByPerson }
         ))}
       </Ledger>
 
-      <div className="mt-13 grid grid-cols-[repeat(auto-fit,minmax(340px,1fr))] gap-x-14 gap-y-13">
+      <div className="mt-13 grid grid-cols-[repeat(auto-fit,minmax(min(340px,100%),1fr))] gap-x-14 gap-y-13">
         <section className="min-w-0">
           <SectionHeading>Money in this month</SectionHeading>
           {deposits.length === 0 ? (

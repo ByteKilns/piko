@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties, useCallback, useLayoutEffect, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { ChevronsUpDown, LogOut, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import Link from "next/link";
@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { logoutAction } from "@/lib/actions/auth";
-import { SIDEBAR_COLLAPSED_COOKIE_NAME } from "@/lib/sidebar-cookie";
+import { NARROW_SIDEBAR_QUERY, SIDEBAR_COLLAPSED_COOKIE_NAME, SIDEBAR_NARROW_COOKIE_NAME } from "@/lib/sidebar-cookie";
 import { cn } from "@/lib/utils";
 import { ExpenseDialog } from "@/modules/expenses/components/ExpenseDialog";
 import { VoiceEntryButton } from "@/modules/voice-entry/components/VoiceEntryButton";
@@ -24,6 +24,7 @@ type Props = {
   categories: Category[];
   currentMemberId: string;
   initialCollapsed: boolean;
+  initialNarrow: boolean;
   members: Member[];
   quickCategoryIds: string[];
   unreadNotifications: number;
@@ -118,10 +119,26 @@ function NavLink({
   );
 }
 
-export function SidebarNav({ categories, currentMemberId, initialCollapsed, members, quickCategoryIds, unreadNotifications }: Props) {
+export function SidebarNav({ categories, currentMemberId, initialCollapsed, initialNarrow, members, quickCategoryIds, unreadNotifications }: Props) {
   const pathname = usePathname();
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(initialCollapsed);
+  const [savedCollapsed, setSavedCollapsed] = useState(initialCollapsed);
+  // In a narrow window the rail is the default; expanding it lasts for the visit.
+  const [narrow, setNarrow] = useState(initialNarrow);
+  const [narrowExpanded, setNarrowExpanded] = useState(false);
+  const collapsed = narrow ? !narrowExpanded : savedCollapsed;
+
+  useEffect(() => {
+    const query = window.matchMedia(NARROW_SIDEBAR_QUERY);
+    const update = () => {
+      setNarrow(query.matches);
+      setNarrowExpanded(false);
+      document.cookie = `${SIDEBAR_NARROW_COOKIE_NAME}=${query.matches}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+    };
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
   const [logoHover, setLogoHover] = useState(false);
   const [tip, setTip] = useState({ label: "", left: 0, on: false, top: 0 });
   const openAddExpense = useCallback(() => setAddExpenseOpen(true), []);
@@ -252,7 +269,11 @@ export function SidebarNav({ categories, currentMemberId, initialCollapsed, memb
 
   function setCollapsedState(next: boolean) {
     if (!next) hideTip();
-    setCollapsed(next);
+    if (narrow) {
+      setNarrowExpanded(!next);
+      return;
+    }
+    setSavedCollapsed(next);
     document.cookie = `${SIDEBAR_COLLAPSED_COOKIE_NAME}=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
   }
 

@@ -94,7 +94,13 @@ language lives in the shared composites under `src/components/` (`PageHeader`, `
 `Rows`, `Modal`, `Money`, `Meter`, `LineTabs`, `Segmented`, …) and the tokens in
 `src/app/globals.css`; read `docs/superpowers/specs/2026-10-07-modernist-redesign-design.md`
 before adding UI. Layout responds to the page's `@container`, not the viewport
-(`@min-[780px]:` etc.). Pages a backend can't yet fill use one clearly named `MOCK_*`
+(`@min-[780px]:` etc.). Every table (`Rows`) needs a real phone layout in its `sm` band
+(below 560px), not the desktop columns squeezed: keep the name, the key figure and the
+⋯ menu, hide the other cells with `@max-[559px]:hidden`, say what they held in a line
+under the name (`@min-[560px]:hidden`), and move row buttons into the menu — Budget and
+Expenses are the models. Below 1024px the sidebar is its icon rail (`NARROW_SIDEBAR_QUERY`).
+`e2e/responsive.spec.ts` opens every page at phone, tablet and small-laptop widths and
+fails on sideways scrolling or a table cell spilling into the next. Pages a backend can't yet fill use one clearly named `MOCK_*`
 constant — never a fake write.
 
 **Worked example:** `expenses`. `api/expenses.actions.ts` holds `createExpenseAction`

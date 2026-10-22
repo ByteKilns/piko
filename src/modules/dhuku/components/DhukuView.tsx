@@ -70,9 +70,12 @@ type Tab = "active" | "all" | "completed";
 
 const COLUMNS: RowColumns = {
   lg: "minmax(170px,1.3fr) minmax(170px,1.3fr) minmax(0,0.9fr) minmax(0,1fr) 128px",
-  md: "minmax(140px,1.2fr) minmax(130px,1.1fr) minmax(0,0.9fr) minmax(0,1fr) 120px",
-  sm: "minmax(120px,1.2fr) minmax(100px,1fr) minmax(0,0.9fr) minmax(0,1fr) 116px",
+  md: "minmax(0,1fr) auto 28px",
+  sm: "minmax(0,1fr) auto 28px",
 };
+// Below 780px (a phone, a tablet) Months and Next payment are said under the
+// name, and Log entry is in the row's menu: five columns don't fit.
+const WIDE = "@max-[779px]:hidden";
 
 const CELL_STYLE: Record<DhukuCell["state"], string> = {
   next: "shadow-[inset_0_0_0_1.5px_var(--ink)]",
@@ -181,9 +184,9 @@ export function DhukuView(props: Props) {
 
       <RowsHeader columns={COLUMNS}>
         <span>Group</span>
-        <span>Months</span>
+        <span className={WIDE}>Months</span>
         <span className="text-right">Contributed</span>
-        <span>Next payment</span>
+        <span className={WIDE}>Next payment</span>
         <span />
       </RowsHeader>
 
@@ -200,8 +203,11 @@ export function DhukuView(props: Props) {
                     {label(row.ownerKey)} · Rs {Math.round(row.monthly).toLocaleString("en-US")} a month
                   </span>
                 </span>
+                <span className={cn("text-xs @min-[780px]:hidden", row.nextTone === "negative" ? "text-signal-ink" : "text-n-600")}>
+                  {row.monthText} · {row.nextLabel}
+                </span>
               </div>
-              <div className="flex min-w-0 flex-col gap-1.5">
+              <div className={cn("flex min-w-0 flex-col gap-1.5", WIDE)}>
                 <span className="flex gap-0.75">
                   {row.cells.map((cell, index) => (
                     <span
@@ -221,7 +227,7 @@ export function DhukuView(props: Props) {
                   of {Math.round(row.pot).toLocaleString("en-US")} · {row.pct}%
                 </span>
               </div>
-              <div className="flex min-w-0 flex-col gap-0.5">
+              <div className={cn("flex min-w-0 flex-col gap-0.5", WIDE)}>
                 <span className="text-sm whitespace-nowrap">{row.nextLabel}</span>
                 <span
                   className={cn(
@@ -232,10 +238,10 @@ export function DhukuView(props: Props) {
                   {row.nextSub}
                 </span>
               </div>
-              <div className="flex items-center justify-end gap-1" onClick={(event) => event.stopPropagation()}>
+              <div className="flex items-center justify-end gap-1" data-tour="dhuku-row-actions" onClick={(event) => event.stopPropagation()}>
                 {row.active && (
                   <Button
-                    className="h-auto px-2.5 py-1.25 text-[13px]"
+                    className={cn("h-auto px-2.5 py-1.25 text-[13px]", WIDE)}
                     data-tour="dhuku-log"
                     onClick={() => setLogTarget({ id: row.id, monthly: row.nextAmount, name: row.name, pot: row.pot })}
                     type="button"
@@ -246,6 +252,9 @@ export function DhukuView(props: Props) {
                 )}
                 <RowMenu
                   items={[
+                    ...(row.active
+                      ? [{ label: "Log entry", onSelect: () => setLogTarget({ id: row.id, monthly: row.nextAmount, name: row.name, pot: row.pot }) }]
+                      : []),
                     { label: "Edit", onSelect: () => setDialog({ editing: row.editing, open: true }) },
                     row.manualCompleted
                       ? { label: "Reopen", onSelect: () => void run(() => reopenDhukuAction(row.id), "Dhuku reopened") }
@@ -268,7 +277,10 @@ export function DhukuView(props: Props) {
                   </span>
                 </div>
                 {row.entries.map((entry) => (
-                  <div className="grid grid-cols-[120px_minmax(0,1fr)_auto_auto] items-center gap-4 border-b border-n-200 py-1.5 last:border-0" key={entry.id}>
+                  <div
+                    className="grid grid-cols-[120px_minmax(0,1fr)_auto_auto] items-center gap-4 border-b border-n-200 py-1.5 last:border-0 @max-[559px]:grid-cols-[72px_minmax(0,1fr)_auto_auto] @max-[559px]:gap-2"
+                    key={entry.id}
+                  >
                     <span className="text-[13px] text-n-600">{entry.dateLabel}</span>
                     <span className="text-sm">{entry.type === "payout" ? "Payout received" : entry.type === "fine" ? "Fine" : "Contribution"}</span>
                     <span className="text-sm font-semibold">

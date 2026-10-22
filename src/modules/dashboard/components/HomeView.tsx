@@ -96,8 +96,19 @@ type Props = {
 const PEOPLE_COLUMNS: RowColumns = {
   lg: "minmax(140px,1.2fr) repeat(3,minmax(0,1fr)) minmax(150px,1.3fr)",
   md: "minmax(110px,1fr) repeat(3,minmax(0,1fr)) minmax(120px,1.2fr)",
-  sm: "minmax(84px,1fr) repeat(3,minmax(0,0.85fr)) minmax(84px,1fr)",
+  sm: "minmax(0,1fr) auto",
 };
+// Below 560px only Person and Spent fit; the rest is said under the name.
+const WIDE = "@max-[559px]:hidden";
+
+function personNote(owner: { income: null | number; incomeUsedPct: null | number; key: string; left: null | number }) {
+  if (owner.key === "shared") return "Already counted under whoever paid";
+  const parts = [];
+  if (owner.income !== null) parts.push(`income ${formatMoney(owner.income, { currency: false })}`);
+  if (owner.left !== null) parts.push(`${formatMoney(owner.left, { currency: false })} left`);
+  if (owner.incomeUsedPct !== null) parts.push(`${owner.incomeUsedPct}% used`);
+  return parts.join(" · ");
+}
 
 function trendText(pct: null | number, prevMonthName: string): null | string {
   if (pct === null) return null;
@@ -341,10 +352,10 @@ export function HomeView(props: Props) {
         </div>
         <RowsHeader columns={PEOPLE_COLUMNS}>
           <span>Person</span>
-          <span className="text-right">Income</span>
+          <span className={cn("text-right", WIDE)}>Income</span>
           <span className="text-right">Spent</span>
-          <span className="text-right">Left</span>
-          <span>Income used</span>
+          <span className={cn("text-right", WIDE)}>Left</span>
+          <span className={WIDE}>Income used</span>
         </RowsHeader>
         {props.owners.map((owner) => {
           const ownerIncomeTrend = trendText(owner.incomeTrendPct, props.prevMonthName);
@@ -352,9 +363,12 @@ export function HomeView(props: Props) {
             <Row columns={PEOPLE_COLUMNS} key={owner.key}>
               <div className="flex min-w-0 items-center gap-2.5">
                 <Monogram people={owner.monogram} />
-                <span className="text-[15px] font-semibold">{owner.label}</span>
+                <div className="flex min-w-0 flex-col">
+                  <span className="text-[15px] font-semibold">{owner.label}</span>
+                  <span className="text-xs text-n-600 @min-[560px]:hidden">{personNote(owner)}</span>
+                </div>
               </div>
-              <div className="flex flex-col items-end gap-0.5">
+              <div className={cn("flex flex-col items-end gap-0.5", WIDE)}>
                 {owner.income === null ? (
                   <span className="text-[15px] text-n-500">—</span>
                 ) : (
@@ -369,7 +383,7 @@ export function HomeView(props: Props) {
               <div className="text-right text-[15px] font-semibold">
                 <Money value={owner.spent} />
               </div>
-              <div className="flex flex-col items-end gap-0.5">
+              <div className={cn("flex flex-col items-end gap-0.5", WIDE)}>
                 {owner.left === null ? (
                   <span className="text-[15px] text-n-500">—</span>
                 ) : (
@@ -381,7 +395,7 @@ export function HomeView(props: Props) {
                   </>
                 )}
               </div>
-              <div className="flex min-w-0 items-center gap-2.5">
+              <div className={cn("flex min-w-0 items-center gap-2.5", WIDE)}>
                 {owner.key === "shared" ? (
                   <span className="text-[13px] text-n-600">Already counted under whoever paid</span>
                 ) : (
@@ -436,7 +450,7 @@ export function HomeView(props: Props) {
           ))}
       </section>
 
-      <div className="mt-13 grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-12">
+      <div className="mt-13 grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] gap-12">
         <section className="min-w-0" data-tour="home-recent">
           <SectionHeading aside={<ArrowLink href="/expenses">All expenses</ArrowLink>}>Recent expenses</SectionHeading>
           {props.recent.length === 0 ? (

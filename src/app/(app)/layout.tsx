@@ -4,7 +4,7 @@ import { BottomNav } from "@/components/nav/BottomNav";
 import { SidebarNav } from "@/components/nav/SidebarNav";
 import { getDateFormatPref } from "@/lib/date-format-cookie";
 import { getCurrentMember, getHouseholdMembers } from "@/lib/session";
-import { SIDEBAR_COLLAPSED_COOKIE_NAME } from "@/lib/sidebar-cookie";
+import { SIDEBAR_COLLAPSED_COOKIE_NAME, SIDEBAR_NARROW_COOKIE_NAME } from "@/lib/sidebar-cookie";
 import { todayISO } from "@/lib/today";
 import { listCategories } from "@/modules/categories/api/categories";
 import { getDemoExpiry } from "@/modules/demo/api/demo";
@@ -37,6 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const expenseCategories = categories.map((c) => ({ groupName: c.groupName, id: c.id, name: c.name }));
   const expenseMembers = members.map((m) => ({ id: m.id, name: m.user.name }));
   const initialCollapsed = cookieStore.get(SIDEBAR_COLLAPSED_COOKIE_NAME)?.value === "true";
+  const initialNarrow = cookieStore.get(SIDEBAR_NARROW_COOKIE_NAME)?.value === "true";
   const quickCategoryIds = topCategoryIds(recentExpenses, 5);
   const demo = demoExpiresAt ? { timeLeft: demoTimeLeft(demoExpiresAt, new Date()) } : null;
   const phoneRecent =
@@ -49,6 +50,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           categories={expenseCategories}
           currentMemberId={current.memberId}
           initialCollapsed={initialCollapsed}
+          initialNarrow={initialNarrow}
           members={members.map((m) => ({ id: m.id, image: m.user.image, name: m.user.name }))}
           quickCategoryIds={quickCategoryIds}
           unreadNotifications={unreadNotifications}
