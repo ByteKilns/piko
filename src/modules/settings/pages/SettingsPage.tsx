@@ -9,7 +9,9 @@ import { getDateFormatPref } from "@/lib/date-format-cookie";
 import { isReleaseAdmin } from "@/lib/release-admin";
 import { getCurrentMember } from "@/lib/session";
 import { listReleases } from "@/modules/app-releases/api/app-releases";
+import { listReleaseRuns, type ReleaseRun, releaseWorkflowConfigured } from "@/modules/app-releases/api/release-workflow";
 import { AppReleasesSection } from "@/modules/app-releases/components/AppReleasesSection";
+import { ReleaseWorkflowSection } from "@/modules/app-releases/components/ReleaseWorkflowSection";
 import { DemoLocked } from "@/modules/demo/components/DemoLocked";
 import { AppearanceSection } from "@/modules/settings/components/AppearanceSection";
 import { DateFormatSection } from "@/modules/settings/components/DateFormatSection";
@@ -25,6 +27,7 @@ export async function SettingsPage() {
     isReleaseAdmin(),
   ]);
   const releases = canPublishReleases ? await listReleases() : [];
+  const workflow = canPublishReleases ? await releaseWorkflowState() : null;
 
   return (
     <div className="max-w-180">
@@ -42,6 +45,7 @@ export async function SettingsPage() {
         <DemoLocked locked={isDemo}>
           <PasswordSection />
         </DemoLocked>
+        {workflow && <ReleaseWorkflowSection {...workflow} />}
         {canPublishReleases && <AppReleasesSection releases={releases} />}
 
         <section data-tour="settings-account">
@@ -61,4 +65,15 @@ export async function SettingsPage() {
       </div>
     </div>
   );
+}
+
+// The release section's first paint. GitHub being unreachable shows as a note
+// in the section rather than breaking Settings.
+async function releaseWorkflowState(): Promise<{ configured: boolean; initialError: null | string; initialRuns: ReleaseRun[] }> {
+  if (!releaseWorkflowConfigured()) return { configured: false, initialError: null, initialRuns: [] };
+  try {
+    return { configured: true, initialError: null, initialRuns: await listReleaseRuns() };
+  } catch (error) {
+    return { configured: true, initialError: error instanceof Error ? error.message : "Couldn't reach GitHub", initialRuns: [] };
+  }
 }

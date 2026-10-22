@@ -130,16 +130,27 @@ SHA-256 and opens Android's installer.
    To check the setup without publishing, run the workflow before bumping the
    version: it should stop at "Build N isn't higher than the live build N".
 
+4. **Optional: release from the website's Settings.** On GitHub, your picture →
+   **Settings → Developer settings → Personal access tokens → Fine-grained tokens →
+   Generate new token**. Resource owner: **ByteKilns** (an organization may have to
+   approve the token first). Repository access: **Only select repositories** → `piko`.
+   Permissions → Repository permissions → **Actions: Read and write** (Metadata:
+   Read-only comes with it); nothing else. Add it in Vercel as `GITHUB_RELEASE_TOKEN`
+   (Production) and redeploy. Settings then shows **Release the mobile app** to the
+   emails in `APP_RELEASE_ADMIN_EMAILS`. The token expires on the date you chose;
+   make a new one then.
+
 ### Each release
 
 1. Bump `version:` in `pubspec.yaml` — the number after `+` must go up
    (e.g. `1.0.0+1` → `1.1.0+2`) — and push it to `main`.
 2. Wait for Vercel to deploy that commit. If it adds a migration, run
    `npm run db:migrate`.
-3. On GitHub, open the repo's **Actions** tab (the top row next to Pull requests,
-   not Settings → Actions) → **Release mobile app** → **Run workflow**, type the
-   release notes (shown in the app's update sheet) and run it. It takes 10–15
-   minutes.
+3. In the website's **Settings → Release the mobile app**, type the release notes
+   (shown in the app's update sheet) and press **Release**; the list below it shows
+   the run and links to it. Or on GitHub, open the repo's **Actions** tab (the top
+   row next to Pull requests, not Settings → Actions) → **Release mobile app** →
+   **Run workflow**. It takes 10–15 minutes.
 
 The workflow checks the website first and stops, publishing nothing, if the website
 doesn't run this commit yet ("Deploy the website first"), a migration is missing

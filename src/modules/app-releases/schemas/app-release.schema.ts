@@ -22,3 +22,11 @@ export const appReleaseSchema = z.object({
 });
 
 export type AppReleaseInput = z.infer<typeof appReleaseSchema>;
+
+// Settings → Release the mobile app: the notes the workflow puts in the
+// app's update sheet.
+export const releaseRunSchema = z.object({
+  notes: z.string().trim().min(1, "Write what's new first").max(2000),
+});
+
+export type ReleaseRunInput = z.input<typeof releaseRunSchema>;

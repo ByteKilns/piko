@@ -369,7 +369,9 @@ approved. The agreed design is in the "Design (agreed)" section of
   Those routes skip the sign-in redirect in `src/proxy.ts`. `/status` reports the
   deployment's commit (`VERCEL_GIT_COMMIT_SHA`) and whether the database is missing a
   migration (`release-status.ts`), so the workflow refuses to publish an APK ahead of the
-  website it needs. Full procedure in `mobile/README.md`.
+  website it needs. Settings can also start that workflow (`release-workflow.ts`, with
+  `GITHUB_RELEASE_TOKEN`, a token that can only run Actions) and lists its recent runs;
+  only release admins see it. Full procedure in `mobile/README.md`.
 - **Activity log** (`src/modules/activity/`): every household data mutation calls
   `logActivity(activityActor(member), entry)` after its write succeeds. Each module
   owns a pure `lib/<x>-activity.ts` (summary + `diffFields` specs) so field knowledge
